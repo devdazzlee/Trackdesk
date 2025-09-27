@@ -124,6 +124,7 @@ export default function CouponsPage() {
       id: `COUPON-${Date.now()}`,
       status: "active",
       usage: 0,
+      maxUsage: parseInt(newCoupon.maxUsage) || 0,
       revenue: 0,
       createdAt: new Date().toISOString().split('T')[0]
     }

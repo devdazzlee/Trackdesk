@@ -45,8 +45,8 @@ export function DatePicker({ value, onChange, placeholder = "Pick a date", class
 }
 
 interface DateRangePickerProps {
-  value?: { from: Date | undefined; to: Date | undefined }
-  onChange?: (range: { from: Date | undefined; to: Date | undefined }) => void
+  value?: { from: Date | undefined; to?: Date | undefined }
+  onChange?: (range: { from: Date | undefined; to?: Date | undefined } | undefined) => void
   placeholder?: string
   className?: string
 }

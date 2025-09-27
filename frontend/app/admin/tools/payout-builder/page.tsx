@@ -35,7 +35,9 @@ const payoutRules = [
     dayOfMonth: 1,
     paymentMethod: "PayPal",
     status: "active",
-    affiliates: 45
+    affiliates: 45,
+    totalPayout: 2500.00,
+    createdAt: "2024-01-01"
   },
   {
     id: "RULE-002",
@@ -47,7 +49,9 @@ const payoutRules = [
     dayOfWeek: "Monday",
     paymentMethod: "PayPal",
     status: "active",
-    affiliates: 10
+    affiliates: 10,
+    totalPayout: 1200.00,
+    createdAt: "2024-01-01"
   },
   {
     id: "RULE-003",
@@ -58,7 +62,9 @@ const payoutRules = [
     frequency: "On Demand",
     paymentMethod: "Bank Transfer",
     status: "inactive",
-    affiliates: 0
+    affiliates: 0,
+    totalPayout: 0.00,
+    createdAt: "2024-01-01"
   }
 ]
 
@@ -85,13 +91,24 @@ export default function PayoutBuilderPage() {
       return
     }
     
-    const rule = {
-      ...newRule,
+    // Create rule object based on frequency type
+    const baseRule = {
       id: `RULE-${Date.now()}`,
+      name: newRule.name,
+      description: newRule.description,
+      conditions: newRule.conditions,
+      amount: newRule.amount,
+      frequency: newRule.frequency,
+      paymentMethod: newRule.paymentMethod,
+      status: "active",
       affiliates: 0,
-      totalPayout: 0,
+      totalPayout: 0.00,
       createdAt: new Date().toISOString().split('T')[0]
     }
+
+    const rule = newRule.frequency === "Weekly" 
+      ? { ...baseRule, dayOfWeek: newRule.dayOfWeek }
+      : { ...baseRule, dayOfMonth: newRule.dayOfMonth }
     
     setRules(prev => [rule, ...prev])
     setNewRule({

@@ -111,6 +111,8 @@ export default function TrafficControlPage() {
       ...newRule,
       id: `RULE-${Date.now()}`,
       status: "active",
+      hits: 0,
+      lastTriggered: "Never",
       createdAt: new Date().toISOString().split('T')[0],
       triggeredCount: 0
     }

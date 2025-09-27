@@ -342,7 +342,7 @@ export default function RealTimeClicksPage() {
           { key: "browser", label: "Browser", type: "text" },
           { key: "os", label: "OS", type: "text" },
           { key: "ip", label: "IP Address", type: "text" },
-          { key: "converted", label: "Converted", type: "boolean" },
+          { key: "converted", label: "Converted", type: "badge" },
           { key: "conversionId", label: "Conversion ID", type: "text" },
           { key: "offer", label: "Offer", type: "text" }
         ]}
@@ -362,7 +362,7 @@ export default function RealTimeClicksPage() {
           { key: "browser", label: "Browser", type: "text", required: true },
           { key: "os", label: "OS", type: "text", required: true },
           { key: "ip", label: "IP Address", type: "text", required: true },
-          { key: "converted", label: "Converted", type: "boolean" },
+          { key: "converted", label: "Converted", type: "switch" },
           { key: "conversionId", label: "Conversion ID", type: "text" },
           { key: "offer", label: "Offer", type: "text", required: true }
         ]}
@@ -381,7 +381,7 @@ export default function RealTimeClicksPage() {
           { key: "browser", label: "Browser", type: "text", required: true },
           { key: "os", label: "OS", type: "text", required: true },
           { key: "ip", label: "IP Address", type: "text", required: true },
-          { key: "converted", label: "Converted", type: "boolean", defaultValue: false },
+          { key: "converted", label: "Converted", type: "switch", defaultValue: false },
           { key: "conversionId", label: "Conversion ID", type: "text" },
           { key: "offer", label: "Offer", type: "text", required: true }
         ]}

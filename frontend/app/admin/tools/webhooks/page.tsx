@@ -149,6 +149,9 @@ export default function WebhooksPage() {
       events: selectedEvents,
       id: `WH-${Date.now()}`,
       status: "active",
+      lastTriggered: "Never",
+      successRate: 0,
+      totalCalls: 0,
       createdAt: new Date().toISOString().split('T')[0]
     }
     setWebhooksList(prev => [...prev, webhookData])

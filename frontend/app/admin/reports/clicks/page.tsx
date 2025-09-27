@@ -450,7 +450,7 @@ export default function ClicksReportPage() {
           { key: "device", label: "Device", type: "text" },
           { key: "country", label: "Country", type: "text" },
           { key: "ip", label: "IP Address", type: "text" },
-          { key: "converted", label: "Converted", type: "boolean" },
+          { key: "converted", label: "Converted", type: "badge" },
           { key: "revenue", label: "Revenue", type: "currency" }
         ]}
       />
@@ -468,7 +468,7 @@ export default function ClicksReportPage() {
           { key: "device", label: "Device", type: "text", required: true },
           { key: "country", label: "Country", type: "text", required: true },
           { key: "ip", label: "IP Address", type: "text", required: true },
-          { key: "converted", label: "Converted", type: "boolean" },
+          { key: "converted", label: "Converted", type: "switch" },
           { key: "revenue", label: "Revenue", type: "number" }
         ]}
       />
@@ -485,7 +485,7 @@ export default function ClicksReportPage() {
           { key: "device", label: "Device", type: "text", required: true },
           { key: "country", label: "Country", type: "text", required: true },
           { key: "ip", label: "IP Address", type: "text", required: true },
-          { key: "converted", label: "Converted", type: "boolean", defaultValue: false },
+          { key: "converted", label: "Converted", type: "switch", defaultValue: false },
           { key: "revenue", label: "Revenue", type: "number", defaultValue: 0 }
         ]}
       />

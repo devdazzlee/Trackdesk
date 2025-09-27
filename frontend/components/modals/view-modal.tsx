@@ -27,9 +27,10 @@ export function ViewModal({ isOpen, onClose, title, data, fields }: ViewModalPro
       case "currency":
         return `$${Number(value).toFixed(2)}`
       case "badge":
+        const displayValue = typeof value === 'boolean' ? (value ? 'Yes' : 'No') : value
         return (
           <Badge variant="outline" className="text-xs">
-            {value}
+            {displayValue}
           </Badge>
         )
       case "status":

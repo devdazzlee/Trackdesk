@@ -84,7 +84,9 @@ export default function URLGeneratorPage() {
       shortUrl,
       clicks: 0,
       conversions: 0,
+      earnings: 0.00,
       createdAt: new Date().toISOString().split('T')[0],
+      status: "active",
       offer: selectedOffer || "Custom Link"
     }
     

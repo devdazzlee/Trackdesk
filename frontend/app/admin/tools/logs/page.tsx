@@ -131,7 +131,9 @@ export default function LogsPage() {
       userAgent: "System",
       details: {
         action: "refresh",
-        success: true
+        method: "system",
+        success: true,
+        reason: "manual_refresh"
       }
     }
     
