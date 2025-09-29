@@ -1,0 +1,526 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User Management
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  firstName String
+  lastName  String
+  role      UserRole @default(AFFILIATE)
+  status    UserStatus @default(ACTIVE)
+  avatar    String?
+  phone     String?
+  timezone  String   @default("UTC")
+  language  String   @default("en")
+  
+  // Two-factor authentication
+  twoFactorEnabled Boolean @default(false)
+  twoFactorSecret  String?
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  lastLoginAt DateTime?
+  
+  // Relations
+  affiliateProfile AffiliateProfile?
+  adminProfile     AdminProfile?
+  sessions         Session[]
+  notifications    Notification[]
+  activities       Activity[]
+  
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("sessions")
+}
+
+// Affiliate Management
+model AffiliateProfile {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  companyName       String?
+  website           String?
+  socialMedia       Json?
+  paymentMethod     PaymentMethod @default(PAYPAL)
+  paymentEmail      String?
+  taxId             String?
+  address           Json?
+  tier              AffiliateTier @default(BRONZE)
+  commissionRate    Float    @default(30.0)
+  totalEarnings     Float    @default(0)
+  totalClicks       Int      @default(0)
+  totalConversions  Int      @default(0)
+  conversionRate    Float    @default(0)
+  lastActivityAt    DateTime?
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clicks         Click[]
+  conversions    Conversion[]
+  commissions    Commission[]
+  payouts        Payout[]
+  links          AffiliateLink[]
+  coupons        Coupon[]
+  applications   OfferApplication[]
+  
+  @@map("affiliate_profiles")
+}
+
+model AdminProfile {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  permissions   String[] @default([])
+  department    String?
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("admin_profiles")
+}
+
+// Offer Management
+model Offer {
+  id              String   @id @default(cuid())
+  name            String
+  description     String
+  category        String
+  commissionRate  Float
+  status          OfferStatus @default(ACTIVE)
+  startDate       DateTime
+  endDate         DateTime?
+  terms           String?
+  requirements    String?
+  
+  // Tracking
+  totalClicks      Int      @default(0)
+  totalConversions Int      @default(0)
+  totalRevenue     Float    @default(0)
+  totalCommissions Float    @default(0)
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  applications    OfferApplication[]
+  conversions     Conversion[]
+  links           AffiliateLink[]
+  creatives       Creative[]
+  
+  @@map("offers")
+}
+
+model OfferApplication {
+  id          String   @id @default(cuid())
+  affiliateId String
+  offerId     String
+  status      ApplicationStatus @default(PENDING)
+  message     String?
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  affiliate AffiliateProfile @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+  offer     Offer            @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  
+  @@unique([affiliateId, offerId])
+  @@map("offer_applications")
+}
+
+// Link Management
+model AffiliateLink {
+  id          String   @id @default(cuid())
+  affiliateId String
+  offerId     String?
+  originalUrl String
+  shortUrl    String   @unique
+  customSlug  String?
+  
+  // Tracking
+  clicks      Int      @default(0)
+  conversions Int      @default(0)
+  earnings    Float    @default(0)
+  
+  // Settings
+  isActive    Boolean  @default(true)
+  expiresAt   DateTime?
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  affiliate AffiliateProfile @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+  offer     Offer?           @relation(fields: [offerId], references: [id], onDelete: SetNull)
+  clickRecords Click[]
+  
+  @@map("affiliate_links")
+}
+
+// Click Tracking
+model Click {
+  id          String   @id @default(cuid())
+  linkId      String
+  affiliateId String
+  
+  // Tracking data
+  ipAddress   String
+  userAgent   String
+  referrer    String?
+  country     String?
+  city        String?
+  device      String?
+  browser     String?
+  os          String?
+  
+  // Conversion tracking
+  converted   Boolean  @default(false)
+  conversionId String?
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  
+  // Relations
+  link       AffiliateLink    @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  affiliate  AffiliateProfile @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+  conversion Conversion?
+  
+  @@map("clicks")
+}
+
+// Conversion Tracking
+model Conversion {
+  id          String   @id @default(cuid())
+  clickId     String   @unique
+  affiliateId String
+  offerId     String
+  
+  // Conversion data
+  customerEmail String?
+  customerValue Float
+  commissionAmount Float
+  status       ConversionStatus @default(PENDING)
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  click      Click            @relation(fields: [clickId], references: [id], onDelete: Cascade)
+  affiliate  AffiliateProfile @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+  offer      Offer            @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  commission Commission?
+  
+  @@map("conversions")
+}
+
+// Commission Management
+model Commission {
+  id            String   @id @default(cuid())
+  conversionId  String   @unique
+  affiliateId   String
+  payoutId      String?
+  
+  // Commission data
+  amount        Float
+  rate          Float
+  status        CommissionStatus @default(PENDING)
+  payoutDate    DateTime?
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  conversion Conversion       @relation(fields: [conversionId], references: [id], onDelete: Cascade)
+  affiliate  AffiliateProfile @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+  payout     Payout?          @relation(fields: [payoutId], references: [id], onDelete: SetNull)
+  
+  @@map("commissions")
+}
+
+// Payout Management
+model Payout {
+  id          String   @id @default(cuid())
+  affiliateId String
+  
+  // Payout data
+  amount      Float
+  method      PaymentMethod
+  status      PayoutStatus @default(PENDING)
+  referenceId String?
+  processedAt DateTime?
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  affiliate   AffiliateProfile @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+  commissions Commission[]
+  
+  @@map("payouts")
+}
+
+// Creative Assets
+model Creative {
+  id          String   @id @default(cuid())
+  offerId     String
+  name        String
+  type        CreativeType
+  size        String
+  format      String
+  url         String
+  downloadUrl String
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  offer Offer @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  
+  @@map("creatives")
+}
+
+// Coupon Management
+model Coupon {
+  id          String   @id @default(cuid())
+  affiliateId String
+  code        String   @unique
+  description String
+  discount    String
+  validUntil  DateTime
+  usage       Int      @default(0)
+  maxUsage    Int?
+  status      CouponStatus @default(ACTIVE)
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  affiliate AffiliateProfile @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+  
+  @@map("coupons")
+}
+
+// Notification System
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  type      NotificationType
+  read      Boolean  @default(false)
+  data      Json?
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("notifications")
+}
+
+// Activity Logging
+model Activity {
+  id        String   @id @default(cuid())
+  userId    String
+  action    String
+  resource  String
+  details   Json?
+  ipAddress String?
+  userAgent String?
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("activities")
+}
+
+// Webhook Management
+model Webhook {
+  id          String   @id @default(cuid())
+  name        String
+  url         String
+  events      String[]
+  secret      String
+  status      WebhookStatus @default(ACTIVE)
+  lastTriggered DateTime?
+  successRate Float    @default(0)
+  totalCalls  Int      @default(0)
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("webhooks")
+}
+
+// Traffic Control Rules
+model TrafficRule {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  type        RuleType
+  conditions  Json
+  action      RuleAction
+  status      RuleStatus @default(ACTIVE)
+  hits        Int      @default(0)
+  lastTriggered DateTime?
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("traffic_rules")
+}
+
+// Enums
+enum UserRole {
+  ADMIN
+  AFFILIATE
+  MANAGER
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  PENDING
+}
+
+enum PaymentMethod {
+  PAYPAL
+  STRIPE
+  BANK_TRANSFER
+  CRYPTO
+  WISE
+}
+
+enum AffiliateTier {
+  BRONZE
+  SILVER
+  GOLD
+  PLATINUM
+}
+
+enum OfferStatus {
+  ACTIVE
+  INACTIVE
+  PAUSED
+  EXPIRED
+}
+
+enum ApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ConversionStatus {
+  PENDING
+  APPROVED
+  DECLINED
+  REFUNDED
+}
+
+enum CommissionStatus {
+  PENDING
+  APPROVED
+  PAID
+  CANCELLED
+}
+
+enum PayoutStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum CreativeType {
+  BANNER
+  LOGO
+  SOCIAL_MEDIA
+  EMAIL_TEMPLATE
+  VIDEO
+}
+
+enum CouponStatus {
+  ACTIVE
+  INACTIVE
+  EXPIRED
+}
+
+enum NotificationType {
+  INFO
+  SUCCESS
+  WARNING
+  ERROR
+  SYSTEM
+}
+
+enum WebhookStatus {
+  ACTIVE
+  INACTIVE
+  ERROR
+}
+
+enum RuleType {
+  IP_BLOCKING
+  RATE_LIMITING
+  BOT_DETECTION
+  GEO_BLOCKING
+  DEVICE_BLOCKING
+}
+
+enum RuleAction {
+  BLOCK
+  ALLOW
+  REDIRECT
+  CAPTCHA
+}
+
+enum RuleStatus {
+  ACTIVE
+  INACTIVE
+  TESTING
+}
