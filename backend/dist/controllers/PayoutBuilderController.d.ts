@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import '../types/express';
 export declare class PayoutBuilderController {
     static createPayoutRule(req: Request, res: Response): Promise<void>;
     static getPayoutRule(req: Request, res: Response): Promise<Response<any, Record<string, any>>>;

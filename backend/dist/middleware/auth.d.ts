@@ -4,6 +4,9 @@ export interface AuthenticatedRequest extends Request {
         id: string;
         email: string;
         role: string;
+        accountId: string;
+        affiliateId?: string;
+        userId?: string;
         affiliateProfile?: any;
         adminProfile?: any;
     };

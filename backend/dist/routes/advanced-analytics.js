@@ -15,37 +15,37 @@ router.get('/funnel', async (req, res) => {
             dateFilter.lte = new Date(endDate);
         const visitors = await prisma.click.count({
             where: {
-                timestamp: dateFilter
+                createdAt: dateFilter
             }
         });
         const landingPageViews = await prisma.click.count({
             where: {
-                timestamp: dateFilter,
-                landingPage: { not: null }
+                createdAt: dateFilter,
+                referrer: { not: null }
             }
         });
         const productViews = await prisma.click.count({
             where: {
-                timestamp: dateFilter,
-                eventType: 'product_view'
+                createdAt: dateFilter,
+                referrer: { contains: 'product' }
             }
         });
         const addToCarts = await prisma.click.count({
             where: {
-                timestamp: dateFilter,
-                eventType: 'add_to_cart'
+                createdAt: dateFilter,
+                referrer: { contains: 'cart' }
             }
         });
         const checkouts = await prisma.click.count({
             where: {
-                timestamp: dateFilter,
-                eventType: 'checkout'
+                createdAt: dateFilter,
+                referrer: { contains: 'checkout' }
             }
         });
         const purchases = await prisma.conversion.count({
             where: {
-                timestamp: dateFilter,
-                status: 'approved'
+                createdAt: dateFilter,
+                status: 'APPROVED'
             }
         });
         const funnelData = [
@@ -150,7 +150,7 @@ router.get('/cohort', async (req, res) => {
                         affiliateId: {
                             in: cohort.user_ids
                         },
-                        timestamp: {
+                        createdAt: {
                             gte: periodStart,
                             lt: periodEnd
                         }
@@ -182,19 +182,19 @@ router.get('/attribution', async (req, res) => {
             dateFilter.lte = new Date(endDate);
         const conversions = await prisma.conversion.findMany({
             where: {
-                timestamp: dateFilter,
-                status: 'approved'
+                createdAt: dateFilter,
+                status: 'APPROVED'
             },
             include: {
                 click: {
                     include: {
-                        affiliateLink: true
+                        link: true
                     }
                 }
             }
         });
         const totalConversions = conversions.length;
-        const totalRevenue = conversions.reduce((sum, conv) => sum + (conv.amount || 0), 0);
+        const totalRevenue = conversions.reduce((sum, conv) => sum + (conv.customerValue || 0), 0);
         const attributionModels = [
             {
                 model: "First Click",

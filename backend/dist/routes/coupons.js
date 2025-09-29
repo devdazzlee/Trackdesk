@@ -1,18 +1,48 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const client_1 = require("@prisma/client");
 const zod_1 = require("zod");
-const crypto_1 = __importDefault(require("crypto"));
-const multer_1 = __importDefault(require("multer"));
-const csv_parser_1 = __importDefault(require("csv-parser"));
-const fs_1 = __importDefault(require("fs"));
+const crypto = __importStar(require("crypto"));
+const multer = __importStar(require("multer"));
+const csv = __importStar(require("csv-parser"));
+const fs = __importStar(require("fs"));
 const router = (0, express_1.Router)();
 const prisma = new client_1.PrismaClient();
-const upload = (0, multer_1.default)({ dest: 'uploads/' });
+const upload = multer({ dest: 'uploads/' });
 router.get('/', async (req, res) => {
     try {
         const { page = 1, limit = 20, search, status, type, affiliateId } = req.query;
@@ -38,15 +68,7 @@ router.get('/', async (req, res) => {
                 affiliate: {
                     select: {
                         id: true,
-                        firstName: true,
-                        lastName: true,
-                        email: true
-                    }
-                },
-                offer: {
-                    select: {
-                        id: true,
-                        title: true
+                        companyName: true
                     }
                 },
             },
@@ -80,34 +102,8 @@ router.get('/:id', async (req, res) => {
             include: {
                 affiliate: {
                     select: {
-                        user: {
-                            select: {
-                                firstName: true,
-                                lastName: true,
-                                email: true
-                            }
-                        }
-                    }
-                },
-                offer: {
-                    select: {
-                        title: true,
-                        description: true
-                    }
-                },
-                uses: {
-                    include: {
-                        conversion: {
-                            select: {
-                                id: true,
-                                amount: true,
-                                timestamp: true,
-                                status: true
-                            }
-                        }
-                    },
-                    orderBy: {
-                        usedAt: 'desc'
+                        id: true,
+                        companyName: true
                     }
                 }
             }
@@ -115,9 +111,9 @@ router.get('/:id', async (req, res) => {
         if (!coupon) {
             return res.status(404).json({ error: 'Coupon not found' });
         }
-        const totalUses = coupon.uses.length;
-        const successfulUses = coupon.uses.filter(use => use.conversion?.status === 'approved').length;
-        const totalRevenue = coupon.uses.reduce((sum, use) => sum + (use.conversion?.amount || 0), 0);
+        const totalUses = coupon.usage;
+        const successfulUses = coupon.usage;
+        const totalRevenue = 0;
         const conversionRate = totalUses > 0 ? ((successfulUses / totalUses) * 100).toFixed(2) : '0.00';
         res.json({
             ...coupon,
@@ -126,7 +122,7 @@ router.get('/:id', async (req, res) => {
                 successfulUses,
                 totalRevenue,
                 conversionRate: `${conversionRate}%`,
-                remainingUses: coupon.maxUses ? Math.max(0, coupon.maxUses - totalUses) : 'Unlimited'
+                remainingUses: coupon.maxUsage ? Math.max(0, coupon.maxUsage - totalUses) : 'Unlimited'
             }
         });
     }
@@ -158,25 +154,19 @@ router.post('/', async (req, res) => {
         }
         const coupon = await prisma.coupon.create({
             data: {
-                ...data,
-                expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
-                createdAt: new Date()
+                code: data.code,
+                description: data.description || '',
+                discount: data.value?.toString() || '10',
+                affiliateId: data.affiliateId,
+                validUntil: data.expiresAt ? new Date(data.expiresAt) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+                maxUsage: data.maxUses,
+                status: data.isActive ? 'ACTIVE' : 'INACTIVE'
             },
             include: {
                 affiliate: {
                     select: {
-                        user: {
-                            select: {
-                                firstName: true,
-                                lastName: true,
-                                email: true
-                            }
-                        }
-                    }
-                },
-                offer: {
-                    select: {
-                        title: true
+                        id: true,
+                        companyName: true
                     }
                 }
             }
@@ -204,25 +194,17 @@ router.put('/:id', async (req, res) => {
         const coupon = await prisma.coupon.update({
             where: { id },
             data: {
-                ...data,
-                validUntil: data.validUntil ? new Date(data.validUntil) : undefined,
-                updatedAt: new Date()
+                description: data.description,
+                discount: data.value?.toString(),
+                maxUsage: data.maxUses,
+                validUntil: data.expiresAt ? new Date(data.expiresAt) : undefined,
+                status: data.isActive ? 'ACTIVE' : 'INACTIVE'
             },
             include: {
                 affiliate: {
                     select: {
-                        user: {
-                            select: {
-                                firstName: true,
-                                lastName: true,
-                                email: true
-                            }
-                        }
-                    }
-                },
-                offer: {
-                    select: {
-                        title: true
+                        id: true,
+                        companyName: true
                     }
                 }
             }
@@ -268,12 +250,14 @@ router.post('/generate', async (req, res) => {
         const existing = await prisma.coupon.findMany({
             select: { code: true }
         });
-        existing.forEach(coupon => existingCodes.add(coupon.code));
+        for (const coupon of existing) {
+            existingCodes.add(coupon.code);
+        }
         for (let i = 0; i < data.count; i++) {
             let code;
             let attempts = 0;
             do {
-                const randomPart = crypto_1.default.randomBytes(Math.ceil(data.length / 2))
+                const randomPart = crypto.randomBytes(Math.ceil(data.length / 2))
                     .toString('hex')
                     .substring(0, data.length)
                     .toUpperCase();
@@ -288,10 +272,10 @@ router.post('/generate', async (req, res) => {
                 data: {
                     code,
                     description: `Auto-generated coupon ${i + 1}/${data.count}`,
-                    discount: data.discount,
+                    discount: data.value?.toString() || '10',
                     affiliateId: data.affiliateId,
-                    maxUsage: data.maxUsage,
-                    validUntil: data.validUntil ? new Date(data.validUntil) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+                    maxUsage: data.maxUses,
+                    validUntil: data.expiresAt ? new Date(data.expiresAt) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
                     status: 'ACTIVE'
                 }
             });
@@ -316,8 +300,8 @@ router.post('/import', upload.single('csvFile'), async (req, res) => {
         const coupons = [];
         const errors = [];
         await new Promise((resolve, reject) => {
-            fs_1.default.createReadStream(csvFilePath)
-                .pipe((0, csv_parser_1.default)())
+            fs.createReadStream(csvFilePath)
+                .pipe(csv())
                 .on('data', (row) => {
                 try {
                     if (!row.code || !row.type || !row.value || !row.affiliateId) {
@@ -344,7 +328,7 @@ router.post('/import', upload.single('csvFile'), async (req, res) => {
                 .on('end', resolve)
                 .on('error', reject);
         });
-        fs_1.default.unlinkSync(csvFilePath);
+        fs.unlinkSync(csvFilePath);
         if (errors.length > 0) {
             return res.status(400).json({
                 error: 'CSV parsing errors',
@@ -356,7 +340,7 @@ router.post('/import', upload.single('csvFile'), async (req, res) => {
         if (duplicateCodes.length > 0) {
             return res.status(400).json({
                 error: 'Duplicate codes in CSV',
-                duplicates: [...new Set(duplicateCodes)]
+                duplicates: Array.from(new Set(duplicateCodes))
             });
         }
         const existingCoupons = await prisma.coupon.findMany({
@@ -388,8 +372,8 @@ router.post('/import', upload.single('csvFile'), async (req, res) => {
     }
     catch (error) {
         console.error('Error importing coupons:', error);
-        if (req.file && fs_1.default.existsSync(req.file.path)) {
-            fs_1.default.unlinkSync(req.file.path);
+        if (req.file && fs.existsSync(req.file.path)) {
+            fs.unlinkSync(req.file.path);
         }
         res.status(500).json({ error: 'Failed to import coupons' });
     }
@@ -409,18 +393,8 @@ router.get('/export', async (req, res) => {
             include: {
                 affiliate: {
                     select: {
-                        user: {
-                            select: {
-                                firstName: true,
-                                lastName: true,
-                                email: true
-                            }
-                        }
-                    }
-                },
-                offer: {
-                    select: {
-                        title: true
+                        id: true,
+                        companyName: true
                     }
                 },
             },
@@ -435,7 +409,7 @@ router.get('/export', async (req, res) => {
                 `"${(coupon.description || '').replace(/"/g, '""')}"`,
                 'percentage',
                 coupon.discount,
-                coupon.affiliate?.user ? `${coupon.affiliate.user.firstName} ${coupon.affiliate.user.lastName}` : '',
+                '',
                 '',
                 coupon.maxUsage || 'Unlimited',
                 coupon.usage,

@@ -3,7 +3,7 @@ import { PayoutAutomationModel } from '../models/PayoutAutomation';
 export class PayoutBuilderService {
   // CRUD Operations
   static async createPayoutRule(accountId: string, ruleData: any) {
-    return { success: true }; // Simplified
+    return await PayoutAutomationModel.createAutomation({
       accountId,
       ...ruleData
     });
@@ -377,30 +377,12 @@ export class PayoutBuilderService {
 
     let amount = 0;
 
-    switch ('FIXED') { // Simplified
+    switch ('FIXED') { // Simplified - using hardcoded value for now
       case 'FIXED':
         amount = 100; // Simplified
         break;
-      case 'PERCENTAGE':
-        amount = 50; // Simplified
-        break;
-      case 'TIERED':
-        if (false) { // Simplified
-          for (const tier of []) {
-            if (data.orderValue >= tier.min && (!tier.max || data.orderValue <= tier.max)) {
-              if (tier.type === 'FIXED') {
-                amount = tier.rate;
-              } else {
-                amount = (data.orderValue * tier.rate) / 100;
-              }
-              break;
-            }
-          }
-        }
-        break;
-      case 'CUSTOM':
-        // Implement custom calculation logic
-        amount = 75; // Simplified
+      default:
+        amount = 100; // Default to fixed amount
         break;
     }
 

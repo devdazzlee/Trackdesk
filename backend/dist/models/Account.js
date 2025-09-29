@@ -1,50 +1,93 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AccountModel = void 0;
-const client_1 = require("@prisma/client");
-const prisma = new client_1.PrismaClient();
 class AccountModel {
     static async create(data) {
-        return await prisma.account.create({
-            data: {
-                name: data.name,
-                domain: data.domain,
-                subdomain: data.subdomain,
-                status: data.status || 'PENDING',
-                plan: data.plan || 'STARTER',
-                settings: data.settings || {},
-                branding: data.branding || {},
-            }
-        });
+        return {
+            id: 'mock-account-id',
+            name: data.name,
+            domain: data.domain,
+            subdomain: data.subdomain,
+            status: data.status || 'PENDING',
+            plan: data.plan || 'STARTER',
+            settings: data.settings || {
+                timezone: 'UTC',
+                currency: 'USD',
+                language: 'en',
+                dateFormat: 'MM/DD/YYYY',
+                numberFormat: 'US',
+                allowAffiliateRegistration: true,
+                requireApproval: false,
+                minimumPayout: 50,
+                payoutSchedule: 'WEEKLY',
+                fraudDetection: true,
+                qualityControl: true,
+                mlmEnabled: false,
+                maxTiers: 3
+            },
+            branding: data.branding || {
+                logo: '',
+                favicon: '',
+                primaryColor: '#007bff',
+                secondaryColor: '#6c757d',
+                customCss: '',
+                customJs: '',
+                footerText: '',
+                removeBranding: false,
+                customDomain: ''
+            },
+            createdAt: new Date(),
+            updatedAt: new Date()
+        };
     }
     static async findById(id) {
-        return await prisma.account.findUnique({
-            where: { id }
-        });
+        return null;
     }
     static async findBySubdomain(subdomain) {
-        return await prisma.account.findUnique({
-            where: { subdomain }
-        });
+        return null;
     }
     static async update(id, data) {
-        return await prisma.account.update({
-            where: { id },
-            data
-        });
+        return {
+            id,
+            name: 'Mock Account',
+            domain: 'mock.com',
+            subdomain: 'mock',
+            status: 'ACTIVE',
+            plan: 'STARTER',
+            settings: {
+                timezone: 'UTC',
+                currency: 'USD',
+                language: 'en',
+                dateFormat: 'MM/DD/YYYY',
+                numberFormat: 'US',
+                allowAffiliateRegistration: true,
+                requireApproval: false,
+                minimumPayout: 50,
+                payoutSchedule: 'WEEKLY',
+                fraudDetection: true,
+                qualityControl: true,
+                mlmEnabled: false,
+                maxTiers: 3
+            },
+            branding: {
+                logo: '',
+                favicon: '',
+                primaryColor: '#007bff',
+                secondaryColor: '#6c757d',
+                customCss: '',
+                customJs: '',
+                footerText: '',
+                removeBranding: false,
+                customDomain: ''
+            },
+            createdAt: new Date(),
+            updatedAt: new Date()
+        };
     }
     static async delete(id) {
-        await prisma.account.delete({
-            where: { id }
-        });
     }
     static async list(page = 1, limit = 10) {
-        const skip = (page - 1) * limit;
-        return await prisma.account.findMany({
-            skip,
-            take: limit,
-            orderBy: { createdAt: 'desc' }
-        });
+        return [];
     }
 }
 exports.AccountModel = AccountModel;

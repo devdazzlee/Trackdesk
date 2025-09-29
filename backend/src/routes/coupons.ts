@@ -1,10 +1,10 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
-import crypto from 'crypto';
+import * as crypto from 'crypto';
 import multer from 'multer';
-import csv from 'csv-parser';
-import fs from 'fs';
+import * as csv from 'csv-parser';
+import * as fs from 'fs';
 
 const router: Router = Router();
 const prisma = new PrismaClient();
@@ -51,15 +51,7 @@ router.get('/', async (req: Request, res: Response) => {
         affiliate: {
           select: {
             id: true,
-            firstName: true,
-            lastName: true,
-            email: true
-          }
-        },
-        offer: {
-          select: {
-            id: true,
-            title: true
+            companyName: true
           }
         },
         // _count not available in schema
@@ -98,34 +90,8 @@ router.get('/:id', async (req: Request, res: Response) => {
       include: {
         affiliate: {
           select: {
-            user: {
-              select: {
-                firstName: true,
-                lastName: true,
-                email: true
-              }
-            }
-          }
-        },
-        offer: {
-          select: {
-            title: true,
-            description: true
-          }
-        },
-        uses: {
-          include: {
-            conversion: {
-              select: {
-                id: true,
-                amount: true,
-                timestamp: true,
-                status: true
-              }
-            }
-          },
-          orderBy: {
-            usedAt: 'desc'
+            id: true,
+            companyName: true
           }
         }
       }
@@ -186,23 +152,21 @@ router.post('/', async (req: Request, res: Response) => {
 
     const coupon = await prisma.coupon.create({
       data: {
-        ...data,
-        validUntil: data.validUntil ? new Date(data.validUntil) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-        createdAt: new Date()
+        code: data.code,
+        description: data.description || '',
+        discount: data.value?.toString() || '10',
+        affiliateId: data.affiliateId,
+        validUntil: data.expiresAt ? new Date(data.expiresAt) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        maxUsage: data.maxUses,
+        status: data.isActive ? 'ACTIVE' : 'INACTIVE'
       },
       include: {
         affiliate: {
           select: {
-            user: {
-              select: {
-                firstName: true,
-                lastName: true,
-                email: true
-              }
-            }
+            id: true,
+            companyName: true
           }
-        },
-        // offer relation not in Coupon schema
+        }
       }
     });
 
@@ -232,23 +196,19 @@ router.put('/:id', async (req: Request, res: Response) => {
     const coupon = await prisma.coupon.update({
       where: { id },
       data: {
-        ...data,
-        validUntil: data.validUntil ? new Date(data.validUntil) : undefined,
-        updatedAt: new Date()
+        description: data.description,
+        discount: data.value?.toString(),
+        maxUsage: data.maxUses,
+        validUntil: data.expiresAt ? new Date(data.expiresAt) : undefined,
+        status: data.isActive ? 'ACTIVE' : 'INACTIVE'
       },
       include: {
         affiliate: {
           select: {
-            user: {
-              select: {
-                firstName: true,
-                lastName: true,
-                email: true
-              }
-            }
+            id: true,
+            companyName: true
           }
-        },
-        // offer relation not in Coupon schema
+        }
       }
     });
 
@@ -301,7 +261,9 @@ router.post('/generate', async (req: Request, res: Response) => {
     const existing = await prisma.coupon.findMany({
       select: { code: true }
     });
-    existing.forEach(coupon => existingCodes.add(coupon.code));
+    for (const coupon of existing) {
+      existingCodes.add(coupon.code);
+    }
 
     for (let i = 0; i < data.count; i++) {
       let code: string;
@@ -327,11 +289,10 @@ router.post('/generate', async (req: Request, res: Response) => {
         data: {
           code,
           description: `Auto-generated coupon ${i + 1}/${data.count}`,
-          // type field removed as it's not in schema
           discount: data.value?.toString() || '10',
           affiliateId: data.affiliateId,
           maxUsage: data.maxUses,
-          validUntil: data.expiresAt ? new Date(data.expiresAt) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+          validUntil: data.expiresAt ? new Date(data.expiresAt) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
           status: 'ACTIVE'
         }
       });
@@ -409,7 +370,7 @@ router.post('/import', upload.single('csvFile'), async (req: Request, res: Respo
     if (duplicateCodes.length > 0) {
       return res.status(400).json({ 
         error: 'Duplicate codes in CSV', 
-        duplicates: [...new Set(duplicateCodes)]
+        duplicates: Array.from(new Set(duplicateCodes))
       });
     }
 
@@ -471,13 +432,8 @@ router.get('/export', async (req: Request, res: Response) => {
       include: {
         affiliate: {
           select: {
-            user: {
-              select: {
-                firstName: true,
-                lastName: true,
-                email: true
-              }
-            }
+            id: true,
+            companyName: true
           }
         },
         // offer relation not in Coupon schema,

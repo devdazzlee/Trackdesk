@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import '../types/express';
 export declare class AlertsController {
     static createAlert(req: Request, res: Response): Promise<void>;
     static getAlert(req: Request, res: Response): Promise<Response<any, Record<string, any>>>;

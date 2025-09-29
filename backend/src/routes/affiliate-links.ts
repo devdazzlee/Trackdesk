@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
-import crypto from 'crypto';
+import * as crypto from 'crypto';
 
 const router: Router = Router();
 const prisma = new PrismaClient();
@@ -39,14 +39,7 @@ router.get('/', async (req: Request, res: Response) => {
         affiliate: {
           select: {
             id: true,
-            user: {
-              select: {
-                firstName: true,
-                lastName: true
-              }
-            },
-            lastName: true,
-            email: true
+            companyName: true
           }
         },
         clickRecords: {
@@ -55,7 +48,7 @@ router.get('/', async (req: Request, res: Response) => {
             createdAt: true,
             ipAddress: true,
             country: true,
-            deviceType: true
+            device: true
           },
           orderBy: {
             createdAt: 'desc'
@@ -64,8 +57,7 @@ router.get('/', async (req: Request, res: Response) => {
         },
         _count: {
           select: {
-            clickRecords: true,
-            conversions: true
+            clickRecords: true
           }
         }
       },
@@ -82,12 +74,12 @@ router.get('/', async (req: Request, res: Response) => {
     const linksWithMetrics = await Promise.all(
       links.map(async (link) => {
         const conversions = await prisma.conversion.count({
-          where: { affiliateLinkId: link.id }
+          where: { affiliateId: link.affiliateId }
         });
 
         const revenue = await prisma.conversion.aggregate({
-          where: { affiliateLinkId: link.id },
-          _sum: { amount: true }
+          where: { affiliateId: link.affiliateId },
+          _sum: { customerValue: true }
         });
 
         const conversionRate = link._count.clickRecords > 0 
@@ -100,7 +92,7 @@ router.get('/', async (req: Request, res: Response) => {
             clicks: link._count.clickRecords,
             conversions,
             conversionRate: `${conversionRate}%`,
-            revenue: revenue._sum.amount || 0
+            revenue: revenue._sum.customerValue || 0
           }
         };
       })
@@ -139,9 +131,9 @@ router.post('/', async (req: Request, res: Response) => {
     const trackingCode = crypto.randomBytes(8).toString('hex');
 
     // Check if custom alias is already taken
-    if (data.customSlug) {
-      const existingLink = await prisma.affiliateLink.findUnique({
-        where: { customAlias: data.customAlias }
+    if (data.customAlias) {
+      const existingLink = await prisma.affiliateLink.findFirst({
+        where: { customSlug: data.customAlias }
       });
       
       if (existingLink) {
@@ -154,12 +146,10 @@ router.post('/', async (req: Request, res: Response) => {
         affiliateId: data.affiliateId,
         offerId: data.offerId,
         originalUrl: data.originalUrl,
-        // trackingCode field not in schema
-        customAlias: data.customAlias,
-        landingPageUrl: data.landingPageUrl,
+        shortUrl: `track/${trackingCode}`,
+        customSlug: data.customAlias,
         expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
-        isActive: true,
-        createdAt: new Date()
+        isActive: true
       },
       include: {
         offer: {
@@ -170,14 +160,8 @@ router.post('/', async (req: Request, res: Response) => {
         },
         affiliate: {
           select: {
-            user: {
-              select: {
-                firstName: true,
-                lastName: true
-              }
-            },
-            lastName: true,
-            email: true
+            id: true,
+            companyName: true
           }
         }
       }
@@ -216,14 +200,8 @@ router.get('/:id', async (req: Request, res: Response) => {
         },
         affiliate: {
           select: {
-            user: {
-              select: {
-                firstName: true,
-                lastName: true
-              }
-            },
-            lastName: true,
-            email: true
+            id: true,
+            companyName: true
           }
         },
         clickRecords: {
@@ -233,7 +211,7 @@ router.get('/:id', async (req: Request, res: Response) => {
             ipAddress: true,
             country: true,
             city: true,
-            deviceType: true,
+            device: true,
             browser: true,
             referrer: true
           },
@@ -242,18 +220,6 @@ router.get('/:id', async (req: Request, res: Response) => {
           },
           take: 50
         },
-        conversions: {
-          select: {
-            id: true,
-            createdAt: true,
-            amount: true,
-            status: true,
-            commission: true
-          },
-          orderBy: {
-            createdAt: 'desc'
-          }
-        }
       }
     });
 
@@ -312,10 +278,10 @@ router.put('/:id', async (req: Request, res: Response) => {
     const data = updateSchema.parse(req.body);
 
     // Check if custom alias is already taken (if being updated)
-    if (data.customSlug) {
+    if (data.customAlias) {
       const existingLink = await prisma.affiliateLink.findFirst({
         where: { 
-          customSlug: data.customSlug,
+          customSlug: data.customAlias,
           NOT: { id }
         }
       });
@@ -328,9 +294,9 @@ router.put('/:id', async (req: Request, res: Response) => {
     const updatedLink = await prisma.affiliateLink.update({
       where: { id },
       data: {
-        ...data,
+        customSlug: data.customAlias,
         expiresAt: data.expiresAt ? new Date(data.expiresAt) : undefined,
-        updatedAt: new Date()
+        isActive: data.isActive
       },
       include: {
         offer: {
@@ -341,14 +307,8 @@ router.put('/:id', async (req: Request, res: Response) => {
         },
         affiliate: {
           select: {
-            user: {
-              select: {
-                firstName: true,
-                lastName: true
-              }
-            },
-            lastName: true,
-            email: true
+            id: true,
+            companyName: true
           }
         }
       }

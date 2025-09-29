@@ -101,7 +101,12 @@ router.post('/', async (req, res) => {
         const data = logSchema.parse(req.body);
         const activity = await prisma.activity.create({
             data: {
-                ...data,
+                userId: data.userId || 'system',
+                action: data.level || 'info',
+                resource: data.source || 'system',
+                details: data.details,
+                ipAddress: data.ipAddress,
+                userAgent: data.userAgent
             }
         });
         res.status(201).json(activity);

@@ -1,6 +1,22 @@
 import { Request, Response } from 'express';
 import { PayoutAutomationModel } from '../models/PayoutAutomation';
 
+// Extend Express Request interface to include user
+declare global {
+  namespace Express {
+    interface Request {
+      user?: {
+        id: string;
+        email: string;
+        role: string;
+        accountId: string;
+        affiliateId?: string;
+        userId?: string;
+      };
+    }
+  }
+}
+
 export class PayoutBuilderController {
   // CRUD Operations
   static async createPayoutRule(req: Request, res: Response) {

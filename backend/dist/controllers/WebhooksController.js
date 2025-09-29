@@ -1,16 +1,14 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.WebhooksController = void 0;
-const Webhooks_1 = require("../models/Webhooks");
+const WebhooksService_1 = require("../services/WebhooksService");
+require("../types/express");
 class WebhooksController {
     static async createWebhook(req, res) {
         try {
             const { accountId } = req.user;
             const webhookData = req.body;
-            const webhook = await Webhooks_1.WebhookModel.create({
-                accountId,
-                ...webhookData
-            });
+            const webhook = await WebhooksService_1.WebhooksService.createWebhook(accountId, webhookData);
             res.status(201).json({
                 success: true,
                 data: webhook,
@@ -27,7 +25,7 @@ class WebhooksController {
     static async getWebhook(req, res) {
         try {
             const { id } = req.params;
-            const webhook = await Webhooks_1.WebhookModel.findById(id);
+            const webhook = await WebhooksService_1.WebhooksService.getWebhook(id);
             if (!webhook) {
                 return res.status(404).json({
                     success: false,
@@ -50,7 +48,7 @@ class WebhooksController {
         try {
             const { id } = req.params;
             const updateData = req.body;
-            const webhook = await Webhooks_1.WebhookModel.update(id, updateData);
+            const webhook = await WebhooksService_1.WebhooksService.updateWebhook(id, updateData);
             res.json({
                 success: true,
                 data: webhook,
@@ -67,7 +65,7 @@ class WebhooksController {
     static async deleteWebhook(req, res) {
         try {
             const { id } = req.params;
-            await Webhooks_1.WebhookModel.delete(id);
+            await WebhooksService_1.WebhooksService.deleteWebhook(id);
             res.json({
                 success: true,
                 message: 'Webhook deleted successfully'
@@ -84,7 +82,7 @@ class WebhooksController {
         try {
             const { accountId } = req.user;
             const filters = req.query;
-            const webhooks = await Webhooks_1.WebhookModel.list(accountId, filters);
+            const webhooks = await WebhooksService_1.WebhooksService.listWebhooks(accountId, filters);
             res.json({
                 success: true,
                 data: webhooks,
@@ -102,7 +100,7 @@ class WebhooksController {
         try {
             const { webhookId } = req.params;
             const eventData = req.body;
-            const webhook = await Webhooks_1.WebhookModel.addEvent(webhookId, eventData);
+            const webhook = await WebhooksService_1.WebhooksService.addEvent(webhookId, eventData);
             res.json({
                 success: true,
                 data: webhook,
@@ -120,7 +118,7 @@ class WebhooksController {
         try {
             const { webhookId, eventId } = req.params;
             const updateData = req.body;
-            const webhook = await Webhooks_1.WebhookModel.updateEvent(webhookId, eventId, updateData);
+            const webhook = await WebhooksService_1.WebhooksService.updateEvent(webhookId, eventId, updateData);
             res.json({
                 success: true,
                 data: webhook,
@@ -137,7 +135,7 @@ class WebhooksController {
     static async removeEvent(req, res) {
         try {
             const { webhookId, eventId } = req.params;
-            const webhook = await Webhooks_1.WebhookModel.removeEvent(webhookId, eventId);
+            const webhook = await WebhooksService_1.WebhooksService.removeEvent(webhookId, eventId);
             res.json({
                 success: true,
                 data: webhook,
@@ -155,7 +153,7 @@ class WebhooksController {
         try {
             const { id } = req.params;
             const testData = req.body;
-            const result = await Webhooks_1.WebhookModel.testWebhook(id, testData);
+            const result = await WebhooksService_1.WebhooksService.testWebhook(id, testData);
             res.json({
                 success: true,
                 data: result,
@@ -173,7 +171,7 @@ class WebhooksController {
         try {
             const { id } = req.params;
             const eventData = req.body;
-            const result = await Webhooks_1.WebhookModel.triggerWebhook(id, eventData);
+            const result = await WebhooksService_1.WebhooksService.triggerWebhook(id, eventData);
             res.json({
                 success: true,
                 data: result,
@@ -191,7 +189,7 @@ class WebhooksController {
         try {
             const { id } = req.params;
             const filters = req.query;
-            const history = await Webhooks_1.WebhookModel.getWebhookHistory(id, filters);
+            const history = await WebhooksService_1.WebhooksService.getWebhookHistory(id, filters);
             res.json({
                 success: true,
                 data: history,
@@ -209,7 +207,7 @@ class WebhooksController {
         try {
             const { id } = req.params;
             const { page = 1, limit = 50 } = req.query;
-            const logs = await Webhooks_1.WebhookModel.getWebhookLogs(id, Number(page), Number(limit));
+            const logs = await WebhooksService_1.WebhooksService.getWebhookLogs(id, Number(page), Number(limit));
             res.json({
                 success: true,
                 data: logs,
@@ -227,7 +225,7 @@ class WebhooksController {
         try {
             const { id } = req.params;
             const { startDate, endDate } = req.query;
-            const stats = await Webhooks_1.WebhookModel.getWebhookStats(id, startDate ? new Date(startDate) : undefined, endDate ? new Date(endDate) : undefined);
+            const stats = await WebhooksService_1.WebhooksService.getWebhookStats(id, startDate ? new Date(startDate) : undefined, endDate ? new Date(endDate) : undefined);
             res.json({
                 success: true,
                 data: stats
@@ -242,7 +240,7 @@ class WebhooksController {
     }
     static async getWebhookTemplates(req, res) {
         try {
-            const templates = await Webhooks_1.WebhookModel.getWebhookTemplates();
+            const templates = await WebhooksService_1.WebhooksService.getWebhookTemplates();
             res.json({
                 success: true,
                 data: templates,
@@ -260,7 +258,7 @@ class WebhooksController {
         try {
             const { accountId } = req.user;
             const { templateId, customizations } = req.body;
-            const webhook = await Webhooks_1.WebhookModel.createFromTemplate(accountId, templateId, customizations);
+            const webhook = await WebhooksService_1.WebhooksService.createWebhookFromTemplate(accountId, templateId, customizations);
             res.status(201).json({
                 success: true,
                 data: webhook,
@@ -277,7 +275,7 @@ class WebhooksController {
     static async generateSecret(req, res) {
         try {
             const { id } = req.params;
-            const secret = await Webhooks_1.WebhookModel.generateSecret(id);
+            const secret = await WebhooksService_1.WebhooksService.generateSecret(id);
             res.json({
                 success: true,
                 data: { secret },
@@ -295,7 +293,7 @@ class WebhooksController {
         try {
             const { id } = req.params;
             const { signature, payload } = req.body;
-            const isValid = await Webhooks_1.WebhookModel.validateSignature(id, signature, payload);
+            const isValid = await WebhooksService_1.WebhooksService.validateSignature(id, signature, payload);
             res.json({
                 success: true,
                 data: { isValid },
@@ -313,7 +311,7 @@ class WebhooksController {
         try {
             const { id } = req.params;
             const { logId } = req.body;
-            const result = await Webhooks_1.WebhookModel.retryWebhook(id, logId);
+            const result = await WebhooksService_1.WebhooksService.retryWebhook(id, logId);
             res.json({
                 success: true,
                 data: result,
@@ -330,7 +328,7 @@ class WebhooksController {
     static async getWebhooksDashboard(req, res) {
         try {
             const { accountId } = req.user;
-            const dashboard = await Webhooks_1.WebhookModel.getWebhooksDashboard(accountId);
+            const dashboard = await WebhooksService_1.WebhooksService.getWebhooksDashboard(accountId);
             res.json({
                 success: true,
                 data: dashboard
@@ -346,7 +344,7 @@ class WebhooksController {
     static async createDefaultWebhooks(req, res) {
         try {
             const { accountId } = req.user;
-            const webhooks = await Webhooks_1.WebhookModel.createDefaultWebhooks(accountId);
+            const webhooks = await WebhooksService_1.WebhooksService.createDefaultWebhooks(accountId);
             res.status(201).json({
                 success: true,
                 data: webhooks,
@@ -365,7 +363,7 @@ class WebhooksController {
             const { webhookId } = req.params;
             const payload = req.body;
             const headers = req.headers;
-            const result = await Webhooks_1.WebhookModel.receiveWebhook(webhookId, payload, headers);
+            const result = await WebhooksService_1.WebhooksService.receiveWebhook(webhookId, payload, headers);
             res.json({
                 success: true,
                 data: result,
@@ -383,7 +381,7 @@ class WebhooksController {
         try {
             const { accountId } = req.user;
             const { format = 'json' } = req.query;
-            const exportData = await Webhooks_1.WebhookModel.exportWebhooks(accountId, format);
+            const exportData = await WebhooksService_1.WebhooksService.exportWebhooks(accountId, format);
             res.json({
                 success: true,
                 data: exportData,
@@ -401,7 +399,7 @@ class WebhooksController {
         try {
             const { accountId } = req.user;
             const { webhooks, overwrite = false } = req.body;
-            const result = await Webhooks_1.WebhookModel.importWebhooks(accountId, webhooks, overwrite);
+            const result = await WebhooksService_1.WebhooksService.importWebhooks(accountId, webhooks, overwrite);
             res.json({
                 success: true,
                 data: result,

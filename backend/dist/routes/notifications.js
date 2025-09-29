@@ -159,7 +159,6 @@ router.put('/:id/read', async (req, res) => {
         const notification = await prisma.notification.update({
             where: { id },
             data: {
-                read: true,
                 read: true
             }
         });
@@ -181,7 +180,6 @@ router.put('/mark-all-read', async (req, res) => {
         const result = await prisma.notification.updateMany({
             where: filters,
             data: {
-                read: true,
                 read: true
             }
         });

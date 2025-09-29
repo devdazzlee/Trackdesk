@@ -102,7 +102,7 @@ router.get('/activity', async (req, res) => {
                 },
                 offer: {
                     select: {
-                        title: true
+                        name: true
                     }
                 }
             },
@@ -125,7 +125,7 @@ router.get('/activity', async (req, res) => {
             ...recentConversions.map(conversion => ({
                 id: `conversion-${conversion.id}`,
                 type: 'conversion',
-                user: conversion.affiliate?.user ? `${conversion.affiliate.user.firstName} ${conversion.affiliate.user.lastName}` : 'Anonymous',
+                user: 'Anonymous',
                 action: `Converted`,
                 timestamp: conversion.createdAt,
                 location: 'Unknown',

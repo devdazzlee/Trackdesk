@@ -1,26 +1,20 @@
 export interface AffiliateProfile {
     id: string;
     userId: string;
-    companyName: string;
-    website: string;
-    phone: string;
-    address: string;
-    taxId: string;
-    bankAccount: string;
-    status: 'PENDING' | 'ACTIVE' | 'SUSPENDED' | 'REJECTED';
-    tier: string;
+    companyName?: string;
+    website?: string;
+    socialMedia?: any;
+    paymentMethod: 'PAYPAL' | 'STRIPE' | 'BANK_TRANSFER' | 'CRYPTO' | 'WISE';
+    paymentEmail?: string;
+    taxId?: string;
+    address?: any;
+    tier: 'BRONZE' | 'SILVER' | 'GOLD' | 'PLATINUM';
+    commissionRate: number;
     totalEarnings: number;
     totalClicks: number;
     totalConversions: number;
     conversionRate: number;
-    lastActivity: Date;
-    kycVerified: boolean;
-    kycDocuments: string[];
-    preferredPaymentMethod: string;
-    paymentDetails: any;
-    notes: string;
-    tags: string[];
-    customFields: Record<string, any>;
+    lastActivityAt?: Date;
     createdAt: Date;
     updatedAt: Date;
 }

@@ -2,6 +2,22 @@ import { Request, Response } from 'express';
 import { OfferService } from '../services/OfferService';
 import { z } from 'zod';
 
+// Extend Express Request interface to include user
+declare global {
+  namespace Express {
+    interface Request {
+      user?: {
+        id: string;
+        email: string;
+        role: string;
+        accountId: string;
+        affiliateId?: string;
+        userId?: string;
+      };
+    }
+  }
+}
+
 const offerService = new OfferService();
 
 const createOfferSchema = z.object({

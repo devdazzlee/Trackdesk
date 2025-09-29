@@ -59,12 +59,21 @@ export declare class TrafficControlModel {
     static deleteRule(id: string): Promise<void>;
     static listRules(filters?: any): Promise<TrafficRule[]>;
     static processTraffic(data: any, ipAddress: string, userAgent: string, affiliateId?: string, clickId?: string): Promise<TrafficEvent>;
-    private static evaluateRule;
-    private static evaluateCondition;
-    private static getFieldValue;
-    private static executeTrafficAction;
     static getTrafficEvents(filters?: any, page?: number, limit?: number): Promise<TrafficEvent[]>;
     static getTrafficStats(startDate?: Date, endDate?: Date): Promise<TrafficStats>;
     static createDefaultRules(): Promise<TrafficRule[]>;
+    static testRule(id: string, testData: any): Promise<any>;
+    static blockIP(ipAddress: string, reason: string, duration?: number): Promise<any>;
+    static unblockIP(ipAddress: string): Promise<any>;
+    static getBlockedIPs(page?: number, limit?: number): Promise<any[]>;
+    static blockCountry(countryCode: string, reason: string): Promise<any>;
+    static unblockCountry(countryCode: string): Promise<any>;
+    static getBlockedCountries(): Promise<any[]>;
+    static updateRateLimit(ruleId: string, requestsPerMinute: number, requestsPerHour: number, requestsPerDay: number): Promise<any>;
+    static blockDevice(deviceType: string, reason: string): Promise<any>;
+    static unblockDevice(deviceType: string): Promise<any>;
+    static getTrafficControlDashboard(): Promise<any>;
+    static exportRules(format: string): Promise<any>;
+    static importRules(rules: any[], overwrite?: boolean): Promise<any>;
 }
 //# sourceMappingURL=TrafficControl.d.ts.map

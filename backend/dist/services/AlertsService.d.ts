@@ -4,15 +4,29 @@ export declare class AlertsService {
     static updateAlert(id: string, updateData: any): Promise<import("../models/Alerts").Alert>;
     static deleteAlert(id: string): Promise<void>;
     static listAlerts(accountId: string, filters?: any): Promise<import("../models/Alerts").Alert[]>;
-    static addRule(alertId: string, ruleData: any): Promise<any>;
-    static updateRule(alertId: string, ruleId: string, updateData: any): Promise<any>;
-    static removeRule(alertId: string, ruleId: string): Promise<any>;
-    static addAction(alertId: string, actionData: any): Promise<any>;
-    static updateAction(alertId: string, actionId: string, updateData: any): Promise<any>;
-    static removeAction(alertId: string, actionId: string): Promise<any>;
+    static addRule(alertId: string, ruleData: any): Promise<{
+        success: boolean;
+    }>;
+    static updateRule(alertId: string, ruleId: string, updateData: any): Promise<{
+        success: boolean;
+    }>;
+    static removeRule(alertId: string, ruleId: string): Promise<{
+        success: boolean;
+    }>;
+    static addAction(alertId: string, actionData: any): Promise<{
+        success: boolean;
+    }>;
+    static updateAction(alertId: string, actionId: string, updateData: any): Promise<{
+        success: boolean;
+    }>;
+    static removeAction(alertId: string, actionId: string): Promise<{
+        success: boolean;
+    }>;
     static triggerAlert(alertId: string, triggerData: any): Promise<import("../models/Alerts").AlertEvent>;
-    static testAlert(alertId: string, testData: any): Promise<import("../models/Alerts").AlertEvent>;
-    static getAlertHistory(alertId: string, filters?: any): Promise<any>;
+    static testAlert(alertId: string, testData: any): Promise<{
+        success: boolean;
+    }>;
+    static getAlertHistory(alertId: string, filters?: any): Promise<any[]>;
     static getAlertStats(accountId: string, startDate?: Date, endDate?: Date): Promise<any>;
     static getAlertsDashboard(accountId: string): Promise<any>;
     static createDefaultAlerts(accountId: string): Promise<import("../models/Alerts").Alert[]>;
@@ -30,9 +44,9 @@ export declare class AlertsService {
     private static sendTeamsMessage;
     private static replacePlaceholders;
     static getAlertPerformance(alertId: string, startDate?: Date, endDate?: Date): Promise<{
-        totalTriggers: any;
-        successfulActions: any;
-        failedActions: any;
+        totalTriggers: number;
+        successfulActions: number;
+        failedActions: number;
         successRate: number;
         averageResponseTime: number;
         byActionType: Record<string, number>;

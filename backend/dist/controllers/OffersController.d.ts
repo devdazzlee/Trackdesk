@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import '../types/express';
 export declare class OffersController {
     static createOffer(req: Request, res: Response): Promise<void>;
     static getOffer(req: Request, res: Response): Promise<Response<any, Record<string, any>>>;

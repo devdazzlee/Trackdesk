@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
+import * as jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -9,6 +9,9 @@ export interface AuthenticatedRequest extends Request {
     id: string;
     email: string;
     role: string;
+    accountId: string;
+    affiliateId?: string;
+    userId?: string;
     affiliateProfile?: any;
     adminProfile?: any;
   };
@@ -40,6 +43,9 @@ export const authenticateToken = async (req: AuthenticatedRequest, res: Response
       id: user.id,
       email: user.email,
       role: user.role,
+      accountId: user.id, // Use user ID as accountId for now
+      affiliateId: user.affiliateProfile?.id,
+      userId: user.id,
       affiliateProfile: user.affiliateProfile,
       adminProfile: user.adminProfile
     };
@@ -112,6 +118,9 @@ export const optionalAuth = async (req: AuthenticatedRequest, res: Response, nex
           id: user.id,
           email: user.email,
           role: user.role,
+          accountId: user.id, // Use user ID as accountId for now
+          affiliateId: user.affiliateProfile?.id,
+          userId: user.id,
           affiliateProfile: user.affiliateProfile,
           adminProfile: user.adminProfile
         };

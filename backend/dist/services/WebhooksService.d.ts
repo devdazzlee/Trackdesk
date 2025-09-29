@@ -1,36 +1,220 @@
 export declare class WebhooksService {
-    static createWebhook(accountId: string, webhookData: any): Promise<any>;
-    static getWebhook(id: string): Promise<any>;
-    static updateWebhook(id: string, updateData: any): Promise<any>;
-    static deleteWebhook(id: string): Promise<any>;
-    static listWebhooks(accountId: string, filters?: any): Promise<any>;
-    static addEvent(webhookId: string, eventData: any): Promise<any>;
-    static updateEvent(webhookId: string, eventId: string, updateData: any): Promise<any>;
-    static removeEvent(webhookId: string, eventId: string): Promise<any>;
-    static testWebhook(id: string, testData: any): Promise<any>;
-    static triggerWebhook(id: string, eventData: any): Promise<any>;
-    static getWebhookHistory(id: string, filters?: any): Promise<any>;
-    static getWebhookLogs(id: string, page?: number, limit?: number): Promise<any>;
-    static getWebhookStats(id: string, startDate?: Date, endDate?: Date): Promise<any>;
-    static getWebhookTemplates(): Promise<any>;
-    static createWebhookFromTemplate(accountId: string, templateId: string, customizations: any): Promise<any>;
-    static generateSecret(id: string): Promise<any>;
-    static validateSignature(id: string, signature: string, payload: string): Promise<any>;
-    static retryWebhook(id: string, logId: string): Promise<any>;
-    static getWebhooksDashboard(accountId: string): Promise<any>;
-    static createDefaultWebhooks(accountId: string): Promise<any>;
-    static receiveWebhook(webhookId: string, payload: any, headers: any): Promise<any>;
-    static exportWebhooks(accountId: string, format: string): Promise<any>;
-    static importWebhooks(accountId: string, webhooks: any[], overwrite?: boolean): Promise<any>;
+    static createWebhook(accountId: string, webhookData: any): Promise<{
+        name: string;
+        url: string;
+        id: string;
+        status: import(".prisma/client").$Enums.WebhookStatus;
+        createdAt: Date;
+        updatedAt: Date;
+        lastTriggered: Date | null;
+        events: string[];
+        secret: string;
+        successRate: number;
+        totalCalls: number;
+    }>;
+    static getWebhook(id: string): Promise<{
+        name: string;
+        url: string;
+        id: string;
+        status: import(".prisma/client").$Enums.WebhookStatus;
+        createdAt: Date;
+        updatedAt: Date;
+        lastTriggered: Date | null;
+        events: string[];
+        secret: string;
+        successRate: number;
+        totalCalls: number;
+    }>;
+    static updateWebhook(id: string, updateData: any): Promise<{
+        name: string;
+        url: string;
+        id: string;
+        status: import(".prisma/client").$Enums.WebhookStatus;
+        createdAt: Date;
+        updatedAt: Date;
+        lastTriggered: Date | null;
+        events: string[];
+        secret: string;
+        successRate: number;
+        totalCalls: number;
+    }>;
+    static deleteWebhook(id: string): Promise<{
+        name: string;
+        url: string;
+        id: string;
+        status: import(".prisma/client").$Enums.WebhookStatus;
+        createdAt: Date;
+        updatedAt: Date;
+        lastTriggered: Date | null;
+        events: string[];
+        secret: string;
+        successRate: number;
+        totalCalls: number;
+    }>;
+    static listWebhooks(accountId: string, filters?: any): Promise<{
+        name: string;
+        url: string;
+        id: string;
+        status: import(".prisma/client").$Enums.WebhookStatus;
+        createdAt: Date;
+        updatedAt: Date;
+        lastTriggered: Date | null;
+        events: string[];
+        secret: string;
+        successRate: number;
+        totalCalls: number;
+    }[]>;
+    static addEvent(webhookId: string, eventData: any): Promise<{
+        name: string;
+        url: string;
+        id: string;
+        status: import(".prisma/client").$Enums.WebhookStatus;
+        createdAt: Date;
+        updatedAt: Date;
+        lastTriggered: Date | null;
+        events: string[];
+        secret: string;
+        successRate: number;
+        totalCalls: number;
+    }>;
+    static updateEvent(webhookId: string, eventId: string, updateData: any): Promise<{
+        name: string;
+        url: string;
+        id: string;
+        status: import(".prisma/client").$Enums.WebhookStatus;
+        createdAt: Date;
+        updatedAt: Date;
+        lastTriggered: Date | null;
+        events: string[];
+        secret: string;
+        successRate: number;
+        totalCalls: number;
+    }>;
+    static removeEvent(webhookId: string, eventId: string): Promise<{
+        name: string;
+        url: string;
+        id: string;
+        status: import(".prisma/client").$Enums.WebhookStatus;
+        createdAt: Date;
+        updatedAt: Date;
+        lastTriggered: Date | null;
+        events: string[];
+        secret: string;
+        successRate: number;
+        totalCalls: number;
+    }>;
+    static testWebhook(id: string, testData: any): Promise<{
+        name: string;
+        url: string;
+        id: string;
+        status: import(".prisma/client").$Enums.WebhookStatus;
+        createdAt: Date;
+        updatedAt: Date;
+        lastTriggered: Date | null;
+        events: string[];
+        secret: string;
+        successRate: number;
+        totalCalls: number;
+    }>;
+    static triggerWebhook(id: string, eventData: any): Promise<{
+        name: string;
+        url: string;
+        id: string;
+        status: import(".prisma/client").$Enums.WebhookStatus;
+        createdAt: Date;
+        updatedAt: Date;
+        lastTriggered: Date | null;
+        events: string[];
+        secret: string;
+        successRate: number;
+        totalCalls: number;
+    }>;
+    static getWebhookHistory(id: string, filters?: any): Promise<{
+        name: string;
+        url: string;
+        id: string;
+        status: import(".prisma/client").$Enums.WebhookStatus;
+        createdAt: Date;
+        updatedAt: Date;
+        lastTriggered: Date | null;
+        events: string[];
+        secret: string;
+        successRate: number;
+        totalCalls: number;
+    }[]>;
+    static getWebhookLogs(id: string, page?: number, limit?: number): Promise<{
+        name: string;
+        url: string;
+        id: string;
+        status: import(".prisma/client").$Enums.WebhookStatus;
+        createdAt: Date;
+        updatedAt: Date;
+        lastTriggered: Date | null;
+        events: string[];
+        secret: string;
+        successRate: number;
+        totalCalls: number;
+    }[]>;
+    static getWebhookStats(id: string, startDate?: Date, endDate?: Date): Promise<{
+        name: string;
+        url: string;
+        id: string;
+        status: import(".prisma/client").$Enums.WebhookStatus;
+        createdAt: Date;
+        updatedAt: Date;
+        lastTriggered: Date | null;
+        events: string[];
+        secret: string;
+        successRate: number;
+        totalCalls: number;
+    }>;
+    static getWebhookTemplates(): Promise<any[]>;
+    static createWebhookFromTemplate(accountId: string, templateId: string, customizations: any): Promise<{
+        name: string;
+        url: string;
+        id: string;
+        status: import(".prisma/client").$Enums.WebhookStatus;
+        createdAt: Date;
+        updatedAt: Date;
+        lastTriggered: Date | null;
+        events: string[];
+        secret: string;
+        successRate: number;
+        totalCalls: number;
+    }>;
+    static generateSecret(id: string): Promise<{
+        secret: string;
+    }>;
+    static validateSignature(id: string, signature: string, payload: string): Promise<boolean>;
+    static retryWebhook(id: string, logId: string): Promise<{
+        name: string;
+        url: string;
+        id: string;
+        status: import(".prisma/client").$Enums.WebhookStatus;
+        createdAt: Date;
+        updatedAt: Date;
+        lastTriggered: Date | null;
+        events: string[];
+        secret: string;
+        successRate: number;
+        totalCalls: number;
+    }>;
+    static getWebhooksDashboard(accountId: string): Promise<{
+        stats: {};
+    }>;
+    static createDefaultWebhooks(accountId: string): Promise<any[]>;
+    static receiveWebhook(webhookId: string, payload: any, headers: any): Promise<{
+        received: boolean;
+    }>;
+    static exportWebhooks(accountId: string, format: string): Promise<any[]>;
+    static importWebhooks(accountId: string, webhooks: any[], overwrite?: boolean): Promise<any[]>;
     static executeWebhook(webhookId: string, eventData: any): Promise<{
         success: boolean;
         status: number;
         statusText: string;
         responseTime: number;
         response: string;
-        headers: {
-            [k: string]: string;
-        };
+        headers: {};
         error?: undefined;
     } | {
         success: boolean;
@@ -55,9 +239,7 @@ export declare class WebhooksService {
         statusText: string;
         responseTime: number;
         response: string;
-        headers: {
-            [k: string]: string;
-        };
+        headers: {};
         error?: undefined;
     } | {
         success: boolean;
@@ -69,9 +251,9 @@ export declare class WebhooksService {
         headers?: undefined;
     }>;
     static getWebhookPerformance(webhookId: string, startDate?: Date, endDate?: Date): Promise<{
-        totalAttempts: any;
-        successfulAttempts: any;
-        failedAttempts: any;
+        totalAttempts: number;
+        successfulAttempts: number;
+        failedAttempts: number;
         successRate: number;
         averageResponseTime: number;
         byStatus: Record<string, number>;

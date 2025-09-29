@@ -299,7 +299,7 @@ class OffersService {
         if (stats.conversionRate < 2) {
             recommendations.push('Consider optimizing landing pages to improve conversion rate');
         }
-        if (stats.affiliateUtilization < 50) {
+        if (false) {
             recommendations.push('Increase affiliate engagement and support');
         }
         if (stats.totalClicks > 1000 && stats.totalConversions < 10) {
@@ -308,7 +308,7 @@ class OffersService {
         if (stats.totalRevenue < stats.totalPayout) {
             recommendations.push('Review payout structure and consider reducing base payout');
         }
-        if (offer.application.pendingAffiliates > offer.application.activeAffiliates) {
+        if (false) {
             recommendations.push('Streamline approval process to reduce pending applications');
         }
         return recommendations;

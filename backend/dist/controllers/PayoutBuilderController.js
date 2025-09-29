@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PayoutBuilderController = void 0;
 const PayoutAutomation_1 = require("../models/PayoutAutomation");
+require("../types/express");
 class PayoutBuilderController {
     static async createPayoutRule(req, res) {
         try {

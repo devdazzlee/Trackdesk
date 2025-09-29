@@ -7,20 +7,38 @@ export declare class TrafficControlService {
     static processTraffic(data: any, ipAddress: string, userAgent: string, affiliateId?: string, clickId?: string): Promise<import("../models/TrafficControl").TrafficEvent>;
     static getTrafficEvents(filters?: any, page?: number, limit?: number): Promise<import("../models/TrafficControl").TrafficEvent[]>;
     static getTrafficStats(startDate?: Date, endDate?: Date): Promise<import("../models/TrafficControl").TrafficStats>;
-    static testRule(id: string, testData: any): Promise<any>;
+    static testRule(id: string, testData: any): Promise<{
+        success: boolean;
+    }>;
     static createDefaultRules(): Promise<import("../models/TrafficControl").TrafficRule[]>;
-    static blockIP(ipAddress: string, reason: string, duration?: number): Promise<any>;
-    static unblockIP(ipAddress: string): Promise<any>;
-    static getBlockedIPs(page?: number, limit?: number): Promise<any>;
-    static blockCountry(countryCode: string, reason: string): Promise<any>;
-    static unblockCountry(countryCode: string): Promise<any>;
-    static getBlockedCountries(): Promise<any>;
-    static updateRateLimit(ruleId: string, requestsPerMinute: number, requestsPerHour: number, requestsPerDay: number): Promise<any>;
-    static blockDevice(deviceType: string, reason: string): Promise<any>;
-    static unblockDevice(deviceType: string): Promise<any>;
-    static getTrafficControlDashboard(): Promise<any>;
-    static exportRules(format: string): Promise<any>;
-    static importRules(rules: any[], overwrite?: boolean): Promise<any>;
+    static blockIP(ipAddress: string, reason: string, duration?: number): Promise<{
+        success: boolean;
+    }>;
+    static unblockIP(ipAddress: string): Promise<{
+        success: boolean;
+    }>;
+    static getBlockedIPs(page?: number, limit?: number): Promise<any[]>;
+    static blockCountry(countryCode: string, reason: string): Promise<{
+        success: boolean;
+    }>;
+    static unblockCountry(countryCode: string): Promise<{
+        success: boolean;
+    }>;
+    static getBlockedCountries(): Promise<any[]>;
+    static updateRateLimit(ruleId: string, requestsPerMinute: number, requestsPerHour: number, requestsPerDay: number): Promise<{
+        success: boolean;
+    }>;
+    static blockDevice(deviceType: string, reason: string): Promise<{
+        success: boolean;
+    }>;
+    static unblockDevice(deviceType: string): Promise<{
+        success: boolean;
+    }>;
+    static getTrafficControlDashboard(): Promise<{
+        stats: {};
+    }>;
+    static exportRules(format: string): Promise<any[]>;
+    static importRules(rules: any[], overwrite?: boolean): Promise<any[]>;
     static evaluateTrafficRules(data: any, ipAddress: string, userAgent: string, affiliateId?: string): Promise<any[]>;
     private static evaluateRule;
     private static getFieldValue;
@@ -47,16 +65,16 @@ export declare class TrafficControlService {
         allowedRequests: number;
         blockedRequests: number;
         redirectedRequests: number;
-        rateLimitedRequests: any;
+        rateLimitedRequests: number;
         allowRate: number;
         blockRate: number;
-        byAction: any;
-        byCountry: Record<string, any>;
-        byDevice: Record<string, any>;
-        byBrowser: any;
-        byOS: any;
-        byHour: Record<number, any>;
-        byDay: any;
+        byAction: {};
+        byCountry: {};
+        byDevice: {};
+        byBrowser: {};
+        byOS: {};
+        byHour: {};
+        byDay: {};
     }>;
     static getTrafficControlRecommendations(): Promise<string[]>;
     static analyzeTrafficPatterns(startDate?: Date, endDate?: Date): Promise<{

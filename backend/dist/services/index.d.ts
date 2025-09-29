@@ -300,8 +300,8 @@ export declare class IntegrationService {
         status: import(".prisma/client").$Enums.WebhookStatus;
         createdAt: Date;
         updatedAt: Date;
-        events: string[];
         lastTriggered: Date | null;
+        events: string[];
         secret: string;
         successRate: number;
         totalCalls: number;

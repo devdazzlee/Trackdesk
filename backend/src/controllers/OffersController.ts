@@ -1,6 +1,22 @@
 import { Request, Response } from 'express';
 import { OffersModel } from '../models/Offers';
 
+// Extend Express Request interface to include user
+declare global {
+  namespace Express {
+    interface Request {
+      user?: {
+        id: string;
+        email: string;
+        role: string;
+        accountId: string;
+        affiliateId?: string;
+        userId?: string;
+      };
+    }
+  }
+}
+
 export class OffersController {
   // CRUD Operations
   static async createOffer(req: Request, res: Response) {

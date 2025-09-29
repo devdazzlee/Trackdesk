@@ -59,23 +59,9 @@ export declare class AlertsModel {
     static delete(id: string): Promise<void>;
     static list(accountId: string, filters?: any): Promise<Alert[]>;
     static triggerAlert(alertId: string, data: any): Promise<AlertEvent>;
-    private static executeActions;
-    private static sendEmailAlert;
-    private static sendSMSAlert;
-    private static sendPushAlert;
-    private static sendWebhookAlert;
-    private static sendSlackAlert;
-    private static sendDiscordAlert;
-    private static executeCustomAction;
-    static acknowledgeEvent(eventId: string, userId: string, notes?: string): Promise<AlertEvent>;
-    static resolveEvent(eventId: string, userId: string, notes?: string): Promise<AlertEvent>;
-    static getEvents(alertId: string, filters?: any, page?: number, limit?: number): Promise<AlertEvent[]>;
-    static subscribeToAlert(userId: string, alertId: string, notificationMethods: string[]): Promise<AlertSubscription>;
-    static unsubscribeFromAlert(userId: string, alertId: string): Promise<void>;
-    static getUserSubscriptions(userId: string): Promise<AlertSubscription[]>;
+    static testAlert(alertId: string): Promise<AlertEvent>;
     static getAlertStats(accountId: string, startDate?: Date, endDate?: Date): Promise<any>;
     static createDefaultAlerts(accountId: string): Promise<Alert[]>;
-    static testAlert(alertId: string): Promise<AlertEvent>;
     static getAlertDashboard(accountId: string): Promise<any>;
 }
 //# sourceMappingURL=Alerts.d.ts.map

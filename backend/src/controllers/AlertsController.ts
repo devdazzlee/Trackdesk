@@ -1,5 +1,21 @@
 import { Request, Response } from 'express';
-import { AlertsModel } from '../models/Alerts';
+import { AlertsService } from '../services/AlertsService';
+
+// Extend Express Request interface to include user
+declare global {
+  namespace Express {
+    interface Request {
+      user?: {
+        id: string;
+        email: string;
+        role: string;
+        accountId: string;
+        affiliateId?: string;
+        userId?: string;
+      };
+    }
+  }
+}
 
 export class AlertsController {
   // CRUD Operations
@@ -8,10 +24,7 @@ export class AlertsController {
       const { accountId } = req.user!;
       const alertData = req.body;
       
-      const alert = await AlertsModel.create({
-        accountId,
-        ...alertData
-      });
+      const alert = await AlertsService.createAlert(accountId, alertData);
       
       res.status(201).json({
         success: true,
@@ -30,7 +43,7 @@ export class AlertsController {
     try {
       const { id } = req.params;
       
-      const alert = await AlertsModel.findById(id);
+      const alert = await AlertsService.getAlert(id);
       if (!alert) {
         return res.status(404).json({
           success: false,
@@ -55,7 +68,7 @@ export class AlertsController {
       const { id } = req.params;
       const updateData = req.body;
       
-      const alert = await AlertsModel.update(id, updateData);
+      const alert = await AlertsService.updateAlert(id, updateData);
       
       res.json({
         success: true,
@@ -74,7 +87,7 @@ export class AlertsController {
     try {
       const { id } = req.params;
       
-      await AlertsModel.delete(id);
+      await AlertsService.deleteAlert(id);
       
       res.json({
         success: true,
@@ -93,7 +106,7 @@ export class AlertsController {
       const { accountId } = req.user!;
       const filters = req.query;
       
-      const alerts = await AlertsModel.list(accountId, filters);
+      const alerts = await AlertsService.listAlerts(accountId, filters);
       
       res.json({
         success: true,
@@ -114,11 +127,11 @@ export class AlertsController {
       const { alertId } = req.params;
       const ruleData = req.body;
       
-      const alert = await AlertsModel.addRule(alertId, ruleData);
+      const result = await AlertsService.addRule(alertId, ruleData);
       
       res.json({
         success: true,
-        data: alert,
+        data: result,
         message: 'Rule added successfully'
       });
     } catch (error: any) {
@@ -134,11 +147,11 @@ export class AlertsController {
       const { alertId, ruleId } = req.params;
       const updateData = req.body;
       
-      const alert = await AlertsModel.updateRule(alertId, ruleId, updateData);
+      const result = await AlertsService.updateRule(alertId, ruleId, updateData);
       
       res.json({
         success: true,
-        data: alert,
+        data: result,
         message: 'Rule updated successfully'
       });
     } catch (error: any) {
@@ -153,11 +166,11 @@ export class AlertsController {
     try {
       const { alertId, ruleId } = req.params;
       
-      const alert = await AlertsModel.removeRule(alertId, ruleId);
+      const result = await AlertsService.removeRule(alertId, ruleId);
       
       res.json({
         success: true,
-        data: alert,
+        data: result,
         message: 'Rule removed successfully'
       });
     } catch (error: any) {
@@ -174,11 +187,11 @@ export class AlertsController {
       const { alertId } = req.params;
       const actionData = req.body;
       
-      const alert = await AlertsModel.addAction(alertId, actionData);
+      const result = await AlertsService.addAction(alertId, actionData);
       
       res.json({
         success: true,
-        data: alert,
+        data: result,
         message: 'Action added successfully'
       });
     } catch (error: any) {
@@ -194,11 +207,11 @@ export class AlertsController {
       const { alertId, actionId } = req.params;
       const updateData = req.body;
       
-      const alert = await AlertsModel.updateAction(alertId, actionId, updateData);
+      const result = await AlertsService.updateAction(alertId, actionId, updateData);
       
       res.json({
         success: true,
-        data: alert,
+        data: result,
         message: 'Action updated successfully'
       });
     } catch (error: any) {
@@ -213,11 +226,11 @@ export class AlertsController {
     try {
       const { alertId, actionId } = req.params;
       
-      const alert = await AlertsModel.removeAction(alertId, actionId);
+      const result = await AlertsService.removeAction(alertId, actionId);
       
       res.json({
         success: true,
-        data: alert,
+        data: result,
         message: 'Action removed successfully'
       });
     } catch (error: any) {
@@ -234,7 +247,7 @@ export class AlertsController {
       const { alertId } = req.params;
       const triggerData = req.body;
       
-      const result = await AlertsModel.triggerAlert(alertId, triggerData);
+      const result = await AlertsService.triggerAlert(alertId, triggerData);
       
       res.json({
         success: true,
@@ -254,7 +267,7 @@ export class AlertsController {
       const { alertId } = req.params;
       const testData = req.body;
       
-      const result = await AlertsModel.testAlert(alertId, testData);
+      const result = await AlertsService.testAlert(alertId, testData);
       
       res.json({
         success: true,
@@ -275,7 +288,7 @@ export class AlertsController {
       const { alertId } = req.params;
       const filters = req.query;
       
-      const history = await AlertsModel.getAlertHistory(alertId, filters);
+      const history = await AlertsService.getAlertHistory(alertId, filters);
       
       res.json({
         success: true,
@@ -296,7 +309,7 @@ export class AlertsController {
       const { accountId } = req.user!;
       const { startDate, endDate } = req.query;
       
-      const stats = await AlertsModel.getAlertStats(accountId, startDate ? new Date(startDate as string) : undefined, endDate ? new Date(endDate as string) : undefined);
+      const stats = await AlertsService.getAlertStats(accountId, startDate ? new Date(startDate as string) : undefined, endDate ? new Date(endDate as string) : undefined);
       
       res.json({
         success: true,
@@ -315,7 +328,7 @@ export class AlertsController {
     try {
       const { accountId } = req.user!;
       
-      const dashboard = await AlertsModel.getAlertsDashboard(accountId);
+      const dashboard = await AlertsService.getAlertsDashboard(accountId);
       
       res.json({
         success: true,
@@ -334,7 +347,7 @@ export class AlertsController {
     try {
       const { accountId } = req.user!;
       
-      const alerts = await AlertsModel.createDefaultAlerts(accountId);
+      const alerts = await AlertsService.createDefaultAlerts(accountId);
       
       res.status(201).json({
         success: true,

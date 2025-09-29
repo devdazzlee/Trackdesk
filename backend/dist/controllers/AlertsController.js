@@ -1,16 +1,14 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AlertsController = void 0;
-const Alerts_1 = require("../models/Alerts");
+const AlertsService_1 = require("../services/AlertsService");
+require("../types/express");
 class AlertsController {
     static async createAlert(req, res) {
         try {
             const { accountId } = req.user;
             const alertData = req.body;
-            const alert = await Alerts_1.AlertsModel.create({
-                accountId,
-                ...alertData
-            });
+            const alert = await AlertsService_1.AlertsService.createAlert(accountId, alertData);
             res.status(201).json({
                 success: true,
                 data: alert,
@@ -27,7 +25,7 @@ class AlertsController {
     static async getAlert(req, res) {
         try {
             const { id } = req.params;
-            const alert = await Alerts_1.AlertsModel.findById(id);
+            const alert = await AlertsService_1.AlertsService.getAlert(id);
             if (!alert) {
                 return res.status(404).json({
                     success: false,
@@ -50,7 +48,7 @@ class AlertsController {
         try {
             const { id } = req.params;
             const updateData = req.body;
-            const alert = await Alerts_1.AlertsModel.update(id, updateData);
+            const alert = await AlertsService_1.AlertsService.updateAlert(id, updateData);
             res.json({
                 success: true,
                 data: alert,
@@ -67,7 +65,7 @@ class AlertsController {
     static async deleteAlert(req, res) {
         try {
             const { id } = req.params;
-            await Alerts_1.AlertsModel.delete(id);
+            await AlertsService_1.AlertsService.deleteAlert(id);
             res.json({
                 success: true,
                 message: 'Alert deleted successfully'
@@ -84,7 +82,7 @@ class AlertsController {
         try {
             const { accountId } = req.user;
             const filters = req.query;
-            const alerts = await Alerts_1.AlertsModel.list(accountId, filters);
+            const alerts = await AlertsService_1.AlertsService.listAlerts(accountId, filters);
             res.json({
                 success: true,
                 data: alerts,
@@ -102,10 +100,10 @@ class AlertsController {
         try {
             const { alertId } = req.params;
             const ruleData = req.body;
-            const alert = await Alerts_1.AlertsModel.addRule(alertId, ruleData);
+            const result = await AlertsService_1.AlertsService.addRule(alertId, ruleData);
             res.json({
                 success: true,
-                data: alert,
+                data: result,
                 message: 'Rule added successfully'
             });
         }
@@ -120,10 +118,10 @@ class AlertsController {
         try {
             const { alertId, ruleId } = req.params;
             const updateData = req.body;
-            const alert = await Alerts_1.AlertsModel.updateRule(alertId, ruleId, updateData);
+            const result = await AlertsService_1.AlertsService.updateRule(alertId, ruleId, updateData);
             res.json({
                 success: true,
-                data: alert,
+                data: result,
                 message: 'Rule updated successfully'
             });
         }
@@ -137,10 +135,10 @@ class AlertsController {
     static async removeRule(req, res) {
         try {
             const { alertId, ruleId } = req.params;
-            const alert = await Alerts_1.AlertsModel.removeRule(alertId, ruleId);
+            const result = await AlertsService_1.AlertsService.removeRule(alertId, ruleId);
             res.json({
                 success: true,
-                data: alert,
+                data: result,
                 message: 'Rule removed successfully'
             });
         }
@@ -155,10 +153,10 @@ class AlertsController {
         try {
             const { alertId } = req.params;
             const actionData = req.body;
-            const alert = await Alerts_1.AlertsModel.addAction(alertId, actionData);
+            const result = await AlertsService_1.AlertsService.addAction(alertId, actionData);
             res.json({
                 success: true,
-                data: alert,
+                data: result,
                 message: 'Action added successfully'
             });
         }
@@ -173,10 +171,10 @@ class AlertsController {
         try {
             const { alertId, actionId } = req.params;
             const updateData = req.body;
-            const alert = await Alerts_1.AlertsModel.updateAction(alertId, actionId, updateData);
+            const result = await AlertsService_1.AlertsService.updateAction(alertId, actionId, updateData);
             res.json({
                 success: true,
-                data: alert,
+                data: result,
                 message: 'Action updated successfully'
             });
         }
@@ -190,10 +188,10 @@ class AlertsController {
     static async removeAction(req, res) {
         try {
             const { alertId, actionId } = req.params;
-            const alert = await Alerts_1.AlertsModel.removeAction(alertId, actionId);
+            const result = await AlertsService_1.AlertsService.removeAction(alertId, actionId);
             res.json({
                 success: true,
-                data: alert,
+                data: result,
                 message: 'Action removed successfully'
             });
         }
@@ -208,7 +206,7 @@ class AlertsController {
         try {
             const { alertId } = req.params;
             const triggerData = req.body;
-            const result = await Alerts_1.AlertsModel.triggerAlert(alertId, triggerData);
+            const result = await AlertsService_1.AlertsService.triggerAlert(alertId, triggerData);
             res.json({
                 success: true,
                 data: result,
@@ -226,7 +224,7 @@ class AlertsController {
         try {
             const { alertId } = req.params;
             const testData = req.body;
-            const result = await Alerts_1.AlertsModel.testAlert(alertId, testData);
+            const result = await AlertsService_1.AlertsService.testAlert(alertId, testData);
             res.json({
                 success: true,
                 data: result,
@@ -244,7 +242,7 @@ class AlertsController {
         try {
             const { alertId } = req.params;
             const filters = req.query;
-            const history = await Alerts_1.AlertsModel.getAlertHistory(alertId, filters);
+            const history = await AlertsService_1.AlertsService.getAlertHistory(alertId, filters);
             res.json({
                 success: true,
                 data: history,
@@ -262,7 +260,7 @@ class AlertsController {
         try {
             const { accountId } = req.user;
             const { startDate, endDate } = req.query;
-            const stats = await Alerts_1.AlertsModel.getAlertStats(accountId, startDate ? new Date(startDate) : undefined, endDate ? new Date(endDate) : undefined);
+            const stats = await AlertsService_1.AlertsService.getAlertStats(accountId, startDate ? new Date(startDate) : undefined, endDate ? new Date(endDate) : undefined);
             res.json({
                 success: true,
                 data: stats
@@ -278,7 +276,7 @@ class AlertsController {
     static async getAlertsDashboard(req, res) {
         try {
             const { accountId } = req.user;
-            const dashboard = await Alerts_1.AlertsModel.getAlertsDashboard(accountId);
+            const dashboard = await AlertsService_1.AlertsService.getAlertsDashboard(accountId);
             res.json({
                 success: true,
                 data: dashboard
@@ -294,7 +292,7 @@ class AlertsController {
     static async createDefaultAlerts(req, res) {
         try {
             const { accountId } = req.user;
-            const alerts = await Alerts_1.AlertsModel.createDefaultAlerts(accountId);
+            const alerts = await AlertsService_1.AlertsService.createDefaultAlerts(accountId);
             res.status(201).json({
                 success: true,
                 data: alerts,

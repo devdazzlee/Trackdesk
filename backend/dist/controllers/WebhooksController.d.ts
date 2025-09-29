@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import '../types/express';
 export declare class WebhooksController {
     static createWebhook(req: Request, res: Response): Promise<void>;
     static getWebhook(req: Request, res: Response): Promise<Response<any, Record<string, any>>>;

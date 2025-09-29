@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.OfferController = void 0;
 const OfferService_1 = require("../services/OfferService");
 const zod_1 = require("zod");
+require("../types/express");
 const offerService = new OfferService_1.OfferService();
 const createOfferSchema = zod_1.z.object({
     name: zod_1.z.string().min(1),

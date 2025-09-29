@@ -84,18 +84,6 @@ export declare class PayoutAutomationModel {
         message: string;
         payoutsCreated: number;
     }>;
-    private static getEligibleAffiliates;
-    private static evaluateRule;
-    private static evaluateCondition;
-    private static getFieldValue;
-    private static executeRuleActions;
-    private static createPayout;
-    private static sendNotification;
-    private static updateStatus;
-    private static callWebhook;
-    private static sendEmail;
-    private static sendSMS;
-    private static calculateNextRun;
     static logExecution(automationId: string, action: string, status: string, message: string, data: any, executionTime: number): Promise<PayoutAutomationLog>;
     static getExecutionLogs(automationId: string, page?: number, limit?: number): Promise<PayoutAutomationLog[]>;
     static getAutomationStats(accountId: string, startDate?: Date, endDate?: Date): Promise<any>;
@@ -108,5 +96,23 @@ export declare class PayoutAutomationModel {
         testResults: any;
     }>;
     static getAutomationDashboard(accountId: string): Promise<any>;
+    static createRule(data: Partial<PayoutRule>): Promise<PayoutRule>;
+    static addCondition(ruleId: string, conditionData: any): Promise<PayoutRule>;
+    static updateCondition(ruleId: string, conditionId: string, updateData: any): Promise<PayoutRule>;
+    static removeCondition(ruleId: string, conditionId: string): Promise<PayoutRule>;
+    static addAction(ruleId: string, actionData: any): Promise<PayoutRule>;
+    static updateAction(ruleId: string, actionId: string, updateData: any): Promise<PayoutRule>;
+    static removeAction(ruleId: string, actionId: string): Promise<PayoutRule>;
+    static processPayouts(ruleId: string, dryRun?: boolean): Promise<any>;
+    static previewPayouts(ruleId: string, filters?: any): Promise<any[]>;
+    static getPayoutHistory(ruleId: string, filters?: any): Promise<any[]>;
+    static generatePayoutReport(ruleId: string, format: string, startDate?: Date, endDate?: Date): Promise<any>;
+    static getPayoutStats(accountId: string, startDate?: Date, endDate?: Date): Promise<any>;
+    static getPayoutAutomationDashboard(accountId: string): Promise<any>;
+    static createDefaultRules(accountId: string): Promise<PayoutRule[]>;
+    static testRule(ruleId: string, testData: any): Promise<any>;
+    static updateSchedule(ruleId: string, scheduleData: any): Promise<PayoutRule>;
+    static exportRules(accountId: string, format: string): Promise<any>;
+    static importRules(accountId: string, rules: any[], overwrite?: boolean): Promise<any>;
 }
 //# sourceMappingURL=PayoutAutomation.d.ts.map

@@ -8,6 +8,9 @@ declare global {
         id: string;
         email: string;
         role: string;
+        accountId: string;
+        affiliateId?: string;
+        userId?: string;
       };
     }
   }
@@ -18,6 +21,9 @@ export interface AuthenticatedRequest extends Request {
     id: string;
     email: string;
     role: string;
+    accountId: string;
+    affiliateId?: string;
+    userId?: string;
   };
 }
 

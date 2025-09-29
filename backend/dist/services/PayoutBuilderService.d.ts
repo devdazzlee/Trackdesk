@@ -1,26 +1,48 @@
 export declare class PayoutBuilderService {
-    static createPayoutRule(accountId: string, ruleData: any): Promise<any>;
+    static createPayoutRule(accountId: string, ruleData: any): Promise<import("../models/PayoutAutomation").PayoutAutomation>;
     static getPayoutRule(id: string): Promise<import("../models/PayoutAutomation").PayoutAutomation>;
     static updatePayoutRule(id: string, updateData: any): Promise<import("../models/PayoutAutomation").PayoutAutomation>;
     static deletePayoutRule(id: string): Promise<void>;
     static listPayoutRules(accountId: string, filters?: any): Promise<import("../models/PayoutAutomation").PayoutAutomation[]>;
-    static addCondition(ruleId: string, conditionData: any): Promise<any>;
-    static updateCondition(ruleId: string, conditionId: string, updateData: any): Promise<any>;
-    static removeCondition(ruleId: string, conditionId: string): Promise<any>;
-    static addAction(ruleId: string, actionData: any): Promise<any>;
-    static updateAction(ruleId: string, actionId: string, updateData: any): Promise<any>;
-    static removeAction(ruleId: string, actionId: string): Promise<any>;
-    static processPayouts(ruleId: string, dryRun?: boolean): Promise<any>;
-    static previewPayouts(ruleId: string, filters?: any): Promise<any>;
-    static getPayoutHistory(ruleId: string, filters?: any): Promise<any>;
-    static generatePayoutReport(ruleId: string, format: string, startDate?: Date, endDate?: Date): Promise<any>;
-    static getPayoutStats(accountId: string, startDate?: Date, endDate?: Date): Promise<any>;
+    static addCondition(ruleId: string, conditionData: any): Promise<{
+        success: boolean;
+    }>;
+    static updateCondition(ruleId: string, conditionId: string, updateData: any): Promise<{
+        success: boolean;
+    }>;
+    static removeCondition(ruleId: string, conditionId: string): Promise<{
+        success: boolean;
+    }>;
+    static addAction(ruleId: string, actionData: any): Promise<{
+        success: boolean;
+    }>;
+    static updateAction(ruleId: string, actionId: string, updateData: any): Promise<{
+        success: boolean;
+    }>;
+    static removeAction(ruleId: string, actionId: string): Promise<{
+        success: boolean;
+    }>;
+    static processPayouts(ruleId: string, dryRun?: boolean): Promise<{
+        success: boolean;
+    }>;
+    static previewPayouts(ruleId: string, filters?: any): Promise<any[]>;
+    static getPayoutHistory(ruleId: string, filters?: any): Promise<any[]>;
+    static generatePayoutReport(ruleId: string, format: string, startDate?: Date, endDate?: Date): Promise<{
+        report: string;
+    }>;
+    static getPayoutStats(accountId: string, startDate?: Date, endDate?: Date): Promise<{
+        stats: {};
+    }>;
     static getPayoutBuilderDashboard(accountId: string): Promise<any>;
-    static createDefaultRules(accountId: string): Promise<any>;
-    static testRule(ruleId: string, testData: any): Promise<any>;
-    static updateSchedule(ruleId: string, scheduleData: any): Promise<any>;
-    static exportRules(accountId: string, format: string): Promise<any>;
-    static importRules(accountId: string, rules: any[], overwrite?: boolean): Promise<any>;
+    static createDefaultRules(accountId: string): Promise<any[]>;
+    static testRule(ruleId: string, testData: any): Promise<{
+        success: boolean;
+    }>;
+    static updateSchedule(ruleId: string, scheduleData: any): Promise<{
+        success: boolean;
+    }>;
+    static exportRules(accountId: string, format: string): Promise<any[]>;
+    static importRules(accountId: string, rules: any[], overwrite?: boolean): Promise<any[]>;
     static evaluatePayoutConditions(ruleId: string, data: any): Promise<any[]>;
     private static evaluateCondition;
     private static getFieldValue;
@@ -38,10 +60,10 @@ export declare class PayoutBuilderService {
     static calculatePayoutAmount(ruleId: string, data: any): Promise<number>;
     private static calculateCustomAmount;
     static getPayoutRulePerformance(ruleId: string, startDate?: Date, endDate?: Date): Promise<{
-        totalPayouts: any;
+        totalPayouts: number;
         totalAmount: any;
-        successfulPayouts: any;
-        failedPayouts: any;
+        successfulPayouts: number;
+        failedPayouts: number;
         successRate: number;
         averageAmount: number;
         byStatus: Record<string, number>;

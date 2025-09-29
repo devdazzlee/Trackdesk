@@ -1,12 +1,42 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const client_1 = require("@prisma/client");
 const zod_1 = require("zod");
-const crypto_1 = __importDefault(require("crypto"));
+const crypto = __importStar(require("crypto"));
 const router = (0, express_1.Router)();
 const prisma = new client_1.PrismaClient();
 router.get('/', async (req, res) => {
@@ -29,7 +59,7 @@ router.get('/', async (req, res) => {
                 offer: {
                     select: {
                         id: true,
-                        title: true,
+                        name: true,
                         description: true,
                         status: true
                     }
@@ -37,28 +67,25 @@ router.get('/', async (req, res) => {
                 affiliate: {
                     select: {
                         id: true,
-                        firstName: true,
-                        lastName: true,
-                        email: true
+                        companyName: true
                     }
                 },
                 clickRecords: {
                     select: {
                         id: true,
-                        timestamp: true,
+                        createdAt: true,
                         ipAddress: true,
                         country: true,
-                        deviceType: true
+                        device: true
                     },
                     orderBy: {
-                        timestamp: 'desc'
+                        createdAt: 'desc'
                     },
                     take: 5
                 },
                 _count: {
                     select: {
-                        clickRecords: true,
-                        conversions: true
+                        clickRecords: true
                     }
                 }
             },
@@ -71,11 +98,11 @@ router.get('/', async (req, res) => {
         const total = await prisma.affiliateLink.count({ where: filters });
         const linksWithMetrics = await Promise.all(links.map(async (link) => {
             const conversions = await prisma.conversion.count({
-                where: { affiliateLinkId: link.id }
+                where: { affiliateId: link.affiliateId }
             });
             const revenue = await prisma.conversion.aggregate({
-                where: { affiliateLinkId: link.id },
-                _sum: { amount: true }
+                where: { affiliateId: link.affiliateId },
+                _sum: { customerValue: true }
             });
             const conversionRate = link._count.clickRecords > 0
                 ? ((conversions / link._count.clickRecords) * 100).toFixed(2)
@@ -86,7 +113,7 @@ router.get('/', async (req, res) => {
                     clicks: link._count.clickRecords,
                     conversions,
                     conversionRate: `${conversionRate}%`,
-                    revenue: revenue._sum.amount || 0
+                    revenue: revenue._sum.customerValue || 0
                 }
             };
         }));
@@ -116,10 +143,10 @@ router.post('/', async (req, res) => {
             expiresAt: zod_1.z.string().optional()
         });
         const data = linkSchema.parse(req.body);
-        const trackingCode = crypto_1.default.randomBytes(8).toString('hex');
+        const trackingCode = crypto.randomBytes(8).toString('hex');
         if (data.customAlias) {
-            const existingLink = await prisma.affiliateLink.findUnique({
-                where: { customAlias: data.customAlias }
+            const existingLink = await prisma.affiliateLink.findFirst({
+                where: { customSlug: data.customAlias }
             });
             if (existingLink) {
                 return res.status(400).json({ error: 'Custom alias already exists' });
@@ -130,25 +157,22 @@ router.post('/', async (req, res) => {
                 affiliateId: data.affiliateId,
                 offerId: data.offerId,
                 originalUrl: data.originalUrl,
-                trackingCode,
-                customAlias: data.customAlias,
-                landingPageUrl: data.landingPageUrl,
+                shortUrl: `track/${trackingCode}`,
+                customSlug: data.customAlias,
                 expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
-                isActive: true,
-                createdAt: new Date()
+                isActive: true
             },
             include: {
                 offer: {
                     select: {
-                        title: true,
+                        name: true,
                         description: true
                     }
                 },
                 affiliate: {
                     select: {
-                        firstName: true,
-                        lastName: true,
-                        email: true
+                        id: true,
+                        companyName: true
                     }
                 }
             }
@@ -175,70 +199,49 @@ router.get('/:id', async (req, res) => {
             include: {
                 offer: {
                     select: {
-                        title: true,
+                        name: true,
                         description: true,
                         status: true
                     }
                 },
                 affiliate: {
                     select: {
-                        firstName: true,
-                        lastName: true,
-                        email: true
+                        id: true,
+                        companyName: true
                     }
                 },
                 clickRecords: {
                     select: {
                         id: true,
-                        timestamp: true,
+                        createdAt: true,
                         ipAddress: true,
                         country: true,
                         city: true,
-                        deviceType: true,
+                        device: true,
                         browser: true,
                         referrer: true
                     },
                     orderBy: {
-                        timestamp: 'desc'
+                        createdAt: 'desc'
                     },
                     take: 50
                 },
-                conversions: {
-                    select: {
-                        id: true,
-                        timestamp: true,
-                        amount: true,
-                        status: true,
-                        commission: true
-                    },
-                    orderBy: {
-                        timestamp: 'desc'
-                    }
-                }
             }
         });
         if (!link) {
             return res.status(404).json({ error: 'Affiliate link not found' });
         }
-        const totalClicks = link.clickRecords.length;
-        const totalConversions = link.conversions.length;
-        const totalRevenue = link.conversions.reduce((sum, conv) => sum + (conv.amount || 0), 0);
-        const totalCommissions = link.conversions.reduce((sum, conv) => sum + (conv.commission || 0), 0);
+        const totalClicks = link.clicks;
+        const totalConversions = link.conversions;
+        const totalRevenue = link.earnings;
+        const totalCommissions = link.earnings;
         const conversionRate = totalClicks > 0 ? ((totalConversions / totalClicks) * 100).toFixed(2) : '0.00';
-        const countryStats = link.clickRecords.reduce((acc, click) => {
-            const country = click.country || 'Unknown';
-            acc[country] = (acc[country] || 0) + 1;
-            return acc;
-        }, {});
-        const deviceStats = link.clickRecords.reduce((acc, click) => {
-            const device = click.deviceType || 'Unknown';
-            acc[device] = (acc[device] || 0) + 1;
-            return acc;
-        }, {});
+        const countryStats = {};
+        const deviceStats = {};
         const baseUrl = process.env.FRONTEND_URL || 'https://trackdesk.com';
-        const affiliateUrl = link.customAlias
-            ? `${baseUrl}/go/${link.customAlias}`
-            : `${baseUrl}/track/${link.trackingCode}`;
+        const affiliateUrl = link.customSlug
+            ? `${baseUrl}/go/${link.customSlug}`
+            : `${baseUrl}/track/${link.id}`;
         res.json({
             ...link,
             affiliateUrl,
@@ -271,7 +274,7 @@ router.put('/:id', async (req, res) => {
         if (data.customAlias) {
             const existingLink = await prisma.affiliateLink.findFirst({
                 where: {
-                    customAlias: data.customAlias,
+                    customSlug: data.customAlias,
                     NOT: { id }
                 }
             });
@@ -282,30 +285,29 @@ router.put('/:id', async (req, res) => {
         const updatedLink = await prisma.affiliateLink.update({
             where: { id },
             data: {
-                ...data,
+                customSlug: data.customAlias,
                 expiresAt: data.expiresAt ? new Date(data.expiresAt) : undefined,
-                updatedAt: new Date()
+                isActive: data.isActive
             },
             include: {
                 offer: {
                     select: {
-                        title: true,
+                        name: true,
                         description: true
                     }
                 },
                 affiliate: {
                     select: {
-                        firstName: true,
-                        lastName: true,
-                        email: true
+                        id: true,
+                        companyName: true
                     }
                 }
             }
         });
         const baseUrl = process.env.FRONTEND_URL || 'https://trackdesk.com';
-        const affiliateUrl = updatedLink.customAlias
-            ? `${baseUrl}/go/${updatedLink.customAlias}`
-            : `${baseUrl}/track/${updatedLink.trackingCode}`;
+        const affiliateUrl = updatedLink.customSlug
+            ? `${baseUrl}/go/${updatedLink.customSlug}`
+            : `${baseUrl}/track/${updatedLink.id}`;
         res.json({
             ...updatedLink,
             affiliateUrl
