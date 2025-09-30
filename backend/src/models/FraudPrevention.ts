@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -6,24 +6,43 @@ export interface FraudRule {
   id: string;
   name: string;
   description: string;
-  type: 'CLICK_FRAUD' | 'CONVERSION_FRAUD' | 'TRAFFIC_QUALITY' | 'GEO_BLOCKING' | 'DEVICE_FINGERPRINTING';
+  type:
+    | "CLICK_FRAUD"
+    | "CONVERSION_FRAUD"
+    | "TRAFFIC_QUALITY"
+    | "GEO_BLOCKING"
+    | "DEVICE_FINGERPRINTING";
   conditions: FraudCondition[];
   actions: FraudAction[];
-  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-  status: 'ACTIVE' | 'INACTIVE';
+  severity: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+  status: "ACTIVE" | "INACTIVE";
   createdAt: Date;
   updatedAt: Date;
 }
 
 export interface FraudCondition {
   field: string;
-  operator: 'EQUALS' | 'NOT_EQUALS' | 'CONTAINS' | 'NOT_CONTAINS' | 'GREATER_THAN' | 'LESS_THAN' | 'IN' | 'NOT_IN';
+  operator:
+    | "EQUALS"
+    | "NOT_EQUALS"
+    | "CONTAINS"
+    | "NOT_CONTAINS"
+    | "GREATER_THAN"
+    | "LESS_THAN"
+    | "IN"
+    | "NOT_IN";
   value: any;
   weight: number;
 }
 
 export interface FraudAction {
-  type: 'BLOCK' | 'FLAG' | 'REDIRECT' | 'NOTIFY' | 'PAUSE_AFFILIATE' | 'REJECT_CONVERSION';
+  type:
+    | "BLOCK"
+    | "FLAG"
+    | "REDIRECT"
+    | "NOTIFY"
+    | "PAUSE_AFFILIATE"
+    | "REJECT_CONVERSION";
   parameters: Record<string, any>;
 }
 
@@ -34,7 +53,7 @@ export interface FraudEvent {
   severity: string;
   data: any;
   score: number;
-  status: 'DETECTED' | 'REVIEWED' | 'RESOLVED' | 'FALSE_POSITIVE';
+  status: "DETECTED" | "REVIEWED" | "RESOLVED" | "FALSE_POSITIVE";
   action: string;
   ipAddress: string;
   userAgent: string;
@@ -58,75 +77,93 @@ export interface FraudStats {
 
 export class FraudPreventionModel {
   static async createRule(data: Partial<FraudRule>): Promise<FraudRule> {
-    return await prisma.fraudRule.create({
+    const result = await prisma.fraudRule.create({
       data: {
         name: data.name!,
-        description: data.description || '',
+        description: data.description || "",
         type: data.type!,
-        conditions: data.conditions || [],
-        actions: data.actions || [],
-        severity: data.severity || 'MEDIUM',
-        status: data.status || 'ACTIVE',
-      }
-    }) as FraudRule;
+        conditions: (data.conditions || []) as any,
+        actions: (data.actions || []) as any,
+        severity: data.severity || "MEDIUM",
+        status: data.status || "ACTIVE",
+      },
+    });
+    return result as unknown as FraudRule;
   }
 
   static async findRuleById(id: string): Promise<FraudRule | null> {
-    return await prisma.fraudRule.findUnique({
-      where: { id }
-    }) as FraudRule | null;
+    const result = await prisma.fraudRule.findUnique({
+      where: { id },
+    });
+    return result as unknown as FraudRule | null;
   }
 
-  static async updateRule(id: string, data: Partial<FraudRule>): Promise<FraudRule> {
-    return await prisma.fraudRule.update({
+  static async updateRule(
+    id: string,
+    data: Partial<FraudRule>
+  ): Promise<FraudRule> {
+    const result = await prisma.fraudRule.update({
       where: { id },
-      data
-    }) as FraudRule;
+      data: {
+        ...data,
+        conditions: data.conditions as any,
+        actions: data.actions as any,
+      },
+    });
+    return result as unknown as FraudRule;
   }
 
   static async deleteRule(id: string): Promise<void> {
     await prisma.fraudRule.delete({
-      where: { id }
+      where: { id },
     });
   }
 
   static async listRules(filters: any = {}): Promise<FraudRule[]> {
     const where: any = {};
-    
+
     if (filters.status) where.status = filters.status;
     if (filters.type) where.type = filters.type;
     if (filters.severity) where.severity = filters.severity;
 
-    return await prisma.fraudRule.findMany({
+    const results = await prisma.fraudRule.findMany({
       where,
-      orderBy: { createdAt: 'desc' }
-    }) as FraudRule[];
+      orderBy: { createdAt: "desc" },
+    });
+    return results as unknown as FraudRule[];
   }
 
-  static async detectFraud(data: any, ipAddress: string, userAgent: string, affiliateId?: string, clickId?: string, conversionId?: string): Promise<FraudEvent[]> {
-    const activeRules = await this.listRules({ status: 'ACTIVE' });
+  static async detectFraud(
+    data: any,
+    ipAddress: string,
+    userAgent: string,
+    affiliateId?: string,
+    clickId?: string,
+    conversionId?: string
+  ): Promise<FraudEvent[]> {
+    const activeRules = await this.listRules({ status: "ACTIVE" });
     const fraudEvents: FraudEvent[] = [];
 
     for (const rule of activeRules) {
       const score = this.calculateFraudScore(rule, data);
-      
+
       if (score > 0) {
-        const fraudEvent = await prisma.fraudEvent.create({
+        const fraudEvent = (await prisma.fraudEvent.create({
           data: {
             ruleId: rule.id,
             type: rule.type,
             severity: rule.severity,
-            data,
+            data: data as any,
             score,
-            status: 'DETECTED',
+            status: "DETECTED",
             action: this.executeFraudActions(rule.actions, data),
             ipAddress,
             userAgent,
             affiliateId,
             clickId,
-            conversionId
-          }
-        }) as FraudEvent;
+            conversionId,
+          },
+        })) as unknown as FraudEvent;
 
         fraudEvents.push(fraudEvent);
       }
@@ -148,72 +185,88 @@ export class FraudPreventionModel {
     return totalWeight > 0 ? totalScore / totalWeight : 0;
   }
 
-  private static evaluateCondition(condition: FraudCondition, data: any): number {
+  private static evaluateCondition(
+    condition: FraudCondition,
+    data: any
+  ): number {
     const fieldValue = this.getFieldValue(data, condition.field);
-    
+
     switch (condition.operator) {
-      case 'EQUALS':
+      case "EQUALS":
         return fieldValue === condition.value ? 1 : 0;
-      case 'NOT_EQUALS':
+      case "NOT_EQUALS":
         return fieldValue !== condition.value ? 1 : 0;
-      case 'CONTAINS':
+      case "CONTAINS":
         return String(fieldValue).includes(String(condition.value)) ? 1 : 0;
-      case 'NOT_CONTAINS':
+      case "NOT_CONTAINS":
         return !String(fieldValue).includes(String(condition.value)) ? 1 : 0;
-      case 'GREATER_THAN':
+      case "GREATER_THAN":
         return Number(fieldValue) > Number(condition.value) ? 1 : 0;
-      case 'LESS_THAN':
+      case "LESS_THAN":
         return Number(fieldValue) < Number(condition.value) ? 1 : 0;
-      case 'IN':
-        return Array.isArray(condition.value) && condition.value.includes(fieldValue) ? 1 : 0;
-      case 'NOT_IN':
-        return Array.isArray(condition.value) && !condition.value.includes(fieldValue) ? 1 : 0;
+      case "IN":
+        return Array.isArray(condition.value) &&
+          condition.value.includes(fieldValue)
+          ? 1
+          : 0;
+      case "NOT_IN":
+        return Array.isArray(condition.value) &&
+          !condition.value.includes(fieldValue)
+          ? 1
+          : 0;
       default:
         return 0;
     }
   }
 
   private static getFieldValue(data: any, field: string): any {
-    const fields = field.split('.');
+    const fields = field.split(".");
     let value = data;
-    
+
     for (const f of fields) {
       value = value?.[f];
     }
-    
+
     return value;
   }
 
-  private static executeFraudActions(actions: FraudAction[], data: any): string {
+  private static executeFraudActions(
+    actions: FraudAction[],
+    data: any
+  ): string {
     const executedActions: string[] = [];
 
     for (const action of actions) {
       switch (action.type) {
-        case 'BLOCK':
-          executedActions.push('BLOCKED');
+        case "BLOCK":
+          executedActions.push("BLOCKED");
           break;
-        case 'FLAG':
-          executedActions.push('FLAGGED');
+        case "FLAG":
+          executedActions.push("FLAGGED");
           break;
-        case 'REDIRECT':
-          executedActions.push('REDIRECTED');
+        case "REDIRECT":
+          executedActions.push("REDIRECTED");
           break;
-        case 'NOTIFY':
-          executedActions.push('NOTIFIED');
+        case "NOTIFY":
+          executedActions.push("NOTIFIED");
           break;
-        case 'PAUSE_AFFILIATE':
-          executedActions.push('AFFILIATE_PAUSED');
+        case "PAUSE_AFFILIATE":
+          executedActions.push("AFFILIATE_PAUSED");
           break;
-        case 'REJECT_CONVERSION':
-          executedActions.push('CONVERSION_REJECTED');
+        case "REJECT_CONVERSION":
+          executedActions.push("CONVERSION_REJECTED");
           break;
       }
     }
 
-    return executedActions.join(', ');
+    return executedActions.join(", ");
   }
 
-  static async getFraudEvents(filters: any = {}, page: number = 1, limit: number = 50): Promise<FraudEvent[]> {
+  static async getFraudEvents(
+    filters: any = {},
+    page: number = 1,
+    limit: number = 50
+  ): Promise<FraudEvent[]> {
     const skip = (page - 1) * limit;
     const where: any = {};
 
@@ -224,40 +277,48 @@ export class FraudPreventionModel {
     if (filters.startDate && filters.endDate) {
       where.createdAt = {
         gte: filters.startDate,
-        lte: filters.endDate
+        lte: filters.endDate,
       };
     }
 
-    return await prisma.fraudEvent.findMany({
+    const results = await prisma.fraudEvent.findMany({
       where,
       skip,
       take: limit,
-      orderBy: { createdAt: 'desc' }
-    }) as FraudEvent[];
+      orderBy: { createdAt: "desc" },
+    });
+    return results as unknown as FraudEvent[];
   }
 
-  static async updateFraudEventStatus(id: string, status: string): Promise<FraudEvent> {
+  static async updateFraudEventStatus(
+    id: string,
+    status: string
+  ): Promise<FraudEvent> {
     const updateData: any = { status };
-    
-    if (status === 'REVIEWED') {
+
+    if (status === "REVIEWED") {
       updateData.reviewedAt = new Date();
-    } else if (status === 'RESOLVED') {
+    } else if (status === "RESOLVED") {
       updateData.resolvedAt = new Date();
     }
 
-    return await prisma.fraudEvent.update({
+    const result = await prisma.fraudEvent.update({
       where: { id },
-      data: updateData
-    }) as FraudEvent;
+      data: updateData,
+    });
+    return result as unknown as FraudEvent;
   }
 
-  static async getFraudStats(startDate?: Date, endDate?: Date): Promise<FraudStats> {
+  static async getFraudStats(
+    startDate?: Date,
+    endDate?: Date
+  ): Promise<FraudStats> {
     const where: any = {};
-    
+
     if (startDate && endDate) {
       where.createdAt = {
         gte: startDate,
-        lte: endDate
+        lte: endDate,
       };
     }
 
@@ -266,10 +327,10 @@ export class FraudPreventionModel {
       include: {
         affiliate: {
           include: {
-            user: true
-          }
-        }
-      }
+            user: true,
+          },
+        },
+      },
     });
 
     const stats: FraudStats = {
@@ -279,24 +340,29 @@ export class FraudPreventionModel {
       eventsByStatus: {},
       topAffiliates: [],
       topIPs: [],
-      topCountries: []
+      topCountries: [],
     };
 
     // Count by type, severity, and status
-    events.forEach(event => {
-      stats.eventsByType[event.type] = (stats.eventsByType[event.type] || 0) + 1;
-      stats.eventsBySeverity[event.severity] = (stats.eventsBySeverity[event.severity] || 0) + 1;
-      stats.eventsByStatus[event.status] = (stats.eventsByStatus[event.status] || 0) + 1;
+    events.forEach((event) => {
+      stats.eventsByType[event.type] =
+        (stats.eventsByType[event.type] || 0) + 1;
+      stats.eventsBySeverity[event.severity] =
+        (stats.eventsBySeverity[event.severity] || 0) + 1;
+      stats.eventsByStatus[event.status] =
+        (stats.eventsByStatus[event.status] || 0) + 1;
     });
 
     // Top affiliates
     const affiliateCounts: Record<string, { count: number; name: string }> = {};
-    events.forEach(event => {
+    events.forEach((event) => {
       if (event.affiliateId) {
         if (!affiliateCounts[event.affiliateId]) {
           affiliateCounts[event.affiliateId] = {
             count: 0,
-            name: event.affiliate?.user ? `${event.affiliate.user.firstName} ${event.affiliate.user.lastName}` : 'Unknown'
+            name: event.affiliate?.user
+              ? `${event.affiliate.user.firstName} ${event.affiliate.user.lastName}`
+              : "Unknown",
           };
         }
         affiliateCounts[event.affiliateId].count++;
@@ -310,7 +376,7 @@ export class FraudPreventionModel {
 
     // Top IPs
     const ipCounts: Record<string, number> = {};
-    events.forEach(event => {
+    events.forEach((event) => {
       ipCounts[event.ipAddress] = (ipCounts[event.ipAddress] || 0) + 1;
     });
 
@@ -321,8 +387,9 @@ export class FraudPreventionModel {
 
     // Top countries
     const countryCounts: Record<string, number> = {};
-    events.forEach(event => {
-      const country = event.data?.country || 'Unknown';
+    events.forEach((event) => {
+      const eventData = event.data as any;
+      const country = eventData?.country || "Unknown";
       countryCounts[country] = (countryCounts[country] || 0) + 1;
     });
 
@@ -337,37 +404,62 @@ export class FraudPreventionModel {
   static async createDefaultRules(): Promise<FraudRule[]> {
     const defaultRules = [
       {
-        name: 'High Click Rate Detection',
-        description: 'Detects unusually high click rates from single IP',
-        type: 'CLICK_FRAUD' as const,
+        name: "High Click Rate Detection",
+        description: "Detects unusually high click rates from single IP",
+        type: "CLICK_FRAUD" as const,
         conditions: [
-          { field: 'clicks_per_hour', operator: 'GREATER_THAN' as const, value: 100, weight: 1 },
-          { field: 'ip_address', operator: 'EQUALS' as const, value: 'same', weight: 1 }
+          {
+            field: "clicks_per_hour",
+            operator: "GREATER_THAN" as const,
+            value: 100,
+            weight: 1,
+          },
+          {
+            field: "ip_address",
+            operator: "EQUALS" as const,
+            value: "same",
+            weight: 1,
+          },
         ],
-        actions: [{ type: 'FLAG' as const, parameters: {} }],
-        severity: 'HIGH' as const
+        actions: [{ type: "FLAG" as const, parameters: {} }],
+        severity: "HIGH" as const,
       },
       {
-        name: 'Suspicious User Agent',
-        description: 'Detects suspicious or bot user agents',
-        type: 'TRAFFIC_QUALITY' as const,
+        name: "Suspicious User Agent",
+        description: "Detects suspicious or bot user agents",
+        type: "TRAFFIC_QUALITY" as const,
         conditions: [
-          { field: 'user_agent', operator: 'CONTAINS' as const, value: 'bot', weight: 1 },
-          { field: 'user_agent', operator: 'EQUALS' as const, value: '', weight: 1 }
+          {
+            field: "user_agent",
+            operator: "CONTAINS" as const,
+            value: "bot",
+            weight: 1,
+          },
+          {
+            field: "user_agent",
+            operator: "EQUALS" as const,
+            value: "",
+            weight: 1,
+          },
         ],
-        actions: [{ type: 'BLOCK' as const, parameters: {} }],
-        severity: 'MEDIUM' as const
+        actions: [{ type: "BLOCK" as const, parameters: {} }],
+        severity: "MEDIUM" as const,
       },
       {
-        name: 'Geo Blocking',
-        description: 'Blocks traffic from specific countries',
-        type: 'GEO_BLOCKING' as const,
+        name: "Geo Blocking",
+        description: "Blocks traffic from specific countries",
+        type: "GEO_BLOCKING" as const,
         conditions: [
-          { field: 'country', operator: 'IN' as const, value: ['CN', 'RU', 'KP'], weight: 1 }
+          {
+            field: "country",
+            operator: "IN" as const,
+            value: ["CN", "RU", "KP"],
+            weight: 1,
+          },
         ],
-        actions: [{ type: 'BLOCK' as const, parameters: {} }],
-        severity: 'HIGH' as const
-      }
+        actions: [{ type: "BLOCK" as const, parameters: {} }],
+        severity: "HIGH" as const,
+      },
     ];
 
     const createdRules: FraudRule[] = [];
@@ -379,5 +471,3 @@ export class FraudPreventionModel {
     return createdRules;
   }
 }
-
-

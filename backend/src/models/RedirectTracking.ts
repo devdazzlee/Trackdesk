@@ -1,29 +1,21 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
-
-export interface RedirectRule {
-  id: string;
-  accountId: string;
-  name: string;
-  description: string;
-  sourceUrl: string;
-  targetUrl: string;
-  type: 'PERMANENT' | 'TEMPORARY' | 'SMART' | 'CONDITIONAL';
-  status: 'ACTIVE' | 'INACTIVE' | 'PAUSED';
-  conditions: RedirectCondition[];
-  settings: RedirectSettings;
-  stats: RedirectStats;
-  createdAt: Date;
-  updatedAt: Date;
-}
 
 export interface RedirectCondition {
   id: string;
   field: string;
-  operator: 'EQUALS' | 'NOT_EQUALS' | 'CONTAINS' | 'STARTS_WITH' | 'ENDS_WITH' | 'REGEX' | 'IN' | 'NOT_IN';
+  operator:
+    | "EQUALS"
+    | "NOT_EQUALS"
+    | "CONTAINS"
+    | "STARTS_WITH"
+    | "ENDS_WITH"
+    | "REGEX"
+    | "IN"
+    | "NOT_IN";
   value: any;
-  logic: 'AND' | 'OR';
+  logic: "AND" | "OR";
   caseSensitive: boolean;
 }
 
@@ -33,7 +25,7 @@ export interface RedirectSettings {
   addTrackingParams: boolean;
   trackingParams: Record<string, string>;
   redirectDelay: number; // milliseconds
-  redirectMethod: 'IMMEDIATE' | 'DELAYED' | 'CONDITIONAL';
+  redirectMethod: "IMMEDIATE" | "DELAYED" | "CONDITIONAL";
   customHeaders: Record<string, string>;
   customScripts: string[];
   analytics: AnalyticsSettings;
@@ -53,7 +45,7 @@ export interface AnalyticsSettings {
 export interface AnalyticsGoal {
   id: string;
   name: string;
-  type: 'PAGE_VIEW' | 'CLICK' | 'FORM_SUBMIT' | 'TIME_ON_PAGE' | 'CUSTOM';
+  type: "PAGE_VIEW" | "CLICK" | "FORM_SUBMIT" | "TIME_ON_PAGE" | "CUSTOM";
   conditions: RedirectCondition[];
   value: number;
   enabled: boolean;
@@ -127,24 +119,24 @@ export interface BounceEvent {
 }
 
 export class RedirectTrackingModel {
-  static async createRule(data: Partial<RedirectRule>): Promise<RedirectRule> {
-    return await prisma.redirectRule.create({
+  static async createRule(data: any): Promise<any> {
+    return (await prisma.redirectRule.create({
       data: {
         accountId: data.accountId!,
         name: data.name!,
-        description: data.description || '',
+        description: data.description || "",
         sourceUrl: data.sourceUrl!,
         targetUrl: data.targetUrl!,
-        type: data.type || 'PERMANENT',
-        status: data.status || 'ACTIVE',
-        conditions: data.conditions || [],
-        settings: data.settings || {
+        type: data.type || "PERMANENT",
+        status: data.status || "ACTIVE",
+        conditions: (data.conditions || []) as any,
+        settings: (data.settings || {
           preserveQueryParams: true,
           preserveHash: true,
           addTrackingParams: true,
           trackingParams: {},
           redirectDelay: 0,
-          redirectMethod: 'IMMEDIATE',
+          redirectMethod: "IMMEDIATE",
           customHeaders: {},
           customScripts: [],
           analytics: {
@@ -154,14 +146,14 @@ export class RedirectTrackingModel {
             trackBounceRate: true,
             trackTimeOnPage: true,
             customEvents: [],
-            goals: []
+            goals: [],
           },
           seo: {
             preserveTitle: true,
             preserveDescription: true,
-            preserveKeywords: true
-          }
-        },
+            preserveKeywords: true,
+          },
+        }) as any,
         stats: {
           totalRedirects: 0,
           uniqueRedirects: 0,
@@ -174,137 +166,165 @@ export class RedirectTrackingModel {
           bySource: {},
           byHour: {},
           byDay: {},
-          byRule: {}
-        }
-      }
-    }) as RedirectRule;
+          byRule: {},
+        } as any,
+      },
+    })) as unknown as any;
   }
 
-  static async findRuleById(id: string): Promise<RedirectRule | null> {
-    return await prisma.redirectRule.findUnique({
-      where: { id }
-    }) as RedirectRule | null;
+  static async findRuleById(id: string): Promise<any | null> {
+    return (await prisma.redirectRule.findUnique({
+      where: { id },
+    })) as unknown as any | null;
   }
 
-  static async findRuleBySourceUrl(accountId: string, sourceUrl: string): Promise<RedirectRule | null> {
-    return await prisma.redirectRule.findFirst({
+  static async findRuleBySourceUrl(
+    accountId: string,
+    sourceUrl: string
+  ): Promise<any | null> {
+    return (await prisma.redirectRule.findFirst({
       where: {
         accountId,
         sourceUrl,
-        status: 'ACTIVE'
-      }
-    }) as RedirectRule | null;
+        status: "ACTIVE",
+      },
+    })) as unknown as any | null;
   }
 
-  static async updateRule(id: string, data: Partial<RedirectRule>): Promise<RedirectRule> {
-    return await prisma.redirectRule.update({
+  static async updateRule(id: string, data: any): Promise<any> {
+    return (await prisma.redirectRule.update({
       where: { id },
       data: {
         ...data,
-        updatedAt: new Date()
-      }
-    }) as RedirectRule;
+        conditions: data.conditions as any,
+        settings: data.settings as any,
+        stats: data.stats as any,
+        updatedAt: new Date(),
+      },
+    })) as unknown as any;
   }
 
   static async deleteRule(id: string): Promise<void> {
     await prisma.redirectRule.delete({
-      where: { id }
+      where: { id },
     });
   }
 
-  static async listRules(accountId: string, filters: any = {}): Promise<RedirectRule[]> {
+  static async listRules(accountId: string, filters: any = {}): Promise<any[]> {
     const where: any = { accountId };
-    
+
     if (filters.status) where.status = filters.status;
     if (filters.type) where.type = filters.type;
 
-    return await prisma.redirectRule.findMany({
+    return (await prisma.redirectRule.findMany({
       where,
-      orderBy: { createdAt: 'desc' }
-    }) as RedirectRule[];
+      orderBy: { createdAt: "desc" },
+    })) as unknown as any[];
   }
 
-  static async processRedirect(sourceUrl: string, requestData: any): Promise<{ redirect: boolean; targetUrl?: string; statusCode?: number; reason?: string }> {
+  static async processRedirect(
+    sourceUrl: string,
+    requestData: any
+  ): Promise<{
+    redirect: boolean;
+    targetUrl?: string;
+    statusCode?: number;
+    reason?: string;
+  }> {
     // Find matching redirect rule
     const rule = await this.findMatchingRule(sourceUrl, requestData);
     if (!rule) {
-      return { redirect: false, reason: 'No matching redirect rule found' };
+      return { redirect: false, reason: "No matching redirect rule found" };
     }
 
     // Check if rule is active
-    if (rule.status !== 'ACTIVE') {
-      return { redirect: false, reason: 'Redirect rule is not active' };
+    if (rule.status !== "ACTIVE") {
+      return { redirect: false, reason: "Redirect rule is not active" };
     }
 
     // Evaluate conditions
-    const conditionResult = this.evaluateConditions(rule.conditions, requestData);
+    const conditionResult = this.evaluateConditions(
+      rule.conditions as any,
+      requestData
+    );
     if (!conditionResult) {
-      return { redirect: false, reason: 'Conditions not met' };
+      return { redirect: false, reason: "Conditions not met" };
     }
 
     // Build target URL
-    let targetUrl = rule.targetUrl;
-    
+    let targetUrl = rule.targetUrl as string;
+
     // Preserve query parameters
-    if (rule.settings.preserveQueryParams && requestData.queryParams) {
+    if ((rule.settings as any).preserveQueryParams && requestData.queryParams) {
       const targetUrlObj = new URL(targetUrl);
       for (const [key, value] of Object.entries(requestData.queryParams)) {
-        targetUrlObj.searchParams.set(key, value);
+        targetUrlObj.searchParams.set(key, value as string);
       }
       targetUrl = targetUrlObj.toString();
     }
 
     // Preserve hash
-    if (rule.settings.preserveHash && requestData.hash) {
+    if ((rule.settings as any).preserveHash && requestData.hash) {
       targetUrl += requestData.hash;
     }
 
     // Add tracking parameters
-    if (rule.settings.addTrackingParams) {
+    if ((rule.settings as any).addTrackingParams) {
       targetUrl = this.addTrackingParameters(targetUrl, rule, requestData);
     }
 
     // Record redirect event
-    if (rule.settings.analytics.enabled && rule.settings.analytics.trackClicks) {
-      await this.recordRedirectEvent(rule.id, sourceUrl, targetUrl, requestData);
+    if (
+      (rule.settings as any).analytics.enabled &&
+      (rule.settings as any).analytics.trackClicks
+    ) {
+      await this.recordRedirectEvent(
+        rule.id,
+        sourceUrl,
+        targetUrl,
+        requestData
+      );
     }
 
     // Determine status code
     let statusCode = 302; // Temporary redirect
-    if (rule.type === 'PERMANENT') {
+    if (rule.type === "PERMANENT") {
       statusCode = 301;
-    } else if (rule.type === 'TEMPORARY') {
+    } else if (rule.type === "TEMPORARY") {
       statusCode = 302;
     }
 
     return { redirect: true, targetUrl, statusCode };
   }
 
-  private static async findMatchingRule(sourceUrl: string, requestData: any): Promise<RedirectRule | null> {
+  private static async findMatchingRule(
+    sourceUrl: string,
+    requestData: any
+  ): Promise<any | null> {
     // First, try exact match
     let rule = await prisma.redirectRule.findFirst({
       where: {
         sourceUrl,
-        status: 'ACTIVE'
+        status: "ACTIVE",
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: "desc" },
     });
 
     if (rule) {
-      return rule as RedirectRule;
+      return rule as any;
     }
 
     // Try pattern matching
     const rules = await prisma.redirectRule.findMany({
       where: {
-        status: 'ACTIVE'
+        status: "ACTIVE",
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: "desc" },
     });
 
     for (const r of rules) {
       if (this.matchesPattern(r.sourceUrl, sourceUrl)) {
-        return r as RedirectRule;
+        return r as any;
       }
     }
 
@@ -314,68 +334,77 @@ export class RedirectTrackingModel {
   private static matchesPattern(pattern: string, url: string): boolean {
     // Convert pattern to regex
     const regexPattern = pattern
-      .replace(/\*/g, '.*')
-      .replace(/\?/g, '.')
-      .replace(/\./g, '\\.');
-    
+      .replace(/\*/g, ".*")
+      .replace(/\?/g, ".")
+      .replace(/\./g, "\\.");
+
     const regex = new RegExp(`^${regexPattern}$`);
     return regex.test(url);
   }
 
-  private static evaluateConditions(conditions: RedirectCondition[], requestData: any): boolean {
+  private static evaluateConditions(
+    conditions: RedirectCondition[],
+    requestData: any
+  ): boolean {
     if (conditions.length === 0) return true;
 
     let result = true;
-    let logic = 'AND';
+    let logic = "AND";
 
     for (const condition of conditions) {
       const conditionResult = this.evaluateCondition(condition, requestData);
-      
-      if (logic === 'AND') {
+
+      if (logic === "AND") {
         result = result && conditionResult;
       } else {
         result = result || conditionResult;
       }
-      
+
       logic = condition.logic;
     }
 
     return result;
   }
 
-  private static evaluateCondition(condition: RedirectCondition, requestData: any): boolean {
+  private static evaluateCondition(
+    condition: RedirectCondition,
+    requestData: any
+  ): boolean {
     const value = this.getFieldValue(requestData, condition.field);
     const conditionValue = condition.value;
-    
+
     let compareValue = value;
     let compareConditionValue = conditionValue;
-    
+
     if (!condition.caseSensitive) {
       compareValue = String(value).toLowerCase();
       compareConditionValue = String(conditionValue).toLowerCase();
     }
-    
+
     switch (condition.operator) {
-      case 'EQUALS':
+      case "EQUALS":
         return compareValue === compareConditionValue;
-      case 'NOT_EQUALS':
+      case "NOT_EQUALS":
         return compareValue !== compareConditionValue;
-      case 'CONTAINS':
+      case "CONTAINS":
         return String(compareValue).includes(String(compareConditionValue));
-      case 'STARTS_WITH':
+      case "STARTS_WITH":
         return String(compareValue).startsWith(String(compareConditionValue));
-      case 'ENDS_WITH':
+      case "ENDS_WITH":
         return String(compareValue).endsWith(String(compareConditionValue));
-      case 'REGEX':
+      case "REGEX":
         try {
-          const regex = new RegExp(conditionValue, condition.caseSensitive ? '' : 'i');
+          const regex = new RegExp(
+            conditionValue,
+            condition.caseSensitive ? "" : "i"
+          );
           return regex.test(String(value));
         } catch {
           return false;
         }
-      case 'IN':
+      case "IN":
         return Array.isArray(conditionValue) && conditionValue.includes(value);
-      case 'NOT_IN':
+      case "NOT_IN":
         return Array.isArray(conditionValue) && !conditionValue.includes(value);
       default:
         return false;
@@ -383,43 +412,74 @@ export class RedirectTrackingModel {
   }
 
   private static getFieldValue(data: any, field: string): any {
-    const fields = field.split('.');
+    const fields = field.split(".");
     let value = data;
-    
+
     for (const f of fields) {
       value = value?.[f];
     }
-    
+
     return value;
   }
 
-  private static addTrackingParameters(targetUrl: string, rule: RedirectRule, requestData: any): string {
+  private static addTrackingParameters(
+    targetUrl: string,
+    rule: any,
+    requestData: any
+  ): string {
     const urlObj = new URL(targetUrl);
-    
+
     // Add tracking parameters
-    for (const [key, value] of Object.entries(rule.settings.trackingParams)) {
-      let paramValue = value;
-      
+    for (const [key, value] of Object.entries(
+      (rule.settings as any).trackingParams
+    )) {
+      let paramValue = value as string;
+
       // Replace placeholders
-      paramValue = paramValue.replace(/\{\{ip\}\}/g, requestData.ipAddress || '');
-      paramValue = paramValue.replace(/\{\{userAgent\}\}/g, requestData.userAgent || '');
-      paramValue = paramValue.replace(/\{\{referrer\}\}/g, requestData.referrer || '');
-      paramValue = paramValue.replace(/\{\{country\}\}/g, requestData.country || '');
-      paramValue = paramValue.replace(/\{\{device\}\}/g, requestData.device || '');
-      paramValue = paramValue.replace(/\{\{timestamp\}\}/g, Date.now().toString());
-      
+      paramValue = paramValue.replace(
+        /\{\{ip\}\}/g,
+        requestData.ipAddress || ""
+      );
+      paramValue = paramValue.replace(
+        /\{\{userAgent\}\}/g,
+        requestData.userAgent || ""
+      );
+      paramValue = paramValue.replace(
+        /\{\{referrer\}\}/g,
+        requestData.referrer || ""
+      );
+      paramValue = paramValue.replace(
+        /\{\{country\}\}/g,
+        requestData.country || ""
+      );
+      paramValue = paramValue.replace(
+        /\{\{device\}\}/g,
+        requestData.device || ""
+      );
+      paramValue = paramValue.replace(
+        /\{\{timestamp\}\}/g,
+        Date.now().toString()
+      );
+
       if (paramValue) {
         urlObj.searchParams.set(key, paramValue);
       }
     }
-    
+
     return urlObj.toString();
   }
 
-  private static async recordRedirectEvent(ruleId: string, sourceUrl: string, targetUrl: string, requestData: any): Promise<RedirectEvent> {
-    return await prisma.redirectEvent.create({
+  private static async recordRedirectEvent(
+    ruleId: string,
+    sourceUrl: string,
+    targetUrl: string,
+    requestData: any
+  ): Promise<RedirectEvent> {
+    return (await prisma.redirectEvent.create({
       data: {
         redirectRuleId: ruleId,
+        ruleId: ruleId,
+        clickId: Math.random().toString(36).substring(2, 15),
         sourceUrl,
         targetUrl,
         ipAddress: requestData.ipAddress,
@@ -430,33 +490,36 @@ export class RedirectTrackingModel {
         device: requestData.device,
         browser: requestData.browser,
         os: requestData.os,
-        queryParams: requestData.queryParams || {},
-        headers: requestData.headers || {},
+        queryParams: (requestData.queryParams || {}) as any,
+        headers: (requestData.headers || {}) as any,
         timestamp: new Date(),
-        data: requestData
-      }
-    }) as RedirectEvent;
+      },
+    })) as unknown as RedirectEvent;
   }
 
-  static async recordConversion(redirectEventId: string, conversionData: any): Promise<ConversionEvent> {
+  static async recordConversion(
+    redirectEventId: string,
+    conversionData: any
+  ): Promise<ConversionEvent> {
     const redirectEvent = await prisma.redirectEvent.findUnique({
-      where: { id: redirectEventId }
+      where: { id: redirectEventId },
     });
 
     if (!redirectEvent) {
-      throw new Error('Redirect event not found');
+      throw new Error("Redirect event not found");
     }
 
-    const conversionEvent = await prisma.conversionEvent.create({
+    const conversionEvent = (await prisma.conversion.create({
       data: {
-        redirectEventId,
-        redirectRuleId: redirectEvent.redirectRuleId,
-        value: conversionData.value || 0,
-        currency: conversionData.currency || 'USD',
-        timestamp: new Date(),
-        data: conversionData
-      }
-    }) as ConversionEvent;
+        clickId: redirectEvent.clickId,
+        affiliateId: conversionData.affiliateId || "",
+        offerId: conversionData.offerId || "",
+        customerValue: conversionData.value || 0,
+        orderValue: conversionData.value || 0,
+        commissionAmount: conversionData.commission || 0,
+        customerEmail: conversionData.email,
+      },
+    })) as unknown as ConversionEvent;
 
     // Update rule stats
     await this.updateRuleStats(redirectEvent.redirectRuleId);
@@ -464,25 +527,28 @@ export class RedirectTrackingModel {
     return conversionEvent;
   }
 
-  static async recordBounce(redirectEventId: string, bounceData: any): Promise<BounceEvent> {
+  static async recordBounce(
+    redirectEventId: string,
+    bounceData: any
+  ): Promise<BounceEvent> {
     const redirectEvent = await prisma.redirectEvent.findUnique({
-      where: { id: redirectEventId }
+      where: { id: redirectEventId },
     });
 
     if (!redirectEvent) {
-      throw new Error('Redirect event not found');
+      throw new Error("Redirect event not found");
     }
 
-    const bounceEvent = await prisma.bounceEvent.create({
+    const bounceEvent = (await prisma.bounceEvent.create({
       data: {
         redirectEventId,
-        redirectRuleId: redirectEvent.redirectRuleId,
         timeOnPage: bounceData.timeOnPage || 0,
         pagesViewed: bounceData.pagesViewed || 1,
+        exitPage: bounceData.exitPage,
         timestamp: new Date(),
-        data: bounceData
-      }
-    }) as BounceEvent;
+        data: bounceData as any,
+      },
+    })) as unknown as BounceEvent;
 
     // Update rule stats
     await this.updateRuleStats(redirectEvent.redirectRuleId);
@@ -496,93 +562,132 @@ export class RedirectTrackingModel {
 
     // Get redirect and conversion counts
     const totalRedirects = await prisma.redirectEvent.count({
-      where: { redirectRuleId: ruleId }
-    });
-
-    const uniqueRedirects = await prisma.redirectEvent.groupBy({
-      by: ['ipAddress'],
-      where: { redirectRuleId: ruleId }
-    }).then(result => result.length);
-
-    const conversions = await prisma.conversionEvent.count({
-      where: { redirectRuleId: ruleId }
-    });
-
-    const revenue = await prisma.conversionEvent.aggregate({
       where: { redirectRuleId: ruleId },
-      _sum: { value: true }
+    });
+
+    const uniqueRedirects = await prisma.redirectEvent
+      .groupBy({
+        by: ["ipAddress"],
+        where: { redirectRuleId: ruleId },
+      })
+      .then((result) => result.length);
+
+    // Get click IDs from redirect events
+    const redirectEvents = await prisma.redirectEvent.findMany({
+      where: { redirectRuleId: ruleId },
+      select: { clickId: true },
+    });
+
+    const clickIds = redirectEvents.map((e) => e.clickId);
+
+    const conversions = await prisma.conversion.count({
+      where: {
+        clickId: { in: clickIds },
+      },
+    });
+
+    const revenue = await prisma.conversion.aggregate({
+      where: {
+        clickId: { in: clickIds },
+      },
+      _sum: { orderValue: true },
     });
 
     const bounces = await prisma.bounceEvent.count({
-      where: { redirectRuleId: ruleId }
+      where: {
+        redirectEvent: {
+          redirectRuleId: ruleId,
+        },
+      },
     });
 
     const averageTimeOnPage = await prisma.bounceEvent.aggregate({
-      where: { redirectRuleId: ruleId },
-      _avg: { timeOnPage: true }
+      where: {
+        redirectEvent: {
+          redirectRuleId: ruleId,
+        },
+      },
+      _avg: { timeOnPage: true },
     });
 
     // Update stats
     const stats: RedirectStats = {
-      ...rule.stats,
+      ...(rule.stats as any),
       totalRedirects,
       uniqueRedirects,
       conversions,
-      revenue: revenue._sum.value || 0,
+      revenue: revenue._sum.orderValue || 0,
       bounceRate: totalRedirects > 0 ? (bounces / totalRedirects) * 100 : 0,
-      averageTimeOnPage: averageTimeOnPage._avg.timeOnPage || 0
+      averageTimeOnPage: averageTimeOnPage._avg.timeOnPage || 0,
     };
 
     await this.updateRule(ruleId, { stats });
   }
 
-  static async getRedirectStats(accountId: string, startDate?: Date, endDate?: Date): Promise<any> {
+  static async getRedirectStats(
+    accountId: string,
+    startDate?: Date,
+    endDate?: Date
+  ): Promise<any> {
     const where: any = { accountId };
-    
+
     if (startDate && endDate) {
       where.createdAt = {
         gte: startDate,
-        lte: endDate
+        lte: endDate,
       };
     }
 
     const rules = await this.listRules(accountId);
     const totalRedirects = await prisma.redirectEvent.count({
-      where: { redirectRule: { accountId } }
+      where: { redirectRuleId: { in: rules.map((r) => r.id) } },
     });
-    const totalConversions = await prisma.conversionEvent.count({
-      where: { redirectRule: { accountId } }
+    // Get all redirect events for the account
+    const allRedirectEvents = await prisma.redirectEvent.findMany({
+      where: { redirectRuleId: { in: rules.map((r) => r.id) } },
+      select: { clickId: true },
+    });
+
+    const allClickIds = allRedirectEvents.map((e) => e.clickId);
+
+    const totalConversions = await prisma.conversion.count({
+      where: {
+        clickId: { in: allClickIds },
+      },
     });
 
     const stats = {
       totalRules: rules.length,
-      activeRules: rules.filter(r => r.status === 'ACTIVE').length,
+      activeRules: rules.filter((r) => r.status === "ACTIVE").length,
       totalRedirects,
       totalConversions,
-      totalRevenue: rules.reduce((sum, r) => sum + r.stats.revenue, 0),
-      averageBounceRate: rules.reduce((sum, r) => sum + r.stats.bounceRate, 0) / rules.length,
+      totalRevenue: rules.reduce((sum, r) => sum + (r.stats as any).revenue, 0),
+      averageBounceRate:
+        rules.reduce((sum, r) => sum + (r.stats as any).bounceRate, 0) /
+        rules.length,
       byType: {} as Record<string, number>,
       byStatus: {} as Record<string, number>,
       byCountry: {} as Record<string, number>,
       byDevice: {} as Record<string, number>,
-      bySource: {} as Record<string, number>
+      bySource: {} as Record<string, number>,
     };
 
     // Aggregate by type and status
-    rules.forEach(rule => {
+    rules.forEach((rule) => {
       stats.byType[rule.type] = (stats.byType[rule.type] || 0) + 1;
       stats.byStatus[rule.status] = (stats.byStatus[rule.status] || 0) + 1;
     });
 
     // Aggregate by country, device, and source
     const redirectEvents = await prisma.redirectEvent.findMany({
-      where: { redirectRule: { accountId } },
-      select: { country: true, device: true, referrer: true }
+      where: { redirectRuleId: { in: rules.map((r) => r.id) } },
+      select: { country: true, device: true, referrer: true },
     });
 
-    redirectEvents.forEach(event => {
+    redirectEvents.forEach((event) => {
       if (event.country) {
-        stats.byCountry[event.country] = (stats.byCountry[event.country] || 0) + 1;
+        stats.byCountry[event.country] =
+          (stats.byCountry[event.country] || 0) + 1;
       }
       if (event.device) {
         stats.byDevice[event.device] = (stats.byDevice[event.device] || 0) + 1;
@@ -601,7 +706,7 @@ export class RedirectTrackingModel {
       const url = new URL(referrer);
       return url.hostname;
     } catch {
-      return 'direct';
+      return "direct";
     }
   }
 
@@ -611,18 +716,18 @@ export class RedirectTrackingModel {
 
     return {
       rules,
-      stats
+      stats,
     };
   }
 
-  static async createDefaultRules(accountId: string): Promise<RedirectRule[]> {
+  static async createDefaultRules(accountId: string): Promise<any[]> {
     const defaultRules = [
       {
-        name: 'HTTP to HTTPS Redirect',
-        description: 'Redirect all HTTP traffic to HTTPS',
-        sourceUrl: 'http://*',
-        targetUrl: 'https://*',
-        type: 'PERMANENT' as const,
+        name: "HTTP to HTTPS Redirect",
+        description: "Redirect all HTTP traffic to HTTPS",
+        sourceUrl: "http://*",
+        targetUrl: "https://*",
+        type: "PERMANENT" as const,
         conditions: [],
         settings: {
           preserveQueryParams: true,
@@ -630,7 +735,7 @@ export class RedirectTrackingModel {
           addTrackingParams: false,
           trackingParams: {},
           redirectDelay: 0,
-          redirectMethod: 'IMMEDIATE',
+          redirectMethod: "IMMEDIATE",
           customHeaders: {},
           customScripts: [],
           analytics: {
@@ -640,21 +745,21 @@ export class RedirectTrackingModel {
             trackBounceRate: true,
             trackTimeOnPage: true,
             customEvents: [],
-            goals: []
+            goals: [],
           },
           seo: {
             preserveTitle: true,
             preserveDescription: true,
-            preserveKeywords: true
-          }
-        }
+            preserveKeywords: true,
+          },
+        },
       },
       {
-        name: 'WWW to Non-WWW Redirect',
-        description: 'Redirect www subdomain to main domain',
-        sourceUrl: 'https://www.*',
-        targetUrl: 'https://*',
-        type: 'PERMANENT' as const,
+        name: "WWW to Non-WWW Redirect",
+        description: "Redirect www subdomain to main domain",
+        sourceUrl: "https://www.*",
+        targetUrl: "https://*",
+        type: "PERMANENT" as const,
         conditions: [],
         settings: {
           preserveQueryParams: true,
@@ -662,7 +767,7 @@ export class RedirectTrackingModel {
           addTrackingParams: false,
           trackingParams: {},
           redirectDelay: 0,
-          redirectMethod: 'IMMEDIATE',
+          redirectMethod: "IMMEDIATE",
           customHeaders: {},
           customScripts: [],
           analytics: {
@@ -672,22 +777,22 @@ export class RedirectTrackingModel {
             trackBounceRate: true,
             trackTimeOnPage: true,
             customEvents: [],
-            goals: []
+            goals: [],
           },
           seo: {
             preserveTitle: true,
             preserveDescription: true,
-            preserveKeywords: true
-          }
-        }
-      }
+            preserveKeywords: true,
+          },
+        },
+      },
     ];
 
-    const createdRules: RedirectRule[] = [];
+    const createdRules: any[] = [];
     for (const ruleData of defaultRules) {
       const rule = await this.createRule({
         accountId,
-        ...ruleData
+        ...ruleData,
       });
       createdRules.push(rule);
     }
@@ -695,5 +800,3 @@ export class RedirectTrackingModel {
     return createdRules;
   }
 }
-
-

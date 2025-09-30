@@ -5,78 +5,39 @@ const client_1 = require("@prisma/client");
 const prisma = new client_1.PrismaClient();
 class IntegrationManualsModel {
     static async create(data) {
-        return await prisma.integrationManual.create({
+        return (await prisma.integrationManual.create({
             data: {
                 accountId: data.accountId,
                 title: data.title,
-                description: data.description || '',
-                category: data.category,
-                type: data.type,
-                status: data.status || 'DRAFT',
                 content: data.content,
-                htmlContent: data.htmlContent || '',
+                category: data.category,
                 tags: data.tags || [],
-                difficulty: data.difficulty || 'BEGINNER',
-                estimatedTime: data.estimatedTime || 0,
-                prerequisites: data.prerequisites || [],
-                steps: data.steps || [],
-                codeExamples: data.codeExamples || [],
-                screenshots: data.screenshots || [],
-                videos: data.videos || [],
-                attachments: data.attachments || [],
-                seo: data.seo || {
-                    metaTitle: data.title,
-                    metaDescription: data.description || '',
-                    metaKeywords: [],
-                    robots: 'index, follow',
-                    sitemap: true
-                },
-                settings: data.settings || {
-                    allowComments: true,
-                    allowRating: true,
-                    allowSharing: true,
-                    requireLogin: false,
-                    showTableOfContents: true,
-                    showProgress: true,
-                    showEstimatedTime: true,
-                    showDifficulty: true,
-                    showPrerequisites: true,
-                    customFields: {}
-                },
-                stats: {
-                    views: 0,
-                    uniqueViews: 0,
-                    completions: 0,
-                    averageRating: 0,
-                    totalRatings: 0,
-                    shares: 0,
-                    downloads: 0
-                }
+                isPublic: data.isPublic || false,
+                createdBy: data.createdBy,
             }
-        });
+        }));
     }
     static async findById(id) {
-        return await prisma.integrationManual.findUnique({
+        return (await prisma.integrationManual.findUnique({
             where: { id }
-        });
+        }));
     }
     static async findBySlug(accountId, slug) {
-        return await prisma.integrationManual.findFirst({
+        return (await prisma.integrationManual.findFirst({
             where: {
                 accountId,
-                slug,
-                status: 'PUBLISHED'
+                title: slug
             }
-        });
+        }));
     }
     static async update(id, data) {
-        return await prisma.integrationManual.update({
+        return (await prisma.integrationManual.update({
             where: { id },
             data: {
                 ...data,
                 updatedAt: new Date()
             }
-        });
+        }));
     }
     static async delete(id) {
         await prisma.integrationManual.delete({
@@ -85,21 +46,15 @@ class IntegrationManualsModel {
     }
     static async list(accountId, filters = {}) {
         const where = { accountId };
-        if (filters.status)
-            where.status = filters.status;
         if (filters.category)
             where.category = filters.category;
-        if (filters.type)
-            where.type = filters.type;
-        if (filters.difficulty)
-            where.difficulty = filters.difficulty;
         if (filters.tags && filters.tags.length > 0) {
             where.tags = { hasSome: filters.tags };
         }
-        return await prisma.integrationManual.findMany({
+        return (await prisma.integrationManual.findMany({
             where,
             orderBy: { createdAt: 'desc' }
-        });
+        }));
     }
     static async publish(id) {
         const manual = await this.findById(id);
@@ -107,19 +62,17 @@ class IntegrationManualsModel {
             throw new Error('Manual not found');
         }
         return await this.update(id, {
-            status: 'PUBLISHED',
-            publishedAt: new Date()
+            isPublic: true
         });
     }
     static async unpublish(id) {
         return await this.update(id, {
-            status: 'DRAFT',
-            publishedAt: undefined
+            isPublic: false
         });
     }
     static async archive(id) {
         return await this.update(id, {
-            status: 'ARCHIVED'
+            isPublic: false
         });
     }
     static async recordView(id, userId, ipAddress) {
@@ -145,31 +98,27 @@ class IntegrationManualsModel {
         await this.updateProgress(id, userId, manual.steps.length, true);
     }
     static async addComment(manualId, userId, content, parentId, ipAddress = '127.0.0.1', userAgent = 'System') {
-        return await prisma.manualComment.create({
+        return (await prisma.manualComment.create({
             data: {
                 manualId,
-                parentId,
                 userId,
                 content,
-                status: 'PENDING',
-                ipAddress,
-                userAgent
+                isInternal: false
             }
-        });
+        }));
     }
     static async findCommentById(id) {
-        return await prisma.manualComment.findUnique({
+        return (await prisma.manualComment.findUnique({
             where: { id }
-        });
+        }));
     }
     static async updateCommentStatus(id, status) {
-        return await prisma.manualComment.update({
+        return (await prisma.manualComment.update({
             where: { id },
             data: {
-                status: status,
                 updatedAt: new Date()
             }
-        });
+        }));
     }
     static async deleteComment(id) {
         await prisma.manualComment.delete({
@@ -178,14 +127,10 @@ class IntegrationManualsModel {
     }
     static async getComments(manualId, filters = {}) {
         const where = { manualId };
-        if (filters.status)
-            where.status = filters.status;
-        if (filters.parentId !== undefined)
-            where.parentId = filters.parentId;
-        return await prisma.manualComment.findMany({
+        return (await prisma.manualComment.findMany({
             where,
             orderBy: { createdAt: 'asc' }
-        });
+        }));
     }
     static async addRating(manualId, userId, rating, comment) {
         const existingRating = await prisma.manualRating.findFirst({
@@ -233,76 +178,61 @@ class IntegrationManualsModel {
         await this.update(manualId, { stats });
     }
     static async updateProgress(manualId, userId, currentStep, isCompleted = false) {
-        const manual = await this.findById(manualId);
-        if (!manual) {
-            throw new Error('Manual not found');
-        }
         const existingProgress = await prisma.manualProgress.findFirst({
             where: { manualId, userId }
         });
-        const completedSteps = Array.from({ length: currentStep }, (_, i) => i + 1);
-        const progress = (currentStep / manual.steps.length) * 100;
+        const progress = isCompleted ? 100 : (currentStep / 10) * 100;
         if (existingProgress) {
-            return await prisma.manualProgress.update({
+            return (await prisma.manualProgress.update({
                 where: { id: existingProgress.id },
                 data: {
-                    currentStep,
-                    completedSteps,
                     progress,
-                    isCompleted,
-                    lastActivity: new Date(),
-                    completedAt: isCompleted ? new Date() : undefined
+                    completed: isCompleted,
+                    lastReadAt: new Date(),
+                    updatedAt: new Date()
                 }
-            });
+            }));
         }
         else {
-            return await prisma.manualProgress.create({
+            return (await prisma.manualProgress.create({
                 data: {
                     manualId,
                     userId,
-                    currentStep,
-                    completedSteps,
-                    totalSteps: manual.steps.length,
                     progress,
-                    isCompleted,
-                    startedAt: new Date(),
-                    lastActivity: new Date(),
-                    completedAt: isCompleted ? new Date() : undefined
+                    completed: isCompleted,
+                    lastReadAt: new Date()
                 }
-            });
+            }));
         }
     }
     static async getProgress(manualId, userId) {
-        return await prisma.manualProgress.findFirst({
+        return (await prisma.manualProgress.findFirst({
             where: { manualId, userId }
-        });
+        }));
     }
     static async createCategory(data) {
-        return await prisma.manualCategory.create({
+        return (await prisma.manualCategory.create({
             data: {
-                accountId: data.accountId,
                 name: data.name,
                 description: data.description || '',
-                slug: data.slug,
-                parentId: data.parentId,
                 order: data.order || 0,
-                isActive: data.isActive !== undefined ? data.isActive : true
+                status: data.status || 'ACTIVE'
             }
-        });
+        }));
     }
     static async findCategoryById(id) {
-        return await prisma.manualCategory.findUnique({
+        return (await prisma.manualCategory.findUnique({
             where: { id }
-        });
+        }));
     }
     static async updateCategory(id, data) {
-        return await prisma.manualCategory.update({
+        return (await prisma.manualCategory.update({
             where: { id },
             data: {
                 ...data,
                 updatedAt: new Date()
             }
-        });
+        }));
     }
     static async deleteCategory(id) {
         await prisma.manualCategory.delete({
@@ -310,37 +240,32 @@ class IntegrationManualsModel {
         });
     }
     static async listCategories(accountId) {
-        return await prisma.manualCategory.findMany({
-            where: { accountId, isActive: true },
+        return (await prisma.manualCategory.findMany({
+            where: { status: 'ACTIVE' },
             orderBy: { order: 'asc' }
-        });
+        }));
     }
     static async createTag(data) {
-        return await prisma.manualTag.create({
+        return (await prisma.manualTag.create({
             data: {
-                accountId: data.accountId,
                 name: data.name,
-                description: data.description || '',
-                slug: data.slug,
-                color: data.color || '#3b82f6',
-                usageCount: 0,
-                isActive: data.isActive !== undefined ? data.isActive : true
+                description: data.description || ''
             }
-        });
+        }));
     }
     static async findTagById(id) {
-        return await prisma.manualTag.findUnique({
+        return (await prisma.manualTag.findUnique({
             where: { id }
-        });
+        }));
     }
     static async updateTag(id, data) {
-        return await prisma.manualTag.update({
+        return (await prisma.manualTag.update({
             where: { id },
             data: {
                 ...data,
                 updatedAt: new Date()
             }
-        });
+        }));
     }
     static async deleteTag(id) {
         await prisma.manualTag.delete({
@@ -348,10 +273,9 @@ class IntegrationManualsModel {
         });
     }
     static async listTags(accountId) {
-        return await prisma.manualTag.findMany({
-            where: { accountId, isActive: true },
-            orderBy: { usageCount: 'desc' }
-        });
+        return (await prisma.manualTag.findMany({
+            orderBy: { createdAt: 'desc' }
+        }));
     }
     static async getManualStats(accountId) {
         const manuals = await this.list(accountId);

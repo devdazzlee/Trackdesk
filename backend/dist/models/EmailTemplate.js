@@ -323,8 +323,8 @@ class EmailTemplateModel {
                 htmlContent: `
           <h1>Commission Earned!</h1>
           <p>Congratulations {{firstName}}!</p>
-          <p>You have earned ${{ amount }} commission from {{offerName}}.</p>
-          <p>Your total earnings are now ${{ totalEarnings }}.</p>
+          <p>You have earned $\{\{amount\}\} commission from \{\{offerName\}\}.</p>
+          <p>Your total earnings are now $\{\{totalEarnings\}\}.</p>
           <p>Keep up the great work!</p>
         `,
                 textContent: 'Congratulations {{firstName}}! You earned ${{amount}} commission.',
@@ -337,7 +337,7 @@ class EmailTemplateModel {
                 htmlContent: `
           <h1>Payout Processed</h1>
           <p>Hello {{firstName}},</p>
-          <p>Your payout of ${{ amount }} has been successfully processed via {{paymentMethod}}.</p>
+          <p>Your payout of $\{\{amount\}\} has been successfully processed via \{\{paymentMethod\}\}.</p>
           <p>Transaction ID: {{transactionId}}</p>
           <p>Thank you for your partnership!</p>
         `,

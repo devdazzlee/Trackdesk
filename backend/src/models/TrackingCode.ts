@@ -1,77 +1,61 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
-
-export interface TrackingCode {
-  id: string;
-  name: string;
-  type: 'PIXEL' | 'JAVASCRIPT' | 'SERVER_TO_SERVER' | 'WEBHOOK';
-  code: string;
-  placement: 'HEAD' | 'BODY' | 'FOOTER' | 'CUSTOM';
-  events: string[];
-  parameters: TrackingParameter[];
-  status: 'ACTIVE' | 'INACTIVE';
-  affiliateId?: string;
-  offerId?: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
 
 export interface TrackingParameter {
   name: string;
   value: string;
-  type: 'STATIC' | 'DYNAMIC' | 'CUSTOM';
+  type: "STATIC" | "DYNAMIC" | "CUSTOM";
   required: boolean;
 }
 
-export interface TrackingEvent {
-  id: string;
-  trackingCodeId: string;
-  event: string;
-  data: any;
-  ipAddress: string;
-  userAgent: string;
-  referrer?: string;
-  timestamp: Date;
-}
+// TrackingEvent is now imported from Prisma
 
 export class TrackingCodeModel {
-  static async create(data: Partial<TrackingCode>): Promise<TrackingCode> {
+  static async create(data: any): Promise<any> {
     return await prisma.trackingCode.create({
       data: {
+        accountId: data.accountId!,
         name: data.name!,
         type: data.type!,
         code: data.code!,
-        placement: data.placement || 'HEAD',
+        placement: data.placement || "HEAD",
         events: data.events || [],
-        parameters: data.parameters || [],
-        status: data.status || 'ACTIVE',
-        affiliateId: data.affiliateId,
-        offerId: data.offerId,
-      }
-    }) as TrackingCode;
+        parameters: (data.parameters || {}) as any,
+        settings: (data.settings || {}) as any,
+        status: data.status || "ACTIVE",
+      },
+    });
   }
 
-  static async findById(id: string): Promise<TrackingCode | null> {
+  static async findById(id: string): Promise<any | null> {
     return await prisma.trackingCode.findUnique({
-      where: { id }
-    }) as TrackingCode | null;
+      where: { id },
+    });
   }
 
-  static async update(id: string, data: Partial<TrackingCode>): Promise<TrackingCode> {
+  static async update(id: string, data: any): Promise<any> {
     return await prisma.trackingCode.update({
       where: { id },
-      data
-    }) as TrackingCode;
+      data: {
+        ...data,
+        parameters: data.parameters as any,
+        settings: data.settings as any,
+      },
+    });
   }
 
   static async delete(id: string): Promise<void> {
     await prisma.trackingCode.delete({
-      where: { id }
+      where: { id },
     });
   }
 
-  static async list(filters: any = {}, page: number = 1, limit: number = 10): Promise<TrackingCode[]> {
+  static async list(
+    filters: any = {},
+    page: number = 1,
+    limit: number = 10
+  ): Promise<any[]> {
     const skip = (page - 1) * limit;
     const where: any = {};
 
@@ -84,18 +68,21 @@ export class TrackingCodeModel {
       where,
       skip,
       take: limit,
-      orderBy: { createdAt: 'desc' }
-    }) as TrackingCode[];
+      orderBy: { createdAt: "desc" },
+    });
   }
 
-  static async generatePixelCode(trackingCodeId: string, baseUrl: string): Promise<string> {
+  static async generatePixelCode(
+    trackingCodeId: string,
+    baseUrl: string
+  ): Promise<string> {
     const trackingCode = await this.findById(trackingCodeId);
     if (!trackingCode) {
-      throw new Error('Tracking code not found');
+      throw new Error("Tracking code not found");
     }
 
     const pixelUrl = `${baseUrl}/track/pixel/${trackingCodeId}`;
-    
+
     return `
       <!-- Trackdesk Pixel -->
       <img src="${pixelUrl}" width="1" height="1" style="display:none;" alt="" />
@@ -103,14 +90,17 @@ export class TrackingCodeModel {
     `;
   }
 
-  static async generateJavaScriptCode(trackingCodeId: string, baseUrl: string): Promise<string> {
+  static async generateJavaScriptCode(
+    trackingCodeId: string,
+    baseUrl: string
+  ): Promise<string> {
     const trackingCode = await this.findById(trackingCodeId);
     if (!trackingCode) {
-      throw new Error('Tracking code not found');
+      throw new Error("Tracking code not found");
     }
 
     const scriptUrl = `${baseUrl}/track/js/${trackingCodeId}`;
-    
+
     return `
       <!-- Trackdesk JavaScript -->
       <script>
@@ -125,14 +115,17 @@ export class TrackingCodeModel {
     `;
   }
 
-  static async generateServerToServerCode(trackingCodeId: string, baseUrl: string): Promise<string> {
+  static async generateServerToServerCode(
+    trackingCodeId: string,
+    baseUrl: string
+  ): Promise<string> {
     const trackingCode = await this.findById(trackingCodeId);
     if (!trackingCode) {
-      throw new Error('Tracking code not found');
+      throw new Error("Tracking code not found");
     }
 
     const endpoint = `${baseUrl}/track/s2s/${trackingCodeId}`;
-    
+
     return `
       <!-- Trackdesk Server-to-Server -->
       POST ${endpoint}
@@ -151,14 +144,17 @@ export class TrackingCodeModel {
     `;
   }
 
-  static async generateWebhookCode(trackingCodeId: string, baseUrl: string): Promise<string> {
+  static async generateWebhookCode(
+    trackingCodeId: string,
+    baseUrl: string
+  ): Promise<string> {
     const trackingCode = await this.findById(trackingCodeId);
     if (!trackingCode) {
-      throw new Error('Tracking code not found');
+      throw new Error("Tracking code not found");
     }
 
     const webhookUrl = `${baseUrl}/track/webhook/${trackingCodeId}`;
-    
+
     return `
       <!-- Trackdesk Webhook -->
       Webhook URL: ${webhookUrl}
@@ -178,37 +174,53 @@ export class TrackingCodeModel {
     `;
   }
 
-  static async recordEvent(trackingCodeId: string, event: string, data: any, ipAddress: string, userAgent: string, referrer?: string): Promise<TrackingEvent> {
-    return await prisma.trackingEvent.create({
+  static async recordEvent(
+    trackingCodeId: string,
+    event: string,
+    data: any,
+    ipAddress: string,
+    userAgent: string,
+    referrer?: string
+  ): Promise<any> {
+    return (await prisma.trackingEvent.create({
       data: {
         trackingCodeId,
-        event,
-        data,
+        eventType: event,
+        event: event,
+        data: data as any,
         ipAddress,
         userAgent,
         referrer,
-        timestamp: new Date()
-      }
-    }) as TrackingEvent;
+        timestamp: new Date(),
+      },
+    })) as unknown as any;
   }
 
-  static async getEvents(trackingCodeId: string, page: number = 1, limit: number = 50): Promise<TrackingEvent[]> {
+  static async getEvents(
+    trackingCodeId: string,
+    page: number = 1,
+    limit: number = 50
+  ): Promise<any[]> {
     const skip = (page - 1) * limit;
-    return await prisma.trackingEvent.findMany({
+    return (await prisma.trackingEvent.findMany({
       where: { trackingCodeId },
       skip,
       take: limit,
-      orderBy: { timestamp: 'desc' }
-    }) as TrackingEvent[];
+      orderBy: { timestamp: "desc" },
+    })) as unknown as any[];
   }
 
-  static async getEventStats(trackingCodeId: string, startDate?: Date, endDate?: Date): Promise<any> {
+  static async getEventStats(
+    trackingCodeId: string,
+    startDate?: Date,
+    endDate?: Date
+  ): Promise<any> {
     const where: any = { trackingCodeId };
-    
+
     if (startDate && endDate) {
       where.timestamp = {
         gte: startDate,
-        lte: endDate
+        lte: endDate,
       };
     }
 
@@ -216,25 +228,25 @@ export class TrackingCodeModel {
       where,
       select: {
         event: true,
-        timestamp: true
-      }
+        timestamp: true,
+      },
     });
 
     const stats: any = {
       total: events.length,
       byEvent: {},
       byDay: {},
-      byHour: {}
+      byHour: {},
     };
 
-    events.forEach(event => {
+    events.forEach((event) => {
       // Count by event type
       stats.byEvent[event.event] = (stats.byEvent[event.event] || 0) + 1;
-      
+
       // Count by day
-      const day = event.timestamp.toISOString().split('T')[0];
+      const day = event.timestamp.toISOString().split("T")[0];
       stats.byDay[day] = (stats.byDay[day] || 0) + 1;
-      
+
       // Count by hour
       const hour = event.timestamp.getHours();
       stats.byHour[hour] = (stats.byHour[hour] || 0) + 1;
@@ -243,13 +255,16 @@ export class TrackingCodeModel {
     return stats;
   }
 
-  static async validateTrackingCode(trackingCodeId: string, event: string): Promise<boolean> {
+  static async validateTrackingCode(
+    trackingCodeId: string,
+    event: string
+  ): Promise<boolean> {
     const trackingCode = await this.findById(trackingCodeId);
     if (!trackingCode) {
       return false;
     }
 
-    if (trackingCode.status !== 'ACTIVE') {
+    if (trackingCode.status !== "ACTIVE") {
       return false;
     }
 
@@ -260,5 +275,3 @@ export class TrackingCodeModel {
     return true;
   }
 }
-
-

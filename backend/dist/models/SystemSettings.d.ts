@@ -1,15 +1,12 @@
-export interface SystemSettings {
-    id: string;
-    accountId: string;
-    general: GeneralSettings;
-    currencies: CurrencySettings;
-    security: SecuritySettings;
-    notifications: NotificationSettings;
-    integrations: IntegrationSettings;
-    performance: PerformanceSettings;
-    compliance: ComplianceSettings;
-    createdAt: Date;
-    updatedAt: Date;
+import { SystemSettings } from "@prisma/client";
+export interface SystemSettingsInput {
+    general?: any;
+    security?: any;
+    currencies?: any;
+    notifications?: any;
+    integrations?: any;
+    performance?: any;
+    compliance?: any;
 }
 export interface GeneralSettings {
     siteName: string;
@@ -181,16 +178,16 @@ export interface ComplianceSettings {
     };
 }
 export declare class SystemSettingsModel {
-    static create(accountId: string, data: Partial<SystemSettings>): Promise<SystemSettings>;
+    static create(accountId: string, data: SystemSettingsInput): Promise<SystemSettings>;
     static findByAccountId(accountId: string): Promise<SystemSettings | null>;
     static update(accountId: string, data: Partial<SystemSettings>): Promise<SystemSettings>;
-    static updateGeneral(accountId: string, general: Partial<GeneralSettings>): Promise<SystemSettings>;
-    static updateSecurity(accountId: string, security: Partial<SecuritySettings>): Promise<SystemSettings>;
-    static updateCurrencies(accountId: string, currencies: Partial<CurrencySettings>): Promise<SystemSettings>;
-    static updateNotifications(accountId: string, notifications: Partial<NotificationSettings>): Promise<SystemSettings>;
-    static updateIntegrations(accountId: string, integrations: Partial<IntegrationSettings>): Promise<SystemSettings>;
-    static updatePerformance(accountId: string, performance: Partial<PerformanceSettings>): Promise<SystemSettings>;
-    static updateCompliance(accountId: string, compliance: Partial<ComplianceSettings>): Promise<SystemSettings>;
+    static updateGeneral(accountId: string, general: any): Promise<SystemSettings>;
+    static updateSecurity(accountId: string, security: any): Promise<SystemSettings>;
+    static updateCurrencies(accountId: string, currencies: any): Promise<SystemSettings>;
+    static updateNotifications(accountId: string, notifications: any): Promise<SystemSettings>;
+    static updateIntegrations(accountId: string, integrations: any): Promise<SystemSettings>;
+    static updatePerformance(accountId: string, performance: any): Promise<SystemSettings>;
+    static updateCompliance(accountId: string, compliance: any): Promise<SystemSettings>;
     static getSupportedCurrencies(): Promise<string[]>;
     static getExchangeRates(baseCurrency?: string): Promise<Record<string, number>>;
     static validateSettings(settings: Partial<SystemSettings>): Promise<{

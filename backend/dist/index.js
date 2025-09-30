@@ -52,7 +52,7 @@ const server = (0, http_1.createServer)(app);
 const io = new socket_io_1.Server(server, {
     cors: {
         origin: process.env.FRONTEND_URL || "http://localhost:3000",
-        methods: ["GET", "POST", "PUT", "DELETE"]
+        methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"]
     }
 });
 app.use((0, helmet_1.default)());

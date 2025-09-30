@@ -3,7 +3,7 @@ export interface Coupon {
     code: string;
     name: string;
     description: string;
-    type: 'PERCENTAGE' | 'FIXED_AMOUNT' | 'FREE_SHIPPING';
+    type: "PERCENTAGE" | "FIXED_AMOUNT" | "FREE_SHIPPING";
     value: number;
     minimumAmount?: number;
     maximumDiscount?: number;
@@ -11,8 +11,8 @@ export interface Coupon {
     usedCount: number;
     startDate: Date;
     endDate?: Date;
-    status: 'ACTIVE' | 'INACTIVE' | 'EXPIRED';
-    applicableTo: 'ALL_PRODUCTS' | 'SPECIFIC_PRODUCTS' | 'CATEGORIES';
+    status: "ACTIVE" | "INACTIVE" | "EXPIRED";
+    applicableTo: "ALL_PRODUCTS" | "SPECIFIC_PRODUCTS" | "CATEGORIES";
     productIds?: string[];
     categoryIds?: string[];
     affiliateId?: string;

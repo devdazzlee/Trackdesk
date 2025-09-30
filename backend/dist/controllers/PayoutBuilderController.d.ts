@@ -1,5 +1,18 @@
 import { Request, Response } from 'express';
-import '../types/express';
+declare global {
+    namespace Express {
+        interface Request {
+            user?: {
+                id: string;
+                email: string;
+                role: string;
+                accountId: string;
+                affiliateId?: string;
+                userId?: string;
+            };
+        }
+    }
+}
 export declare class PayoutBuilderController {
     static createPayoutRule(req: Request, res: Response): Promise<void>;
     static getPayoutRule(req: Request, res: Response): Promise<Response<any, Record<string, any>>>;

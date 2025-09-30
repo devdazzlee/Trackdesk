@@ -2,7 +2,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AlertsController = void 0;
 const AlertsService_1 = require("../services/AlertsService");
-require("../types/express");
 class AlertsController {
     static async createAlert(req, res) {
         try {

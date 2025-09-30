@@ -3,10 +3,10 @@ export interface AttributionModel {
     accountId: string;
     name: string;
     description: string;
-    type: 'FIRST_CLICK' | 'LAST_CLICK' | 'LINEAR' | 'TIME_DECAY' | 'POSITION_BASED' | 'CUSTOM';
+    type: "FIRST_CLICK" | "LAST_CLICK" | "LINEAR" | "TIME_DECAY" | "POSITION_BASED" | "CUSTOM";
     settings: AttributionSettings;
     rules: AttributionRule[];
-    status: 'ACTIVE' | 'INACTIVE';
+    status: "ACTIVE" | "INACTIVE";
     isDefault: boolean;
     createdAt: Date;
     updatedAt: Date;
@@ -33,12 +33,12 @@ export interface AttributionRule {
 }
 export interface AttributionCondition {
     field: string;
-    operator: 'EQUALS' | 'NOT_EQUALS' | 'CONTAINS' | 'GREATER_THAN' | 'LESS_THAN' | 'IN' | 'NOT_IN';
+    operator: "EQUALS" | "NOT_EQUALS" | "CONTAINS" | "GREATER_THAN" | "LESS_THAN" | "IN" | "NOT_IN";
     value: any;
-    logic: 'AND' | 'OR';
+    logic: "AND" | "OR";
 }
 export interface AttributionAction {
-    type: 'ASSIGN_CREDIT' | 'MODIFY_CREDIT' | 'EXCLUDE' | 'INCLUDE' | 'CUSTOM';
+    type: "ASSIGN_CREDIT" | "MODIFY_CREDIT" | "EXCLUDE" | "INCLUDE" | "CUSTOM";
     parameters: Record<string, any>;
     enabled: boolean;
 }
@@ -67,7 +67,7 @@ export interface AttributionReport {
     filters: AttributionFilter[];
     metrics: string[];
     dimensions: string[];
-    status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+    status: "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
     results: AttributionResults;
     createdAt: Date;
     completedAt?: Date;

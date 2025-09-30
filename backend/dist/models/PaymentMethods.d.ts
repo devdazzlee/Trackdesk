@@ -2,8 +2,8 @@ export interface PaymentMethod {
     id: string;
     accountId: string;
     name: string;
-    type: 'PAYPAL' | 'STRIPE' | 'BANK_TRANSFER' | 'WISE' | 'CRYPTO' | 'CHECK' | 'WIRE_TRANSFER' | 'CUSTOM';
-    status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+    type: "PAYPAL" | "STRIPE" | "BANK_TRANSFER" | "WISE" | "CRYPTO" | "CHECK" | "WIRE_TRANSFER" | "CUSTOM";
+    status: "ACTIVE" | "INACTIVE" | "SUSPENDED";
     settings: PaymentMethodSettings;
     fees: PaymentFees;
     limits: PaymentLimits;
@@ -58,12 +58,12 @@ export interface PaymentMethodUsage {
     updatedAt: Date;
 }
 export declare class PaymentMethodsModel {
-    static create(data: Partial<PaymentMethod>): Promise<PaymentMethod>;
-    static findById(id: string): Promise<PaymentMethod | null>;
-    static update(id: string, data: Partial<PaymentMethod>): Promise<PaymentMethod>;
+    static create(data: any): Promise<any>;
+    static findById(id: string): Promise<any | null>;
+    static update(id: string, data: any): Promise<any>;
     static delete(id: string): Promise<void>;
-    static list(accountId: string, filters?: any): Promise<PaymentMethod[]>;
-    static getActiveMethods(accountId: string): Promise<PaymentMethod[]>;
+    static list(accountId: string, filters?: any): Promise<any[]>;
+    static getActiveMethods(accountId: string): Promise<any[]>;
     static calculateFees(paymentMethodId: string, amount: number, currency: string): Promise<{
         totalFees: number;
         netAmount: number;
@@ -73,12 +73,12 @@ export declare class PaymentMethodsModel {
         valid: boolean;
         errors: string[];
     }>;
-    static recordUsage(paymentMethodId: string, affiliateId: string, amount: number, success: boolean, processingTime: number): Promise<PaymentMethodUsage>;
+    static recordUsage(paymentMethodId: string, affiliateId: string, amount: number, success: boolean, processingTime: number): Promise<any>;
     static getUsageStats(paymentMethodId: string): Promise<any>;
-    static createDefaultMethods(accountId: string): Promise<PaymentMethod[]>;
-    static getAffiliateMethods(affiliateId: string): Promise<PaymentMethod[]>;
+    static createDefaultMethods(accountId: string): Promise<any[]>;
+    static getAffiliateMethods(affiliateId: string): Promise<any[]>;
     static getMethodComparison(accountId: string): Promise<any[]>;
-    static updateMethodStatus(id: string, status: string): Promise<PaymentMethod>;
+    static updateMethodStatus(id: string, status: string): Promise<any>;
     static getMethodHealth(accountId: string): Promise<any>;
 }
 //# sourceMappingURL=PaymentMethods.d.ts.map

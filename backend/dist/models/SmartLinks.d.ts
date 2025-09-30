@@ -1,19 +1,3 @@
-export interface SmartLink {
-    id: string;
-    accountId: string;
-    name: string;
-    description: string;
-    baseUrl: string;
-    shortCode: string;
-    type: 'DYNAMIC' | 'A_B_TEST' | 'GEO_TARGETED' | 'DEVICE_TARGETED' | 'TIME_TARGETED' | 'CUSTOM';
-    status: 'ACTIVE' | 'INACTIVE' | 'PAUSED';
-    settings: SmartLinkSettings;
-    targets: SmartLinkTarget[];
-    rules: SmartLinkRule[];
-    stats: SmartLinkStats;
-    createdAt: Date;
-    updatedAt: Date;
-}
 export interface SmartLinkSettings {
     clickTracking: boolean;
     conversionTracking: boolean;
@@ -25,7 +9,7 @@ export interface SmartLinkSettings {
     referrerFiltering: boolean;
     customFilters: CustomFilter[];
     redirectDelay: number;
-    redirectMethod: 'IMMEDIATE' | 'DELAYED' | 'CONDITIONAL';
+    redirectMethod: "IMMEDIATE" | "DELAYED" | "CONDITIONAL";
     fallbackUrl?: string;
     trackingPixels: TrackingPixel[];
     postbackUrls: PostbackUrl[];
@@ -43,9 +27,9 @@ export interface SmartLinkTarget {
 }
 export interface TargetCondition {
     field: string;
-    operator: 'EQUALS' | 'NOT_EQUALS' | 'CONTAINS' | 'GREATER_THAN' | 'LESS_THAN' | 'IN' | 'NOT_IN' | 'REGEX';
+    operator: "EQUALS" | "NOT_EQUALS" | "CONTAINS" | "GREATER_THAN" | "LESS_THAN" | "IN" | "NOT_IN" | "REGEX";
     value: any;
-    logic: 'AND' | 'OR';
+    logic: "AND" | "OR";
     caseSensitive: boolean;
 }
 export interface SmartLinkRule {
@@ -58,22 +42,22 @@ export interface SmartLinkRule {
 }
 export interface SmartLinkCondition {
     field: string;
-    operator: 'EQUALS' | 'NOT_EQUALS' | 'CONTAINS' | 'GREATER_THAN' | 'LESS_THAN' | 'IN' | 'NOT_IN' | 'REGEX';
+    operator: "EQUALS" | "NOT_EQUALS" | "CONTAINS" | "GREATER_THAN" | "LESS_THAN" | "IN" | "NOT_IN" | "REGEX";
     value: any;
-    logic: 'AND' | 'OR';
+    logic: "AND" | "OR";
     caseSensitive: boolean;
 }
 export interface SmartLinkAction {
-    type: 'REDIRECT' | 'BLOCK' | 'MODIFY_URL' | 'ADD_PARAMETER' | 'REMOVE_PARAMETER' | 'CUSTOM';
+    type: "REDIRECT" | "BLOCK" | "MODIFY_URL" | "ADD_PARAMETER" | "REMOVE_PARAMETER" | "CUSTOM";
     parameters: Record<string, any>;
     enabled: boolean;
 }
 export interface CustomFilter {
     id: string;
     name: string;
-    type: 'GEO' | 'DEVICE' | 'TIME' | 'IP' | 'REFERRER' | 'CUSTOM';
+    type: "GEO" | "DEVICE" | "TIME" | "IP" | "REFERRER" | "CUSTOM";
     conditions: SmartLinkCondition[];
-    action: 'ALLOW' | 'BLOCK' | 'REDIRECT';
+    action: "ALLOW" | "BLOCK" | "REDIRECT";
     redirectUrl?: string;
     enabled: boolean;
 }
@@ -81,7 +65,7 @@ export interface TrackingPixel {
     id: string;
     name: string;
     url: string;
-    position: 'BEFORE_REDIRECT' | 'AFTER_REDIRECT' | 'ON_CONVERSION';
+    position: "BEFORE_REDIRECT" | "AFTER_REDIRECT" | "ON_CONVERSION";
     parameters: Record<string, string>;
     enabled: boolean;
 }
@@ -89,7 +73,7 @@ export interface PostbackUrl {
     id: string;
     name: string;
     url: string;
-    method: 'GET' | 'POST';
+    method: "GET" | "POST";
     parameters: Record<string, string>;
     headers: Record<string, string>;
     enabled: boolean;
@@ -106,7 +90,7 @@ export interface AnalyticsSettings {
 export interface AnalyticsGoal {
     id: string;
     name: string;
-    type: 'PAGE_VIEW' | 'CLICK' | 'FORM_SUBMIT' | 'TIME_ON_PAGE' | 'CUSTOM';
+    type: "PAGE_VIEW" | "CLICK" | "FORM_SUBMIT" | "TIME_ON_PAGE" | "CUSTOM";
     conditions: SmartLinkCondition[];
     value: number;
     enabled: boolean;
@@ -163,12 +147,12 @@ export interface SmartLinkConversion {
     data: any;
 }
 export declare class SmartLinksModel {
-    static create(data: Partial<SmartLink>): Promise<SmartLink>;
-    static findById(id: string): Promise<SmartLink | null>;
-    static findByShortCode(shortCode: string): Promise<SmartLink | null>;
-    static update(id: string, data: Partial<SmartLink>): Promise<SmartLink>;
+    static create(data: any): Promise<any>;
+    static findById(id: string): Promise<any | null>;
+    static findByShortCode(shortCode: string): Promise<any | null>;
+    static update(id: string, data: any): Promise<any>;
     static delete(id: string): Promise<void>;
-    static list(accountId: string, filters?: any): Promise<SmartLink[]>;
+    static list(accountId: string, filters?: any): Promise<any[]>;
     static processSmartLink(shortCode: string, requestData: any): Promise<{
         redirect: boolean;
         targetUrl?: string;
@@ -200,6 +184,6 @@ export declare class SmartLinksModel {
     private static generateShortCode;
     static getSmartLinkStats(accountId: string, startDate?: Date, endDate?: Date): Promise<any>;
     static getSmartLinksDashboard(accountId: string): Promise<any>;
-    static createDefaultSmartLinks(accountId: string): Promise<SmartLink[]>;
+    static createDefaultSmartLinks(accountId: string): Promise<any[]>;
 }
 //# sourceMappingURL=SmartLinks.d.ts.map

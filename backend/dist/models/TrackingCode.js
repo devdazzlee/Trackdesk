@@ -7,32 +7,36 @@ class TrackingCodeModel {
     static async create(data) {
         return await prisma.trackingCode.create({
             data: {
+                accountId: data.accountId,
                 name: data.name,
                 type: data.type,
                 code: data.code,
-                placement: data.placement || 'HEAD',
+                placement: data.placement || "HEAD",
                 events: data.events || [],
-                parameters: data.parameters || [],
-                status: data.status || 'ACTIVE',
-                affiliateId: data.affiliateId,
-                offerId: data.offerId,
-            }
+                parameters: (data.parameters || {}),
+                settings: (data.settings || {}),
+                status: data.status || "ACTIVE",
+            },
         });
     }
     static async findById(id) {
         return await prisma.trackingCode.findUnique({
-            where: { id }
+            where: { id },
         });
     }
     static async update(id, data) {
         return await prisma.trackingCode.update({
             where: { id },
-            data
+            data: {
+                ...data,
+                parameters: data.parameters,
+                settings: data.settings,
+            },
         });
     }
     static async delete(id) {
         await prisma.trackingCode.delete({
-            where: { id }
+            where: { id },
         });
     }
     static async list(filters = {}, page = 1, limit = 10) {
@@ -50,13 +54,13 @@ class TrackingCodeModel {
             where,
             skip,
             take: limit,
-            orderBy: { createdAt: 'desc' }
+            orderBy: { createdAt: "desc" },
         });
     }
     static async generatePixelCode(trackingCodeId, baseUrl) {
         const trackingCode = await this.findById(trackingCodeId);
         if (!trackingCode) {
-            throw new Error('Tracking code not found');
+            throw new Error("Tracking code not found");
         }
         const pixelUrl = `${baseUrl}/track/pixel/${trackingCodeId}`;
         return `
@@ -68,7 +72,7 @@ class TrackingCodeModel {
     static async generateJavaScriptCode(trackingCodeId, baseUrl) {
         const trackingCode = await this.findById(trackingCodeId);
         if (!trackingCode) {
-            throw new Error('Tracking code not found');
+            throw new Error("Tracking code not found");
         }
         const scriptUrl = `${baseUrl}/track/js/${trackingCodeId}`;
         return `
@@ -87,7 +91,7 @@ class TrackingCodeModel {
     static async generateServerToServerCode(trackingCodeId, baseUrl) {
         const trackingCode = await this.findById(trackingCodeId);
         if (!trackingCode) {
-            throw new Error('Tracking code not found');
+            throw new Error("Tracking code not found");
         }
         const endpoint = `${baseUrl}/track/s2s/${trackingCodeId}`;
         return `
@@ -110,7 +114,7 @@ class TrackingCodeModel {
     static async generateWebhookCode(trackingCodeId, baseUrl) {
         const trackingCode = await this.findById(trackingCodeId);
         if (!trackingCode) {
-            throw new Error('Tracking code not found');
+            throw new Error("Tracking code not found");
         }
         const webhookUrl = `${baseUrl}/track/webhook/${trackingCodeId}`;
         return `
@@ -132,51 +136,52 @@ class TrackingCodeModel {
     `;
     }
     static async recordEvent(trackingCodeId, event, data, ipAddress, userAgent, referrer) {
-        return await prisma.trackingEvent.create({
+        return (await prisma.trackingEvent.create({
             data: {
                 trackingCodeId,
-                event,
-                data,
+                eventType: event,
+                event: event,
+                data: data,
                 ipAddress,
                 userAgent,
                 referrer,
-                timestamp: new Date()
-            }
-        });
+                timestamp: new Date(),
+            },
+        }));
     }
     static async getEvents(trackingCodeId, page = 1, limit = 50) {
         const skip = (page - 1) * limit;
-        return await prisma.trackingEvent.findMany({
+        return (await prisma.trackingEvent.findMany({
             where: { trackingCodeId },
             skip,
             take: limit,
-            orderBy: { timestamp: 'desc' }
-        });
+            orderBy: { timestamp: "desc" },
+        }));
     }
     static async getEventStats(trackingCodeId, startDate, endDate) {
         const where = { trackingCodeId };
         if (startDate && endDate) {
             where.timestamp = {
                 gte: startDate,
-                lte: endDate
+                lte: endDate,
             };
         }
         const events = await prisma.trackingEvent.findMany({
             where,
             select: {
                 event: true,
-                timestamp: true
-            }
+                timestamp: true,
+            },
         });
         const stats = {
             total: events.length,
             byEvent: {},
             byDay: {},
-            byHour: {}
+            byHour: {},
         };
-        events.forEach(event => {
+        events.forEach((event) => {
             stats.byEvent[event.event] = (stats.byEvent[event.event] || 0) + 1;
-            const day = event.timestamp.toISOString().split('T')[0];
+            const day = event.timestamp.toISOString().split("T")[0];
             stats.byDay[day] = (stats.byDay[day] || 0) + 1;
             const hour = event.timestamp.getHours();
             stats.byHour[hour] = (stats.byHour[hour] || 0) + 1;
@@ -188,7 +193,7 @@ class TrackingCodeModel {
         if (!trackingCode) {
             return false;
         }
-        if (trackingCode.status !== 'ACTIVE') {
+        if (trackingCode.status !== "ACTIVE") {
             return false;
         }
         if (!trackingCode.events.includes(event)) {

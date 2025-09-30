@@ -7,11 +7,8 @@ export interface OfferCategory {
   accountId: string;
   name: string;
   description: string;
-  parentId?: string;
-  level: number;
-  path: string;
+  order: number;
   status: 'ACTIVE' | 'INACTIVE';
-  sortOrder: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -20,9 +17,8 @@ export interface OfferTag {
   id: string;
   accountId: string;
   name: string;
-  description: string;
   color: string;
-  status: 'ACTIVE' | 'INACTIVE';
+  description: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -32,8 +28,7 @@ export interface OfferGroup {
   accountId: string;
   name: string;
   description: string;
-  type: 'CAMPAIGN' | 'SEASONAL' | 'PROMOTIONAL' | 'GEOGRAPHIC' | 'DEVICE' | 'CUSTOM';
-  criteria: GroupCriteria;
+  offers: string[];
   status: 'ACTIVE' | 'INACTIVE';
   createdAt: Date;
   updatedAt: Date;
@@ -63,11 +58,8 @@ export interface OfferTemplate {
   accountId: string;
   name: string;
   description: string;
-  type: 'STANDARD' | 'CPA' | 'CPS' | 'CPL' | 'CPM' | 'HYBRID';
-  template: OfferTemplateData;
-  isPublic: boolean;
+  template: any;
   isDefault: boolean;
-  status: 'ACTIVE' | 'INACTIVE';
   createdAt: Date;
   updatedAt: Date;
 }
@@ -124,8 +116,7 @@ export interface OfferOrganization {
   accountId: string;
   name: string;
   description: string;
-  structure: OrganizationStructure;
-  rules: OrganizationRule[];
+  settings: any;
   status: 'ACTIVE' | 'INACTIVE';
   createdAt: Date;
   updatedAt: Date;
@@ -169,11 +160,7 @@ export class OfferOrganizationModel {
         accountId: data.accountId!,
         name: data.name!,
         description: data.description || '',
-        parentId: data.parentId,
-        level: data.level || 0,
-        path: data.path || data.name!,
-        status: data.status || 'ACTIVE',
-        sortOrder: data.sortOrder || 0
+        order: data.order || 0
       }
     }) as OfferCategory;
   }
@@ -202,14 +189,10 @@ export class OfferOrganizationModel {
 
   static async listCategories(accountId: string, filters: any = {}): Promise<OfferCategory[]> {
     const where: any = { accountId };
-    
-    if (filters.status) where.status = filters.status;
-    if (filters.parentId !== undefined) where.parentId = filters.parentId;
-    if (filters.level) where.level = filters.level;
 
     return await prisma.offerCategory.findMany({
       where,
-      orderBy: [{ level: 'asc' }, { sortOrder: 'asc' }, { name: 'asc' }]
+      orderBy: [{ order: 'asc' }, { name: 'asc' }]
     }) as OfferCategory[];
   }
 
@@ -218,13 +201,8 @@ export class OfferOrganizationModel {
     return this.buildCategoryTree(categories);
   }
 
-  private static buildCategoryTree(categories: OfferCategory[], parentId?: string): OfferCategory[] {
-    return categories
-      .filter(cat => cat.parentId === parentId)
-      .map(cat => ({
-        ...cat,
-        children: this.buildCategoryTree(categories, cat.id)
-      }));
+  private static buildCategoryTree(categories: OfferCategory[]): OfferCategory[] {
+    return categories;
   }
 
   static async createTag(data: Partial<OfferTag>): Promise<OfferTag> {
@@ -233,8 +211,7 @@ export class OfferOrganizationModel {
         accountId: data.accountId!,
         name: data.name!,
         description: data.description || '',
-        color: data.color || '#3b82f6',
-        status: data.status || 'ACTIVE'
+        color: data.color || '#3b82f6'
       }
     }) as OfferTag;
   }
@@ -263,8 +240,6 @@ export class OfferOrganizationModel {
 
   static async listTags(accountId: string, filters: any = {}): Promise<OfferTag[]> {
     const where: any = { accountId };
-    
-    if (filters.status) where.status = filters.status;
 
     return await prisma.offerTag.findMany({
       where,
@@ -278,9 +253,7 @@ export class OfferOrganizationModel {
         accountId: data.accountId!,
         name: data.name!,
         description: data.description || '',
-        type: data.type!,
-        criteria: data.criteria || {},
-        status: data.status || 'ACTIVE'
+        offers: data.offers || []
       }
     }) as OfferGroup;
   }
@@ -309,9 +282,6 @@ export class OfferOrganizationModel {
 
   static async listGroups(accountId: string, filters: any = {}): Promise<OfferGroup[]> {
     const where: any = { accountId };
-    
-    if (filters.status) where.status = filters.status;
-    if (filters.type) where.type = filters.type;
 
     return await prisma.offerGroup.findMany({
       where,
@@ -325,11 +295,8 @@ export class OfferOrganizationModel {
         accountId: data.accountId!,
         name: data.name!,
         description: data.description || '',
-        type: data.type!,
-        template: data.template!,
-        isPublic: data.isPublic || false,
-        isDefault: data.isDefault || false,
-        status: data.status || 'ACTIVE'
+        template: data.template || {},
+        isDefault: data.isDefault || false
       }
     }) as OfferTemplate;
   }
@@ -359,9 +326,6 @@ export class OfferOrganizationModel {
   static async listTemplates(accountId: string, filters: any = {}): Promise<OfferTemplate[]> {
     const where: any = { accountId };
     
-    if (filters.status) where.status = filters.status;
-    if (filters.type) where.type = filters.type;
-    if (filters.isPublic !== undefined) where.isPublic = filters.isPublic;
     if (filters.isDefault !== undefined) where.isDefault = filters.isDefault;
 
     return await prisma.offerTemplate.findMany({
@@ -376,14 +340,7 @@ export class OfferOrganizationModel {
         accountId: data.accountId!,
         name: data.name!,
         description: data.description || '',
-        structure: data.structure || {
-          categories: [],
-          tags: [],
-          groups: [],
-          templates: []
-        },
-        rules: data.rules || [],
-        status: data.status || 'ACTIVE'
+        settings: data.settings || {}
       }
     }) as OfferOrganization;
   }
@@ -412,8 +369,6 @@ export class OfferOrganizationModel {
 
   static async listOrganizations(accountId: string, filters: any = {}): Promise<OfferOrganization[]> {
     const where: any = { accountId };
-    
-    if (filters.status) where.status = filters.status;
 
     return await prisma.offerOrganization.findMany({
       where,
@@ -435,14 +390,16 @@ export class OfferOrganizationModel {
       return;
     }
 
-    for (const rule of organization.rules) {
-      if (!rule.enabled) continue;
-
-      const conditionsMet = await this.evaluateRuleConditions(rule.conditions, offer);
-      if (conditionsMet) {
-        await this.executeRuleActions(rule.actions, offer);
-      }
-    }
+    // Note: Rules functionality would need to be implemented separately
+    // as the rules property doesn't exist in the current schema
+    // const rules = organization.settings?.rules || [];
+    // for (const rule of rules) {
+    //   if (!rule.enabled) continue;
+    //   const conditionsMet = await this.evaluateRuleConditions(rule.conditions, offer);
+    //   if (conditionsMet) {
+    //     await this.executeRuleActions(rule.actions, offer);
+    //   }
+    // }
   }
 
   private static async evaluateRuleConditions(conditions: RuleCondition[], offer: any): Promise<boolean> {
@@ -531,7 +488,7 @@ export class OfferOrganizationModel {
           case 'REQUIRE_APPROVAL':
             await prisma.offer.update({
               where: { id: offer.id },
-              data: { status: 'PENDING_APPROVAL' }
+              data: { status: 'PAUSED' }
             });
             break;
           case 'AUTO_APPROVE':
@@ -562,11 +519,11 @@ export class OfferOrganizationModel {
       totalCategories: categories.length,
       activeCategories: categories.filter(c => c.status === 'ACTIVE').length,
       totalTags: tags.length,
-      activeTags: tags.filter(t => t.status === 'ACTIVE').length,
+      activeTags: tags.length, // All tags are considered active in current schema
       totalGroups: groups.length,
       activeGroups: groups.filter(g => g.status === 'ACTIVE').length,
       totalTemplates: templates.length,
-      activeTemplates: templates.filter(t => t.status === 'ACTIVE').length,
+      activeTemplates: templates.length, // All templates are considered active in current schema
       totalOrganizations: organizations.length,
       activeOrganizations: organizations.filter(o => o.status === 'ACTIVE').length,
       totalOffers: offers.length,
@@ -598,29 +555,25 @@ export class OfferOrganizationModel {
         accountId,
         name: 'E-commerce',
         description: 'E-commerce and retail offers',
-        level: 0,
-        sortOrder: 1
+        order: 1
       }),
       this.createCategory({
         accountId,
         name: 'Finance',
         description: 'Financial services and products',
-        level: 0,
-        sortOrder: 2
+        order: 2
       }),
       this.createCategory({
         accountId,
         name: 'Health & Beauty',
         description: 'Health and beauty products',
-        level: 0,
-        sortOrder: 3
+        order: 3
       }),
       this.createCategory({
         accountId,
         name: 'Technology',
         description: 'Technology products and services',
-        level: 0,
-        sortOrder: 4
+        order: 4
       })
     ]);
 
@@ -658,23 +611,13 @@ export class OfferOrganizationModel {
         accountId,
         name: 'Holiday Campaigns',
         description: 'Offers for holiday seasons',
-        type: 'SEASONAL',
-        criteria: {
-          tags: [tags.find(t => t.name === 'Seasonal')?.id || ''],
-          dateRange: {
-            startDate: new Date('2024-11-01'),
-            endDate: new Date('2024-12-31')
-          }
-        }
+        offers: []
       }),
       this.createGroup({
         accountId,
         name: 'Top Performers',
         description: 'High-performing offers',
-        type: 'PROMOTIONAL',
-        criteria: {
-          tags: [tags.find(t => t.name === 'High Converting')?.id || '']
-        }
+        offers: []
       })
     ]);
 
@@ -684,7 +627,6 @@ export class OfferOrganizationModel {
         accountId,
         name: 'Standard CPA Offer',
         description: 'Standard cost-per-action offer template',
-        type: 'CPA',
         template: {
           name: '',
           description: '',
@@ -720,28 +662,12 @@ export class OfferOrganizationModel {
       accountId,
       name: 'Default Organization',
       description: 'Default offer organization structure',
-      structure: {
+      settings: {
         categories,
         tags,
         groups,
         templates
-      },
-      rules: [
-        {
-          id: 'auto_categorize',
-          name: 'Auto Categorize by Name',
-          description: 'Automatically categorize offers based on name keywords',
-          type: 'AUTO_CATEGORIZE',
-          conditions: [
-            { field: 'name', operator: 'CONTAINS', value: 'ecommerce', logic: 'AND' }
-          ],
-          actions: [
-            { type: 'ASSIGN_CATEGORY', parameters: { categoryId: categories[0].id }, enabled: true }
-          ],
-          priority: 1,
-          enabled: true
-        }
-      ]
+      }
     });
   }
 

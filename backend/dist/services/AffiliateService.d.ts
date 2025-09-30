@@ -83,6 +83,8 @@ export declare class AffiliateService {
             };
         } & {
             id: string;
+            status: string;
+            phone: string | null;
             createdAt: Date;
             updatedAt: Date;
             userId: string;
@@ -93,6 +95,8 @@ export declare class AffiliateService {
             paymentEmail: string | null;
             taxId: string | null;
             address: import("@prisma/client/runtime/library").JsonValue | null;
+            bankAccount: string | null;
+            kycVerified: boolean;
             tier: import(".prisma/client").$Enums.AffiliateTier;
             commissionRate: number;
             totalEarnings: number;
@@ -119,6 +123,8 @@ export declare class AffiliateService {
         };
     } & {
         id: string;
+        status: string;
+        phone: string | null;
         createdAt: Date;
         updatedAt: Date;
         userId: string;
@@ -129,6 +135,8 @@ export declare class AffiliateService {
         paymentEmail: string | null;
         taxId: string | null;
         address: import("@prisma/client/runtime/library").JsonValue | null;
+        bankAccount: string | null;
+        kycVerified: boolean;
         tier: import(".prisma/client").$Enums.AffiliateTier;
         commissionRate: number;
         totalEarnings: number;
@@ -159,6 +167,8 @@ export declare class AffiliateService {
         };
     } & {
         id: string;
+        status: string;
+        phone: string | null;
         createdAt: Date;
         updatedAt: Date;
         userId: string;
@@ -169,6 +179,8 @@ export declare class AffiliateService {
         paymentEmail: string | null;
         taxId: string | null;
         address: import("@prisma/client/runtime/library").JsonValue | null;
+        bankAccount: string | null;
+        kycVerified: boolean;
         tier: import(".prisma/client").$Enums.AffiliateTier;
         commissionRate: number;
         totalEarnings: number;
@@ -188,6 +200,8 @@ export declare class AffiliateService {
         };
     } & {
         id: string;
+        status: string;
+        phone: string | null;
         createdAt: Date;
         updatedAt: Date;
         userId: string;
@@ -198,6 +212,8 @@ export declare class AffiliateService {
         paymentEmail: string | null;
         taxId: string | null;
         address: import("@prisma/client/runtime/library").JsonValue | null;
+        bankAccount: string | null;
+        kycVerified: boolean;
         tier: import(".prisma/client").$Enums.AffiliateTier;
         commissionRate: number;
         totalEarnings: number;
@@ -216,6 +232,8 @@ export declare class AffiliateService {
         };
     } & {
         id: string;
+        status: string;
+        phone: string | null;
         createdAt: Date;
         updatedAt: Date;
         userId: string;
@@ -226,6 +244,8 @@ export declare class AffiliateService {
         paymentEmail: string | null;
         taxId: string | null;
         address: import("@prisma/client/runtime/library").JsonValue | null;
+        bankAccount: string | null;
+        kycVerified: boolean;
         tier: import(".prisma/client").$Enums.AffiliateTier;
         commissionRate: number;
         totalEarnings: number;
@@ -303,18 +323,23 @@ export declare class AffiliateService {
                     description: string;
                     totalRevenue: number;
                     totalCommissions: number;
+                    accountId: string;
                     category: string;
+                    categoryId: string | null;
                     startDate: Date;
                     endDate: Date | null;
                     terms: string | null;
                     requirements: string | null;
+                    tags: string[];
                 };
             } & {
                 id: string;
                 status: import(".prisma/client").$Enums.ConversionStatus;
                 createdAt: Date;
                 updatedAt: Date;
+                userId: string | null;
                 customerValue: number;
+                orderValue: number;
                 commissionAmount: number;
                 affiliateId: string;
                 offerId: string;
@@ -362,6 +387,7 @@ export declare class AffiliateService {
             updatedAt: Date;
             amount: number;
             affiliateId: string;
+            paymentMethodId: string | null;
             referenceId: string | null;
             processedAt: Date | null;
         })[];
@@ -380,6 +406,7 @@ export declare class AffiliateService {
         updatedAt: Date;
         amount: number;
         affiliateId: string;
+        paymentMethodId: string | null;
         referenceId: string | null;
         processedAt: Date | null;
     }>;

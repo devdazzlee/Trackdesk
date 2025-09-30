@@ -3,14 +3,14 @@ export interface EmailTemplate {
     accountId: string;
     name: string;
     description: string;
-    type: 'WELCOME' | 'COMMISSION_EARNED' | 'PAYOUT_PROCESSED' | 'ACCOUNT_UPDATE' | 'PROMOTIONAL' | 'SYSTEM_ALERT' | 'CUSTOM';
+    type: "WELCOME" | "COMMISSION_EARNED" | "PAYOUT_PROCESSED" | "ACCOUNT_UPDATE" | "PROMOTIONAL" | "SYSTEM_ALERT" | "CUSTOM";
     category: string;
     subject: string;
     content: string;
     htmlContent: string;
     variables: string[];
     settings: EmailTemplateSettings;
-    status: 'ACTIVE' | 'INACTIVE' | 'DRAFT';
+    status: "ACTIVE" | "INACTIVE" | "DRAFT";
     isDefault: boolean;
     createdAt: Date;
     updatedAt: Date;
@@ -19,7 +19,7 @@ export interface EmailTemplateSettings {
     fromName: string;
     fromEmail: string;
     replyTo?: string;
-    priority: 'LOW' | 'NORMAL' | 'HIGH';
+    priority: "LOW" | "NORMAL" | "HIGH";
     trackOpens: boolean;
     trackClicks: boolean;
     unsubscribeLink: boolean;
@@ -37,19 +37,19 @@ export interface EmailCampaign {
     subject: string;
     content: string;
     htmlContent: string;
-    recipientType: 'ALL_AFFILIATES' | 'SPECIFIC_AFFILIATES' | 'AFFILIATE_GROUP' | 'TIER_BASED' | 'CUSTOM_LIST';
+    recipientType: "ALL_AFFILIATES" | "SPECIFIC_AFFILIATES" | "AFFILIATE_GROUP" | "TIER_BASED" | "CUSTOM_LIST";
     recipientIds: string[];
     filters: any;
     schedule: CampaignSchedule;
-    status: 'DRAFT' | 'SCHEDULED' | 'SENDING' | 'SENT' | 'PAUSED' | 'CANCELLED';
+    status: "DRAFT" | "SCHEDULED" | "SENDING" | "SENT" | "PAUSED" | "CANCELLED";
     createdAt: Date;
     updatedAt: Date;
 }
 export interface CampaignSchedule {
-    type: 'IMMEDIATE' | 'SCHEDULED' | 'RECURRING';
+    type: "IMMEDIATE" | "SCHEDULED" | "RECURRING";
     scheduledAt?: Date;
     timezone: string;
-    frequency?: 'DAILY' | 'WEEKLY' | 'MONTHLY';
+    frequency?: "DAILY" | "WEEKLY" | "MONTHLY";
     endDate?: Date;
 }
 export interface EmailDesign {
@@ -57,19 +57,19 @@ export interface EmailDesign {
     accountId: string;
     name: string;
     description: string;
-    type: 'HEADER' | 'FOOTER' | 'BUTTON' | 'BANNER' | 'CUSTOM';
+    type: "HEADER" | "FOOTER" | "BUTTON" | "BANNER" | "CUSTOM";
     html: string;
     css: string;
     assets: DesignAsset[];
     isDefault: boolean;
-    status: 'ACTIVE' | 'INACTIVE';
+    status: "ACTIVE" | "INACTIVE";
     createdAt: Date;
     updatedAt: Date;
 }
 export interface DesignAsset {
     id: string;
     name: string;
-    type: 'IMAGE' | 'FONT' | 'ICON' | 'LOGO';
+    type: "IMAGE" | "FONT" | "ICON" | "LOGO";
     url: string;
     size: number;
     mimeType: string;
@@ -80,12 +80,12 @@ export interface EmailVariable {
     accountId: string;
     name: string;
     description: string;
-    type: 'AFFILIATE' | 'OFFER' | 'COMMISSION' | 'PAYOUT' | 'SYSTEM' | 'CUSTOM';
+    type: "AFFILIATE" | "OFFER" | "COMMISSION" | "PAYOUT" | "SYSTEM" | "CUSTOM";
     source: string;
     format: string;
     defaultValue?: string;
     isRequired: boolean;
-    status: 'ACTIVE' | 'INACTIVE';
+    status: "ACTIVE" | "INACTIVE";
     createdAt: Date;
     updatedAt: Date;
 }
@@ -97,22 +97,22 @@ export interface EmailAutomation {
     trigger: AutomationTrigger;
     conditions: AutomationCondition[];
     actions: AutomationAction[];
-    status: 'ACTIVE' | 'INACTIVE' | 'PAUSED';
+    status: "ACTIVE" | "INACTIVE" | "PAUSED";
     createdAt: Date;
     updatedAt: Date;
 }
 export interface AutomationTrigger {
-    type: 'AFFILIATE_REGISTERED' | 'COMMISSION_EARNED' | 'PAYOUT_PROCESSED' | 'ACCOUNT_ACTIVATED' | 'TIER_UPGRADED' | 'CUSTOM';
+    type: "AFFILIATE_REGISTERED" | "COMMISSION_EARNED" | "PAYOUT_PROCESSED" | "ACCOUNT_ACTIVATED" | "TIER_UPGRADED" | "CUSTOM";
     parameters: Record<string, any>;
 }
 export interface AutomationCondition {
     field: string;
-    operator: 'EQUALS' | 'NOT_EQUALS' | 'GREATER_THAN' | 'LESS_THAN' | 'CONTAINS' | 'NOT_CONTAINS';
+    operator: "EQUALS" | "NOT_EQUALS" | "GREATER_THAN" | "LESS_THAN" | "CONTAINS" | "NOT_CONTAINS";
     value: any;
-    logic: 'AND' | 'OR';
+    logic: "AND" | "OR";
 }
 export interface AutomationAction {
-    type: 'SEND_EMAIL' | 'SEND_SMS' | 'ADD_TAG' | 'REMOVE_TAG' | 'UPDATE_FIELD' | 'WEBHOOK';
+    type: "SEND_EMAIL" | "SEND_SMS" | "ADD_TAG" | "REMOVE_TAG" | "UPDATE_FIELD" | "WEBHOOK";
     parameters: Record<string, any>;
     delay?: number;
     enabled: boolean;

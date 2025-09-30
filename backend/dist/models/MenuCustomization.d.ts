@@ -3,7 +3,7 @@ export interface MenuItem {
     accountId: string;
     name: string;
     label: string;
-    type: 'LINK' | 'DROPDOWN' | 'SEPARATOR' | 'CUSTOM';
+    type: string;
     url?: string;
     icon?: string;
     parentId?: string;
@@ -11,12 +11,9 @@ export interface MenuItem {
     order: number;
     permissions: string[];
     roles: string[];
-    status: 'ACTIVE' | 'INACTIVE';
+    status: string;
     isVisible: boolean;
     isExternal: boolean;
-    target?: string;
-    customHtml?: string;
-    cssClass?: string;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -24,19 +21,16 @@ export interface MenuStructure {
     id: string;
     accountId: string;
     name: string;
-    description: string;
-    type: 'ADMIN' | 'AFFILIATE' | 'PUBLIC' | 'CUSTOM';
-    items: MenuItem[];
-    settings: MenuSettings;
-    status: 'ACTIVE' | 'INACTIVE';
+    items: any;
+    status: string;
     createdAt: Date;
     updatedAt: Date;
 }
 export interface MenuSettings {
-    theme: 'DEFAULT' | 'DARK' | 'LIGHT' | 'CUSTOM';
-    position: 'TOP' | 'SIDE' | 'BOTTOM' | 'FLOATING';
-    style: 'HORIZONTAL' | 'VERTICAL' | 'ACCORDION' | 'TABS';
-    animation: 'NONE' | 'FADE' | 'SLIDE' | 'BOUNCE';
+    theme: "DEFAULT" | "DARK" | "LIGHT" | "CUSTOM";
+    position: "TOP" | "SIDE" | "BOTTOM" | "FLOATING";
+    style: "HORIZONTAL" | "VERTICAL" | "ACCORDION" | "TABS";
+    animation: "NONE" | "FADE" | "SLIDE" | "BOUNCE";
     responsive: boolean;
     mobileBreakpoint: number;
     customCss?: string;
@@ -44,24 +38,18 @@ export interface MenuSettings {
 }
 export interface MenuTemplate {
     id: string;
-    accountId: string;
     name: string;
     description: string;
-    type: 'ADMIN' | 'AFFILIATE' | 'PUBLIC';
-    template: MenuStructure;
-    isPublic: boolean;
+    structure: any;
     isDefault: boolean;
-    status: 'ACTIVE' | 'INACTIVE';
     createdAt: Date;
     updatedAt: Date;
 }
 export interface MenuPermission {
     id: string;
     menuItemId: string;
-    userId?: string;
-    role?: string;
-    permission: 'VIEW' | 'EDIT' | 'DELETE' | 'ADMIN';
-    granted: boolean;
+    role: string;
+    permissions: string[];
     createdAt: Date;
     updatedAt: Date;
 }

@@ -13,13 +13,13 @@ export interface Balance {
 export interface BalanceTransaction {
     id: string;
     affiliateId: string;
-    type: 'COMMISSION' | 'PAYOUT' | 'ADJUSTMENT' | 'HOLD' | 'RELEASE' | 'REFUND';
+    type: "COMMISSION" | "PAYOUT" | "ADJUSTMENT" | "HOLD" | "RELEASE" | "REFUND";
     amount: number;
     currency: string;
     description: string;
     referenceId?: string;
-    referenceType?: 'CONVERSION' | 'PAYOUT' | 'ADJUSTMENT' | 'HOLD';
-    status: 'PENDING' | 'PROCESSED' | 'FAILED' | 'CANCELLED';
+    referenceType?: "CONVERSION" | "PAYOUT" | "ADJUSTMENT" | "HOLD";
+    status: "PENDING" | "PROCESSED" | "FAILED" | "CANCELLED";
     processedAt?: Date;
     createdAt: Date;
     updatedAt: Date;
@@ -29,8 +29,8 @@ export interface PayoutRequest {
     affiliateId: string;
     amount: number;
     currency: string;
-    method: 'PAYPAL' | 'STRIPE' | 'BANK_TRANSFER' | 'CRYPTO' | 'WISE';
-    status: 'PENDING' | 'APPROVED' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
+    method: "PAYPAL" | "STRIPE" | "BANK_TRANSFER" | "CRYPTO" | "WISE";
+    status: "PENDING" | "APPROVED" | "PROCESSING" | "COMPLETED" | "FAILED" | "CANCELLED";
     paymentDetails: any;
     notes?: string;
     requestedAt: Date;

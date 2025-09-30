@@ -3,11 +3,8 @@ export interface OfferCategory {
     accountId: string;
     name: string;
     description: string;
-    parentId?: string;
-    level: number;
-    path: string;
+    order: number;
     status: 'ACTIVE' | 'INACTIVE';
-    sortOrder: number;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -15,9 +12,8 @@ export interface OfferTag {
     id: string;
     accountId: string;
     name: string;
-    description: string;
     color: string;
-    status: 'ACTIVE' | 'INACTIVE';
+    description: string;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -26,8 +22,7 @@ export interface OfferGroup {
     accountId: string;
     name: string;
     description: string;
-    type: 'CAMPAIGN' | 'SEASONAL' | 'PROMOTIONAL' | 'GEOGRAPHIC' | 'DEVICE' | 'CUSTOM';
-    criteria: GroupCriteria;
+    offers: string[];
     status: 'ACTIVE' | 'INACTIVE';
     createdAt: Date;
     updatedAt: Date;
@@ -54,11 +49,8 @@ export interface OfferTemplate {
     accountId: string;
     name: string;
     description: string;
-    type: 'STANDARD' | 'CPA' | 'CPS' | 'CPL' | 'CPM' | 'HYBRID';
-    template: OfferTemplateData;
-    isPublic: boolean;
+    template: any;
     isDefault: boolean;
-    status: 'ACTIVE' | 'INACTIVE';
     createdAt: Date;
     updatedAt: Date;
 }
@@ -110,8 +102,7 @@ export interface OfferOrganization {
     accountId: string;
     name: string;
     description: string;
-    structure: OrganizationStructure;
-    rules: OrganizationRule[];
+    settings: any;
     status: 'ACTIVE' | 'INACTIVE';
     createdAt: Date;
     updatedAt: Date;

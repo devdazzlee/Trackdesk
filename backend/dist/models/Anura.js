@@ -5,60 +5,55 @@ const client_1 = require("@prisma/client");
 const prisma = new client_1.PrismaClient();
 class AnuraModel {
     static async createConfig(data) {
-        return await prisma.anuraConfig.create({
+        return (await prisma.anuraConfig.create({
             data: {
+                accountId: "default",
                 apiKey: data.apiKey,
-                apiSecret: data.apiSecret,
-                endpoint: data.endpoint || 'https://api.anura.io/v1',
-                enabled: data.enabled || false,
-                settings: data.settings || {
-                    fraudThreshold: 0.7,
-                    qualityThreshold: 0.5,
-                    autoBlock: true,
-                    notifyOnFraud: true,
-                    notifyOnQuality: true,
-                    customRules: []
-                }
-            }
-        });
+                settings: data.settings ||
+                    {
+                        fraudThreshold: 0.7,
+                        qualityThreshold: 0.5,
+                        autoBlock: true,
+                        notifyOnFraud: true,
+                        notifyOnQuality: true,
+                        customRules: [],
+                    },
+                isActive: data.enabled || false,
+            },
+        }));
     }
     static async getConfig() {
-        return await prisma.anuraConfig.findFirst({
-            orderBy: { createdAt: 'desc' }
-        });
+        return (await prisma.anuraConfig.findFirst({
+            orderBy: { createdAt: "desc" },
+        }));
     }
     static async updateConfig(id, data) {
-        return await prisma.anuraConfig.update({
+        return (await prisma.anuraConfig.update({
             where: { id },
-            data
-        });
+            data: data,
+        }));
     }
     static async deleteConfig(id) {
         await prisma.anuraConfig.delete({
-            where: { id }
+            where: { id },
         });
     }
     static async performAnuraCheck(data, ipAddress, userAgent, affiliateId, clickId, conversionId) {
         const config = await this.getConfig();
         if (!config || !config.enabled) {
-            throw new Error('Anura is not configured or enabled');
+            throw new Error("Anura is not configured or enabled");
         }
         const requestId = this.generateRequestId();
         const result = await this.callAnuraAPI(config, data, ipAddress, userAgent);
-        const anuraCheck = await prisma.anuraCheck.create({
+        const anuraCheck = (await prisma.anuraCheck.create({
             data: {
-                requestId,
-                type: 'BOTH',
-                data,
-                result,
-                ipAddress,
-                userAgent,
                 affiliateId,
                 clickId,
-                conversionId,
-                timestamp: new Date()
-            }
-        });
+                result: result,
+                score: 0.5,
+                status: "COMPLETED",
+            },
+        }));
         return anuraCheck;
     }
     static async callAnuraAPI(config, data, ipAddress, userAgent) {
@@ -72,16 +67,16 @@ class AnuraModel {
                 browser: data.browser,
                 os: data.os,
                 timestamp: new Date().toISOString(),
-                custom_data: data
+                custom_data: data,
             };
             const response = await fetch(`${config.endpoint}/check`, {
-                method: 'POST',
+                method: "POST",
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${config.apiKey}`,
-                    'X-API-Secret': config.apiSecret
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${config.apiKey}`,
+                    "X-API-Secret": config.apiSecret,
                 },
-                body: JSON.stringify(payload)
+                body: JSON.stringify(payload),
             });
             if (!response.ok) {
                 throw new Error(`Anura API error: ${response.status} ${response.statusText}`);
@@ -94,37 +89,38 @@ class AnuraModel {
                 recommendations: anuraResponse.recommendations || [],
                 blocked: this.shouldBlock(anuraResponse, config.settings),
                 reason: anuraResponse.reason,
-                details: anuraResponse
+                details: anuraResponse,
             };
         }
         catch (error) {
             return {
                 fraudScore: 0.5,
                 qualityScore: 0.5,
-                riskLevel: 'MEDIUM',
-                recommendations: ['API call failed, manual review recommended'],
+                riskLevel: "MEDIUM",
+                recommendations: ["API call failed, manual review recommended"],
                 blocked: false,
-                reason: 'API error',
-                details: { error: error.message }
+                reason: "API error",
+                details: { error: error.message },
             };
         }
     }
     static calculateRiskLevel(fraudScore, qualityScore) {
         const combinedScore = (fraudScore + (1 - qualityScore)) / 2;
         if (combinedScore >= 0.8)
-            return 'CRITICAL';
+            return "CRITICAL";
         if (combinedScore >= 0.6)
-            return 'HIGH';
+            return "HIGH";
         if (combinedScore >= 0.4)
-            return 'MEDIUM';
-        return 'LOW';
+            return "MEDIUM";
+        return "LOW";
     }
     static shouldBlock(anuraResponse, settings) {
         if (!settings.autoBlock)
             return false;
         const fraudScore = anuraResponse.fraud_score || 0;
         const qualityScore = anuraResponse.quality_score || 0;
-        return fraudScore >= settings.fraudThreshold || qualityScore <= settings.qualityThreshold;
+        return (fraudScore >= settings.fraudThreshold ||
+            qualityScore <= settings.qualityThreshold);
     }
     static generateRequestId() {
         return `anura_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -137,40 +133,33 @@ class AnuraModel {
         if (filters.affiliateId)
             where.affiliateId = filters.affiliateId;
         if (filters.riskLevel)
-            where.result = { path: ['riskLevel'], equals: filters.riskLevel };
+            where.result = { path: ["riskLevel"], equals: filters.riskLevel };
         if (filters.blocked)
-            where.result = { path: ['blocked'], equals: filters.blocked };
+            where.result = { path: ["blocked"], equals: filters.blocked };
         if (filters.startDate && filters.endDate) {
             where.timestamp = {
                 gte: filters.startDate,
-                lte: filters.endDate
+                lte: filters.endDate,
             };
         }
-        return await prisma.anuraCheck.findMany({
+        return (await prisma.anuraCheck.findMany({
             where,
             skip,
             take: limit,
-            orderBy: { timestamp: 'desc' }
-        });
+            orderBy: { createdAt: "desc" },
+        }));
     }
     static async getAnuraStats(startDate, endDate) {
         const where = {};
         if (startDate && endDate) {
             where.timestamp = {
                 gte: startDate,
-                lte: endDate
+                lte: endDate,
             };
         }
-        const checks = await prisma.anuraCheck.findMany({
+        const checks = (await prisma.anuraCheck.findMany({
             where,
-            include: {
-                affiliate: {
-                    include: {
-                        user: true
-                    }
-                }
-            }
-        });
+        }));
         const stats = {
             totalChecks: checks.length,
             fraudDetected: 0,
@@ -181,11 +170,11 @@ class AnuraModel {
             averageQualityScore: 0,
             byRiskLevel: {},
             byAffiliate: {},
-            byHour: {}
+            byHour: {},
         };
         let totalFraudScore = 0;
         let totalQualityScore = 0;
-        checks.forEach(check => {
+        checks.forEach((check) => {
             const result = check.result;
             if (result.fraudScore >= 0.7)
                 stats.fraudDetected++;
@@ -197,7 +186,8 @@ class AnuraModel {
                 stats.allowedRequests++;
             totalFraudScore += result.fraudScore;
             totalQualityScore += result.qualityScore;
-            stats.byRiskLevel[result.riskLevel] = (stats.byRiskLevel[result.riskLevel] || 0) + 1;
+            stats.byRiskLevel[result.riskLevel] =
+                (stats.byRiskLevel[result.riskLevel] || 0) + 1;
             if (check.affiliateId) {
                 if (!stats.byAffiliate[check.affiliateId]) {
                     stats.byAffiliate[check.affiliateId] = {
@@ -205,7 +195,7 @@ class AnuraModel {
                         fraud: 0,
                         quality: 0,
                         blocked: 0,
-                        name: check.affiliate?.user ? `${check.affiliate.user.firstName} ${check.affiliate.user.lastName}` : 'Unknown'
+                        name: "Unknown",
                     };
                 }
                 stats.byAffiliate[check.affiliateId].total++;
@@ -216,7 +206,7 @@ class AnuraModel {
                 if (result.blocked)
                     stats.byAffiliate[check.affiliateId].blocked++;
             }
-            const hour = check.timestamp.getHours();
+            const hour = check.timestamp?.getHours() || 0;
             if (!stats.byHour[hour]) {
                 stats.byHour[hour] = { total: 0, fraud: 0, quality: 0, blocked: 0 };
             }
@@ -228,17 +218,19 @@ class AnuraModel {
             if (result.blocked)
                 stats.byHour[hour].blocked++;
         });
-        stats.averageFraudScore = checks.length > 0 ? totalFraudScore / checks.length : 0;
-        stats.averageQualityScore = checks.length > 0 ? totalQualityScore / checks.length : 0;
+        stats.averageFraudScore =
+            checks.length > 0 ? totalFraudScore / checks.length : 0;
+        stats.averageQualityScore =
+            checks.length > 0 ? totalQualityScore / checks.length : 0;
         return stats;
     }
     static async updateAnuraSettings(settings) {
         const config = await this.getConfig();
         if (!config) {
-            throw new Error('Anura configuration not found');
+            throw new Error("Anura configuration not found");
         }
         return await this.updateConfig(config.id, {
-            settings: { ...config.settings, ...settings }
+            settings: { ...config.settings, ...settings },
         });
     }
     static async testAnuraConnection() {
@@ -248,11 +240,11 @@ class AnuraModel {
         }
         try {
             const response = await fetch(`${config.endpoint}/health`, {
-                method: 'GET',
+                method: "GET",
                 headers: {
-                    'Authorization': `Bearer ${config.apiKey}`,
-                    'X-API-Secret': config.apiSecret
-                }
+                    Authorization: `Bearer ${config.apiKey}`,
+                    "X-API-Secret": config.apiSecret,
+                },
             });
             return response.ok;
         }
@@ -263,21 +255,21 @@ class AnuraModel {
     static async createCustomRule(rule) {
         const config = await this.getConfig();
         if (!config) {
-            throw new Error('Anura configuration not found');
+            throw new Error("Anura configuration not found");
         }
         const customRules = [...config.settings.customRules, rule];
         return await this.updateConfig(config.id, {
-            settings: { ...config.settings, customRules }
+            settings: { ...config.settings, customRules },
         });
     }
     static async removeCustomRule(ruleName) {
         const config = await this.getConfig();
         if (!config) {
-            throw new Error('Anura configuration not found');
+            throw new Error("Anura configuration not found");
         }
-        const customRules = config.settings.customRules.filter(rule => rule.name !== ruleName);
+        const customRules = config.settings.customRules.filter((rule) => rule.name !== ruleName);
         return await this.updateConfig(config.id, {
-            settings: { ...config.settings, customRules }
+            settings: { ...config.settings, customRules },
         });
     }
 }

@@ -1,44 +1,6 @@
-export interface TermsConditions {
-    id: string;
-    accountId: string;
-    type: 'AFFILIATE_TERMS' | 'PRIVACY_POLICY' | 'COOKIE_POLICY' | 'DATA_PROCESSING' | 'COMMISSION_TERMS' | 'PAYOUT_TERMS' | 'CUSTOM';
-    title: string;
-    content: string;
-    version: string;
-    status: 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
-    effectiveDate: Date;
-    expiryDate?: Date;
-    requiresAcceptance: boolean;
-    acceptanceRequired: string[];
-    lastModifiedBy: string;
-    createdAt: Date;
-    updatedAt: Date;
-}
-export interface TermsAcceptance {
-    id: string;
-    termsId: string;
-    userId: string;
-    userRole: string;
-    acceptedAt: Date;
-    ipAddress: string;
-    userAgent: string;
-    version: string;
-}
-export interface TermsTemplate {
-    id: string;
-    name: string;
-    description: string;
-    type: string;
-    category: 'LEGAL' | 'BUSINESS' | 'TECHNICAL' | 'COMPLIANCE';
-    content: string;
-    variables: string[];
-    isDefault: boolean;
-    isPublic: boolean;
-    createdAt: Date;
-    updatedAt: Date;
-}
+import { TermsConditions, TermsAcceptance, TermsTemplate } from "@prisma/client";
 export declare class TermsConditionsModel {
-    static create(data: Partial<TermsConditions>): Promise<TermsConditions>;
+    static create(data: any): Promise<TermsConditions>;
     static findById(id: string): Promise<TermsConditions | null>;
     static findByAccountAndType(accountId: string, type: string): Promise<TermsConditions | null>;
     static update(id: string, data: Partial<TermsConditions>): Promise<TermsConditions>;

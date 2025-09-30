@@ -1,24 +1,9 @@
-export interface RedirectRule {
-    id: string;
-    accountId: string;
-    name: string;
-    description: string;
-    sourceUrl: string;
-    targetUrl: string;
-    type: 'PERMANENT' | 'TEMPORARY' | 'SMART' | 'CONDITIONAL';
-    status: 'ACTIVE' | 'INACTIVE' | 'PAUSED';
-    conditions: RedirectCondition[];
-    settings: RedirectSettings;
-    stats: RedirectStats;
-    createdAt: Date;
-    updatedAt: Date;
-}
 export interface RedirectCondition {
     id: string;
     field: string;
-    operator: 'EQUALS' | 'NOT_EQUALS' | 'CONTAINS' | 'STARTS_WITH' | 'ENDS_WITH' | 'REGEX' | 'IN' | 'NOT_IN';
+    operator: "EQUALS" | "NOT_EQUALS" | "CONTAINS" | "STARTS_WITH" | "ENDS_WITH" | "REGEX" | "IN" | "NOT_IN";
     value: any;
-    logic: 'AND' | 'OR';
+    logic: "AND" | "OR";
     caseSensitive: boolean;
 }
 export interface RedirectSettings {
@@ -27,7 +12,7 @@ export interface RedirectSettings {
     addTrackingParams: boolean;
     trackingParams: Record<string, string>;
     redirectDelay: number;
-    redirectMethod: 'IMMEDIATE' | 'DELAYED' | 'CONDITIONAL';
+    redirectMethod: "IMMEDIATE" | "DELAYED" | "CONDITIONAL";
     customHeaders: Record<string, string>;
     customScripts: string[];
     analytics: AnalyticsSettings;
@@ -45,7 +30,7 @@ export interface AnalyticsSettings {
 export interface AnalyticsGoal {
     id: string;
     name: string;
-    type: 'PAGE_VIEW' | 'CLICK' | 'FORM_SUBMIT' | 'TIME_ON_PAGE' | 'CUSTOM';
+    type: "PAGE_VIEW" | "CLICK" | "FORM_SUBMIT" | "TIME_ON_PAGE" | "CUSTOM";
     conditions: RedirectCondition[];
     value: number;
     enabled: boolean;
@@ -113,12 +98,12 @@ export interface BounceEvent {
     data: any;
 }
 export declare class RedirectTrackingModel {
-    static createRule(data: Partial<RedirectRule>): Promise<RedirectRule>;
-    static findRuleById(id: string): Promise<RedirectRule | null>;
-    static findRuleBySourceUrl(accountId: string, sourceUrl: string): Promise<RedirectRule | null>;
-    static updateRule(id: string, data: Partial<RedirectRule>): Promise<RedirectRule>;
+    static createRule(data: any): Promise<any>;
+    static findRuleById(id: string): Promise<any | null>;
+    static findRuleBySourceUrl(accountId: string, sourceUrl: string): Promise<any | null>;
+    static updateRule(id: string, data: any): Promise<any>;
     static deleteRule(id: string): Promise<void>;
-    static listRules(accountId: string, filters?: any): Promise<RedirectRule[]>;
+    static listRules(accountId: string, filters?: any): Promise<any[]>;
     static processRedirect(sourceUrl: string, requestData: any): Promise<{
         redirect: boolean;
         targetUrl?: string;
@@ -138,6 +123,6 @@ export declare class RedirectTrackingModel {
     static getRedirectStats(accountId: string, startDate?: Date, endDate?: Date): Promise<any>;
     private static extractSource;
     static getRedirectTrackingDashboard(accountId: string): Promise<any>;
-    static createDefaultRules(accountId: string): Promise<RedirectRule[]>;
+    static createDefaultRules(accountId: string): Promise<any[]>;
 }
 //# sourceMappingURL=RedirectTracking.d.ts.map

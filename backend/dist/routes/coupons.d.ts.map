@@ -1,1 +1,1 @@
-{"version":3,"file":"coupons.d.ts","sourceRoot":"","sources":["../../src/routes/coupons.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,MAAM,EAAqB,MAAM,SAAS,CAAC;AAQpD,QAAA,MAAM,MAAM,EAAE,MAAiB,CAAC;AAoiBhC,eAAe,MAAM,CAAC"}
+{"version":3,"file":"coupons.d.ts","sourceRoot":"","sources":["../../src/routes/coupons.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,MAAM,EAAqB,MAAM,SAAS,CAAC;AAQpD,QAAA,MAAM,MAAM,EAAE,MAAiB,CAAC;AAkkBhC,eAAe,MAAM,CAAC"}

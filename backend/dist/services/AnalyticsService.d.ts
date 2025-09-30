@@ -91,11 +91,14 @@ export declare class AnalyticsService {
                         description: string;
                         totalRevenue: number;
                         totalCommissions: number;
+                        accountId: string;
                         category: string;
+                        categoryId: string | null;
                         startDate: Date;
                         endDate: Date | null;
                         terms: string | null;
                         requirements: string | null;
+                        tags: string[];
                     };
                 } & {
                     id: string;
@@ -117,6 +120,7 @@ export declare class AnalyticsService {
                 createdAt: Date;
                 ipAddress: string;
                 userAgent: string;
+                userId: string | null;
                 affiliateId: string;
                 conversionId: string | null;
                 linkId: string;
@@ -126,14 +130,18 @@ export declare class AnalyticsService {
                 device: string | null;
                 browser: string | null;
                 os: string | null;
+                source: string | null;
                 converted: boolean;
+                timestamp: Date;
             };
         } & {
             id: string;
             status: import(".prisma/client").$Enums.ConversionStatus;
             createdAt: Date;
             updatedAt: Date;
+            userId: string | null;
             customerValue: number;
+            orderValue: number;
             commissionAmount: number;
             affiliateId: string;
             offerId: string;
@@ -154,11 +162,14 @@ export declare class AnalyticsService {
                     description: string;
                     totalRevenue: number;
                     totalCommissions: number;
+                    accountId: string;
                     category: string;
+                    categoryId: string | null;
                     startDate: Date;
                     endDate: Date | null;
                     terms: string | null;
                     requirements: string | null;
+                    tags: string[];
                 };
             } & {
                 id: string;
@@ -180,6 +191,7 @@ export declare class AnalyticsService {
             createdAt: Date;
             ipAddress: string;
             userAgent: string;
+            userId: string | null;
             affiliateId: string;
             conversionId: string | null;
             linkId: string;
@@ -189,7 +201,9 @@ export declare class AnalyticsService {
             device: string | null;
             browser: string | null;
             os: string | null;
+            source: string | null;
             converted: boolean;
+            timestamp: Date;
         })[];
         firstClick: {
             link: {
@@ -205,11 +219,14 @@ export declare class AnalyticsService {
                     description: string;
                     totalRevenue: number;
                     totalCommissions: number;
+                    accountId: string;
                     category: string;
+                    categoryId: string | null;
                     startDate: Date;
                     endDate: Date | null;
                     terms: string | null;
                     requirements: string | null;
+                    tags: string[];
                 };
             } & {
                 id: string;
@@ -231,6 +248,7 @@ export declare class AnalyticsService {
             createdAt: Date;
             ipAddress: string;
             userAgent: string;
+            userId: string | null;
             affiliateId: string;
             conversionId: string | null;
             linkId: string;
@@ -240,7 +258,9 @@ export declare class AnalyticsService {
             device: string | null;
             browser: string | null;
             os: string | null;
+            source: string | null;
             converted: boolean;
+            timestamp: Date;
         };
         lastClick: {
             link: {
@@ -256,11 +276,14 @@ export declare class AnalyticsService {
                     description: string;
                     totalRevenue: number;
                     totalCommissions: number;
+                    accountId: string;
                     category: string;
+                    categoryId: string | null;
                     startDate: Date;
                     endDate: Date | null;
                     terms: string | null;
                     requirements: string | null;
+                    tags: string[];
                 };
             } & {
                 id: string;
@@ -282,6 +305,7 @@ export declare class AnalyticsService {
             createdAt: Date;
             ipAddress: string;
             userAgent: string;
+            userId: string | null;
             affiliateId: string;
             conversionId: string | null;
             linkId: string;
@@ -291,7 +315,9 @@ export declare class AnalyticsService {
             device: string | null;
             browser: string | null;
             os: string | null;
+            source: string | null;
             converted: boolean;
+            timestamp: Date;
         };
     }>;
     getAttributionModels(): Promise<{

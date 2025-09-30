@@ -4,18 +4,18 @@ export interface ConversionType {
     name: string;
     description: string;
     code: string;
-    category: 'SALE' | 'LEAD' | 'SIGNUP' | 'DOWNLOAD' | 'CLICK' | 'VIEW' | 'CUSTOM';
+    category: "SALE" | "LEAD" | "SIGNUP" | "DOWNLOAD" | "CLICK" | "VIEW" | "CUSTOM";
     value: ConversionValue;
     tracking: TrackingSettings;
     validation: ValidationSettings;
     attribution: AttributionSettings;
-    status: 'ACTIVE' | 'INACTIVE';
+    status: "ACTIVE" | "INACTIVE";
     isDefault: boolean;
     createdAt: Date;
     updatedAt: Date;
 }
 export interface ConversionValue {
-    type: 'FIXED' | 'PERCENTAGE' | 'DYNAMIC' | 'CUSTOM';
+    type: "FIXED" | "PERCENTAGE" | "DYNAMIC" | "CUSTOM";
     fixedAmount?: number;
     percentage?: number;
     field?: string;
@@ -25,7 +25,7 @@ export interface ConversionValue {
     maximumValue?: number;
 }
 export interface TrackingSettings {
-    method: 'PIXEL' | 'POSTBACK' | 'API' | 'JAVASCRIPT' | 'SERVER_TO_SERVER';
+    method: "PIXEL" | "POSTBACK" | "API" | "JAVASCRIPT" | "SERVER_TO_SERVER";
     pixelCode?: string;
     postbackUrl?: string;
     apiEndpoint?: string;
@@ -46,9 +46,9 @@ export interface ValidationSettings {
 export interface ValidationRule {
     id: string;
     name: string;
-    type: 'REQUIRED_FIELD' | 'FIELD_FORMAT' | 'FIELD_VALUE' | 'CUSTOM_LOGIC';
+    type: "REQUIRED_FIELD" | "FIELD_FORMAT" | "FIELD_VALUE" | "CUSTOM_LOGIC";
     field: string;
-    operator: 'EQUALS' | 'NOT_EQUALS' | 'CONTAINS' | 'GREATER_THAN' | 'LESS_THAN' | 'REGEX';
+    operator: "EQUALS" | "NOT_EQUALS" | "CONTAINS" | "GREATER_THAN" | "LESS_THAN" | "REGEX";
     value: any;
     message: string;
     enabled: boolean;
@@ -76,12 +76,12 @@ export interface AttributionRule {
 }
 export interface AttributionCondition {
     field: string;
-    operator: 'EQUALS' | 'NOT_EQUALS' | 'CONTAINS' | 'GREATER_THAN' | 'LESS_THAN' | 'IN' | 'NOT_IN';
+    operator: "EQUALS" | "NOT_EQUALS" | "CONTAINS" | "GREATER_THAN" | "LESS_THAN" | "IN" | "NOT_IN";
     value: any;
-    logic: 'AND' | 'OR';
+    logic: "AND" | "OR";
 }
 export interface AttributionAction {
-    type: 'ASSIGN_CREDIT' | 'MODIFY_CREDIT' | 'EXCLUDE' | 'INCLUDE' | 'CUSTOM';
+    type: "ASSIGN_CREDIT" | "MODIFY_CREDIT" | "EXCLUDE" | "INCLUDE" | "CUSTOM";
     parameters: Record<string, any>;
     enabled: boolean;
 }
@@ -95,7 +95,7 @@ export interface ConversionEvent {
     sessionId?: string;
     value: number;
     currency: string;
-    status: 'PENDING' | 'VALIDATED' | 'APPROVED' | 'REJECTED' | 'FRAUD';
+    status: "PENDING" | "VALIDATED" | "APPROVED" | "REJECTED" | "FRAUD";
     data: any;
     ipAddress: string;
     userAgent: string;
@@ -109,7 +109,7 @@ export interface ConversionValidation {
     id: string;
     conversionEventId: string;
     ruleId: string;
-    status: 'PASSED' | 'FAILED' | 'SKIPPED';
+    status: "PASSED" | "FAILED" | "SKIPPED";
     message: string;
     data: any;
     timestamp: Date;

@@ -5,7 +5,7 @@ const client_1 = require("@prisma/client");
 const prisma = new client_1.PrismaClient();
 class CDNModel {
     static async createConfig(data) {
-        return await prisma.cdnConfig.create({
+        return (await prisma.cdnConfig.create({
             data: {
                 name: data.name,
                 type: data.type,
@@ -22,43 +22,43 @@ class CDNModel {
                     blockedCountries: [],
                     rateLimiting: {
                         enabled: false,
-                        requestsPerMinute: 1000
-                    }
+                        requestsPerMinute: 1000,
+                    },
                 },
-                status: 'ACTIVE'
-            }
-        });
+                status: "ACTIVE",
+            },
+        }));
     }
     static async findConfigById(id) {
-        return await prisma.cdnConfig.findUnique({
-            where: { id }
-        });
+        return (await prisma.cdnConfig.findUnique({
+            where: { id },
+        }));
     }
     static async getActiveConfig() {
-        return await prisma.cdnConfig.findFirst({
-            where: { status: 'ACTIVE' }
-        });
+        return (await prisma.cdnConfig.findFirst({
+            where: { status: "ACTIVE" },
+        }));
     }
     static async updateConfig(id, data) {
-        return await prisma.cdnConfig.update({
+        return (await prisma.cdnConfig.update({
             where: { id },
-            data
-        });
+            data,
+        }));
     }
     static async deleteConfig(id) {
         await prisma.cdnConfig.delete({
-            where: { id }
+            where: { id },
         });
     }
     static async listConfigs() {
-        return await prisma.cdnConfig.findMany({
-            orderBy: { createdAt: 'desc' }
-        });
+        return (await prisma.cdnConfig.findMany({
+            orderBy: { createdAt: "desc" },
+        }));
     }
     static async uploadAsset(name, type, originalUrl, size, mimeType, metadata = {}) {
         const hash = this.generateHash(originalUrl);
         const cdnUrl = await this.generateCDNUrl(name, hash);
-        const asset = await prisma.cdnAsset.create({
+        const asset = (await prisma.cdnAsset.create({
             data: {
                 name,
                 type: type,
@@ -67,30 +67,30 @@ class CDNModel {
                 size,
                 mimeType,
                 hash,
-                status: 'UPLOADING',
-                metadata
-            }
-        });
+                status: "UPLOADING",
+                metadata,
+            },
+        }));
         setTimeout(async () => {
-            await this.updateAssetStatus(asset.id, 'ACTIVE');
+            await this.updateAssetStatus(asset.id, "ACTIVE");
         }, 1000);
         return asset;
     }
     static async findAssetById(id) {
-        return await prisma.cdnAsset.findUnique({
-            where: { id }
-        });
+        return (await prisma.cdnAsset.findUnique({
+            where: { id },
+        }));
     }
     static async findAssetByHash(hash) {
-        return await prisma.cdnAsset.findFirst({
-            where: { hash }
-        });
+        return (await prisma.cdnAsset.findFirst({
+            where: { hash },
+        }));
     }
     static async updateAsset(id, data) {
-        return await prisma.cdnAsset.update({
+        return (await prisma.cdnAsset.update({
             where: { id },
-            data
-        });
+            data,
+        }));
     }
     static async updateAssetStatus(id, status) {
         return await this.updateAsset(id, { status: status });
@@ -98,7 +98,7 @@ class CDNModel {
     static async deleteAsset(id) {
         await prisma.cdnAsset.update({
             where: { id },
-            data: { status: 'DELETED' }
+            data: { status: "DELETED" },
         });
     }
     static async listAssets(filters = {}, page = 1, limit = 50) {
@@ -110,15 +110,15 @@ class CDNModel {
             where.status = filters.status;
         if (filters.name)
             where.name = { contains: filters.name };
-        return await prisma.cdnAsset.findMany({
+        return (await prisma.cdnAsset.findMany({
             where,
             skip,
             take: limit,
-            orderBy: { createdAt: 'desc' }
-        });
+            orderBy: { createdAt: "desc" },
+        }));
     }
     static async recordUsage(assetId, requests, bandwidth, cacheHits, cacheMisses, country, device) {
-        return await prisma.cdnUsage.create({
+        return (await prisma.cdnUsage.create({
             data: {
                 assetId,
                 requests,
@@ -127,36 +127,36 @@ class CDNModel {
                 cacheMisses,
                 date: new Date(),
                 country,
-                device
-            }
-        });
+                device,
+            },
+        }));
     }
     static async getAssetUsage(assetId, startDate, endDate) {
         const where = { assetId };
         if (startDate && endDate) {
             where.date = {
                 gte: startDate,
-                lte: endDate
+                lte: endDate,
             };
         }
-        return await prisma.cdnUsage.findMany({
+        return (await prisma.cdnUsage.findMany({
             where,
-            orderBy: { date: 'desc' }
-        });
+            orderBy: { date: "desc" },
+        }));
     }
     static async getCDNStats(startDate, endDate) {
         const where = {};
         if (startDate && endDate) {
             where.date = {
                 gte: startDate,
-                lte: endDate
+                lte: endDate,
             };
         }
         const usage = await prisma.cdnUsage.findMany({
             where,
             include: {
-                asset: true
-            }
+                asset: true,
+            },
         });
         const stats = {
             totalRequests: 0,
@@ -168,9 +168,9 @@ class CDNModel {
             byType: {},
             byCountry: {},
             byDevice: {},
-            byDay: {}
+            byDay: {},
         };
-        usage.forEach(record => {
+        usage.forEach((record) => {
             stats.totalRequests += record.requests;
             stats.totalBandwidth += record.bandwidth;
             stats.totalCacheHits += record.cacheHits;
@@ -181,7 +181,7 @@ class CDNModel {
                     bandwidth: 0,
                     cacheHits: 0,
                     cacheMisses: 0,
-                    name: record.asset?.name || 'Unknown'
+                    name: record.asset?.name || "Unknown",
                 };
             }
             stats.byAsset[record.assetId].requests += record.requests;
@@ -209,7 +209,7 @@ class CDNModel {
                 stats.byDevice[record.device].requests += record.requests;
                 stats.byDevice[record.device].bandwidth += record.bandwidth;
             }
-            const day = record.date.toISOString().split('T')[0];
+            const day = record.date.toISOString().split("T")[0];
             if (!stats.byDay[day]) {
                 stats.byDay[day] = { requests: 0, bandwidth: 0 };
             }
@@ -217,43 +217,46 @@ class CDNModel {
             stats.byDay[day].bandwidth += record.bandwidth;
         });
         const totalCacheRequests = stats.totalCacheHits + stats.totalCacheMisses;
-        stats.cacheHitRate = totalCacheRequests > 0 ? (stats.totalCacheHits / totalCacheRequests) * 100 : 0;
+        stats.cacheHitRate =
+            totalCacheRequests > 0
+                ? (stats.totalCacheHits / totalCacheRequests) * 100
+                : 0;
         return stats;
     }
     static async purgeCache(assetId, pattern) {
         try {
             const config = await this.getActiveConfig();
             if (!config) {
-                throw new Error('No active CDN configuration found');
+                throw new Error("No active CDN configuration found");
             }
             return true;
         }
         catch (error) {
-            console.error('Cache purge failed:', error);
+            console.error("Cache purge failed:", error);
             return false;
         }
     }
     static async optimizeImage(assetId, options = {}) {
         const asset = await this.findAssetById(assetId);
         if (!asset) {
-            throw new Error('Asset not found');
+            throw new Error("Asset not found");
         }
-        if (asset.type !== 'IMAGE') {
-            throw new Error('Asset is not an image');
+        if (asset.type !== "IMAGE") {
+            throw new Error("Asset is not an image");
         }
         return asset;
     }
     static async generateCDNUrl(name, hash) {
         const config = await this.getActiveConfig();
         if (!config) {
-            throw new Error('No active CDN configuration found');
+            throw new Error("No active CDN configuration found");
         }
-        const extension = name.split('.').pop();
+        const extension = name.split(".").pop();
         return `https://${config.domain}/${hash}.${extension}`;
     }
     static generateHash(input) {
-        const crypto = require('crypto');
-        return crypto.createHash('md5').update(input).digest('hex');
+        const crypto = require("crypto");
+        return crypto.createHash("md5").update(input).digest("hex");
     }
     static async testCDNConnection(configId) {
         const config = await this.findConfigById(configId);
@@ -264,7 +267,7 @@ class CDNModel {
             return true;
         }
         catch (error) {
-            console.error('CDN connection test failed:', error);
+            console.error("CDN connection test failed:", error);
             return false;
         }
     }
@@ -272,14 +275,18 @@ class CDNModel {
         const configs = await this.listConfigs();
         const assets = await prisma.cdnAsset.count();
         const activeAssets = await prisma.cdnAsset.count({
-            where: { status: 'ACTIVE' }
+            where: { status: "ACTIVE" },
         });
         const health = {
             totalConfigs: configs.length,
-            activeConfigs: configs.filter(c => c.status === 'ACTIVE').length,
+            activeConfigs: configs.filter((c) => c.status === "ACTIVE").length,
             totalAssets: assets,
             activeAssets,
-            healthPercentage: configs.length > 0 ? (configs.filter(c => c.status === 'ACTIVE').length / configs.length) * 100 : 0
+            healthPercentage: configs.length > 0
+                ? (configs.filter((c) => c.status === "ACTIVE").length /
+                    configs.length) *
+                    100
+                : 0,
         };
         return health;
     }

@@ -5,47 +5,43 @@ const client_1 = require("@prisma/client");
 const prisma = new client_1.PrismaClient();
 class CouponModel {
     static async create(data) {
-        return await prisma.coupon.create({
+        return (await prisma.coupon.create({
             data: {
                 code: data.code,
-                name: data.name,
-                description: data.description || '',
-                type: data.type,
-                value: data.value,
-                minimumAmount: data.minimumAmount,
-                maximumDiscount: data.maximumDiscount,
-                usageLimit: data.usageLimit,
-                usedCount: 0,
-                startDate: data.startDate,
-                endDate: data.endDate,
-                status: data.status || 'ACTIVE',
-                applicableTo: data.applicableTo || 'ALL_PRODUCTS',
-                productIds: data.productIds,
-                categoryIds: data.categoryIds,
-                affiliateId: data.affiliateId,
-                offerId: data.offerId,
-            }
-        });
+                description: data.description || "",
+                discount: data.value?.toString() || "0",
+                validUntil: data.endDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+                usage: 0,
+                maxUsage: data.usageLimit,
+                status: data.status || "ACTIVE",
+                affiliateId: data.affiliateId || "default",
+            },
+        }));
     }
     static async findById(id) {
-        return await prisma.coupon.findUnique({
-            where: { id }
-        });
+        return (await prisma.coupon.findUnique({
+            where: { id },
+        }));
     }
     static async findByCode(code) {
-        return await prisma.coupon.findUnique({
-            where: { code }
-        });
+        return (await prisma.coupon.findUnique({
+            where: { code },
+        }));
     }
     static async update(id, data) {
-        return await prisma.coupon.update({
+        return (await prisma.coupon.update({
             where: { id },
-            data
-        });
+            data: {
+                ...data,
+                discount: data.value?.toString() || data.discount,
+                validUntil: data.endDate || data.validUntil,
+                maxUsage: data.usageLimit || data.maxUsage,
+            },
+        }));
     }
     static async delete(id) {
         await prisma.coupon.delete({
-            where: { id }
+            where: { id },
         });
     }
     static async list(filters = {}, page = 1, limit = 10) {
@@ -59,71 +55,67 @@ class CouponModel {
             where.affiliateId = filters.affiliateId;
         if (filters.offerId)
             where.offerId = filters.offerId;
-        return await prisma.coupon.findMany({
+        return (await prisma.coupon.findMany({
             where,
             skip,
             take: limit,
-            orderBy: { createdAt: 'desc' }
-        });
+            orderBy: { createdAt: "desc" },
+        }));
     }
     static async validateCoupon(code, orderAmount, productIds) {
         const coupon = await this.findByCode(code);
         if (!coupon) {
-            return { valid: false, error: 'Coupon not found' };
+            return { valid: false, error: "Coupon not found" };
         }
-        if (coupon.status !== 'ACTIVE') {
-            return { valid: false, error: 'Coupon is not active' };
+        if (coupon.status !== "ACTIVE") {
+            return { valid: false, error: "Coupon is not active" };
         }
         if (coupon.endDate && new Date() > coupon.endDate) {
-            return { valid: false, error: 'Coupon has expired' };
+            return { valid: false, error: "Coupon has expired" };
         }
-        if (coupon.usageLimit && coupon.usedCount >= coupon.usageLimit) {
-            return { valid: false, error: 'Coupon usage limit reached' };
-        }
-        if (coupon.minimumAmount && orderAmount < coupon.minimumAmount) {
-            return { valid: false, error: `Minimum order amount of ${coupon.minimumAmount} required` };
+        if (coupon.maxUsage &&
+            coupon.usage >= coupon.maxUsage) {
+            return { valid: false, error: "Coupon usage limit reached" };
         }
         let discount = 0;
-        if (coupon.type === 'PERCENTAGE') {
-            discount = (orderAmount * coupon.value) / 100;
-            if (coupon.maximumDiscount) {
-                discount = Math.min(discount, coupon.maximumDiscount);
-            }
+        const discountValue = parseFloat(coupon.discount) || 0;
+        if (discountValue <= 100) {
+            discount = (orderAmount * discountValue) / 100;
         }
-        else if (coupon.type === 'FIXED_AMOUNT') {
-            discount = coupon.value;
+        else {
+            discount = discountValue;
         }
         return { valid: true, coupon, discount };
     }
     static async recordUsage(couponId, orderId, customerId, affiliateId, discountAmount) {
-        const usage = await prisma.couponUsage.create({
+        const usage = (await prisma.couponUsage.create({
             data: {
                 couponId,
                 orderId,
                 customerId,
                 affiliateId,
                 discountAmount,
-                usedAt: new Date()
-            }
-        });
+                usedAt: new Date(),
+            },
+        }));
         await prisma.coupon.update({
             where: { id: couponId },
             data: {
-                usedCount: {
-                    increment: 1
-                }
-            }
+                usage: {
+                    increment: 1,
+                },
+            },
         });
         return usage;
     }
     static async importFromCSV(csvData, affiliateId, offerId) {
-        const lines = csvData.split('\n');
+        const lines = csvData.split("\n");
         const coupons = [];
         for (let i = 1; i < lines.length; i++) {
             const line = lines[i].trim();
             if (!line)
                 continue;
-            const columns = line.split(',');
+            const columns = line.split(",");
             if (columns.length < 4)
                 continue;
             const coupon = await this.create({
@@ -137,8 +129,8 @@ class CouponModel {
                 usageLimit: columns[7] ? parseInt(columns[7].trim()) : undefined,
                 startDate: new Date(columns[8].trim()),
                 endDate: columns[9] ? new Date(columns[9].trim()) : undefined,
-                status: 'ACTIVE',
-                applicableTo: 'ALL_PRODUCTS',
+                status: "ACTIVE",
+                applicableTo: "ALL_PRODUCTS",
                 affiliateId,
                 offerId,
             });

@@ -1,5 +1,5 @@
-import { Request, Response } from 'express';
-import '../types/express';
+import { Request, Response } from "express";
+import "../types/express";
 export declare class OfferController {
     getAllOffers(req: Request, res: Response): Promise<void>;
     getOfferById(req: Request, res: Response): Promise<void>;

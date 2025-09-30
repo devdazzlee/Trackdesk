@@ -10,11 +10,7 @@ class OfferOrganizationModel {
                 accountId: data.accountId,
                 name: data.name,
                 description: data.description || '',
-                parentId: data.parentId,
-                level: data.level || 0,
-                path: data.path || data.name,
-                status: data.status || 'ACTIVE',
-                sortOrder: data.sortOrder || 0
+                order: data.order || 0
             }
         });
     }
@@ -39,28 +35,17 @@ class OfferOrganizationModel {
     }
     static async listCategories(accountId, filters = {}) {
         const where = { accountId };
-        if (filters.status)
-            where.status = filters.status;
-        if (filters.parentId !== undefined)
-            where.parentId = filters.parentId;
-        if (filters.level)
-            where.level = filters.level;
         return await prisma.offerCategory.findMany({
             where,
-            orderBy: [{ level: 'asc' }, { sortOrder: 'asc' }, { name: 'asc' }]
+            orderBy: [{ order: 'asc' }, { name: 'asc' }]
         });
     }
     static async getCategoryTree(accountId) {
         const categories = await this.listCategories(accountId);
         return this.buildCategoryTree(categories);
     }
-    static buildCategoryTree(categories, parentId) {
-        return categories
-            .filter(cat => cat.parentId === parentId)
-            .map(cat => ({
-            ...cat,
-            children: this.buildCategoryTree(categories, cat.id)
-        }));
+    static buildCategoryTree(categories) {
+        return categories;
     }
     static async createTag(data) {
         return await prisma.offerTag.create({
@@ -68,8 +53,7 @@ class OfferOrganizationModel {
                 accountId: data.accountId,
                 name: data.name,
                 description: data.description || '',
-                color: data.color || '#3b82f6',
-                status: data.status || 'ACTIVE'
+                color: data.color || '#3b82f6'
             }
         });
     }
@@ -94,8 +78,6 @@ class OfferOrganizationModel {
     }
     static async listTags(accountId, filters = {}) {
         const where = { accountId };
-        if (filters.status)
-            where.status = filters.status;
         return await prisma.offerTag.findMany({
             where,
             orderBy: { name: 'asc' }
@@ -107,9 +89,7 @@ class OfferOrganizationModel {
                 accountId: data.accountId,
                 name: data.name,
                 description: data.description || '',
-                type: data.type,
-                criteria: data.criteria || {},
-                status: data.status || 'ACTIVE'
+                offers: data.offers || []
             }
         });
     }
@@ -134,10 +114,6 @@ class OfferOrganizationModel {
     }
     static async listGroups(accountId, filters = {}) {
         const where = { accountId };
-        if (filters.status)
-            where.status = filters.status;
-        if (filters.type)
-            where.type = filters.type;
         return await prisma.offerGroup.findMany({
             where,
             orderBy: { name: 'asc' }
@@ -149,11 +125,8 @@ class OfferOrganizationModel {
                 accountId: data.accountId,
                 name: data.name,
                 description: data.description || '',
-                type: data.type,
-                template: data.template,
-                isPublic: data.isPublic || false,
-                isDefault: data.isDefault || false,
-                status: data.status || 'ACTIVE'
+                template: data.template || {},
+                isDefault: data.isDefault || false
             }
         });
     }
@@ -178,12 +151,6 @@ class OfferOrganizationModel {
     }
     static async listTemplates(accountId, filters = {}) {
         const where = { accountId };
-        if (filters.status)
-            where.status = filters.status;
-        if (filters.type)
-            where.type = filters.type;
-        if (filters.isPublic !== undefined)
-            where.isPublic = filters.isPublic;
         if (filters.isDefault !== undefined)
             where.isDefault = filters.isDefault;
         return await prisma.offerTemplate.findMany({
@@ -197,14 +164,7 @@ class OfferOrganizationModel {
                 accountId: data.accountId,
                 name: data.name,
                 description: data.description || '',
-                structure: data.structure || {
-                    categories: [],
-                    tags: [],
-                    groups: [],
-                    templates: []
-                },
-                rules: data.rules || [],
-                status: data.status || 'ACTIVE'
+                settings: data.settings || {}
             }
         });
     }
@@ -229,8 +189,6 @@ class OfferOrganizationModel {
     }
     static async listOrganizations(accountId, filters = {}) {
         const where = { accountId };
-        if (filters.status)
-            where.status = filters.status;
         return await prisma.offerOrganization.findMany({
             where,
             orderBy: { name: 'asc' }
@@ -246,14 +204,6 @@ class OfferOrganizationModel {
         });
         if (!offer) {
             return;
-        }
-        for (const rule of organization.rules) {
-            if (!rule.enabled)
-                continue;
-            const conditionsMet = await this.evaluateRuleConditions(rule.conditions, offer);
-            if (conditionsMet) {
-                await this.executeRuleActions(rule.actions, offer);
-            }
         }
     }
     static async evaluateRuleConditions(conditions, offer) {
@@ -330,7 +280,7 @@ class OfferOrganizationModel {
                     case 'REQUIRE_APPROVAL':
                         await prisma.offer.update({
                             where: { id: offer.id },
-                            data: { status: 'PENDING_APPROVAL' }
+                            data: { status: 'PAUSED' }
                         });
                         break;
                     case 'AUTO_APPROVE':
@@ -359,11 +309,11 @@ class OfferOrganizationModel {
             totalCategories: categories.length,
             activeCategories: categories.filter(c => c.status === 'ACTIVE').length,
             totalTags: tags.length,
-            activeTags: tags.filter(t => t.status === 'ACTIVE').length,
+            activeTags: tags.length,
             totalGroups: groups.length,
             activeGroups: groups.filter(g => g.status === 'ACTIVE').length,
             totalTemplates: templates.length,
-            activeTemplates: templates.filter(t => t.status === 'ACTIVE').length,
+            activeTemplates: templates.length,
             totalOrganizations: organizations.length,
             activeOrganizations: organizations.filter(o => o.status === 'ACTIVE').length,
             totalOffers: offers.length,
@@ -389,29 +339,25 @@ class OfferOrganizationModel {
                 accountId,
                 name: 'E-commerce',
                 description: 'E-commerce and retail offers',
-                level: 0,
-                sortOrder: 1
+                order: 1
             }),
             this.createCategory({
                 accountId,
                 name: 'Finance',
                 description: 'Financial services and products',
-                level: 0,
-                sortOrder: 2
+                order: 2
             }),
             this.createCategory({
                 accountId,
                 name: 'Health & Beauty',
                 description: 'Health and beauty products',
-                level: 0,
-                sortOrder: 3
+                order: 3
             }),
             this.createCategory({
                 accountId,
                 name: 'Technology',
                 description: 'Technology products and services',
-                level: 0,
-                sortOrder: 4
+                order: 4
             })
         ]);
         const tags = await Promise.all([
@@ -445,23 +391,13 @@ class OfferOrganizationModel {
                 accountId,
                 name: 'Holiday Campaigns',
                 description: 'Offers for holiday seasons',
-                type: 'SEASONAL',
-                criteria: {
-                    tags: [tags.find(t => t.name === 'Seasonal')?.id || ''],
-                    dateRange: {
-                        startDate: new Date('2024-11-01'),
-                        endDate: new Date('2024-12-31')
-                    }
-                }
+                offers: []
             }),
             this.createGroup({
                 accountId,
                 name: 'Top Performers',
                 description: 'High-performing offers',
-                type: 'PROMOTIONAL',
-                criteria: {
-                    tags: [tags.find(t => t.name === 'High Converting')?.id || '']
-                }
+                offers: []
             })
         ]);
         const templates = await Promise.all([
@@ -469,7 +405,6 @@ class OfferOrganizationModel {
                 accountId,
                 name: 'Standard CPA Offer',
                 description: 'Standard cost-per-action offer template',
-                type: 'CPA',
                 template: {
                     name: '',
                     description: '',
@@ -503,28 +438,12 @@ class OfferOrganizationModel {
             accountId,
             name: 'Default Organization',
             description: 'Default offer organization structure',
-            structure: {
+            settings: {
                 categories,
                 tags,
                 groups,
                 templates
-            },
-            rules: [
-                {
-                    id: 'auto_categorize',
-                    name: 'Auto Categorize by Name',
-                    description: 'Automatically categorize offers based on name keywords',
-                    type: 'AUTO_CATEGORIZE',
-                    conditions: [
-                        { field: 'name', operator: 'CONTAINS', value: 'ecommerce', logic: 'AND' }
-                    ],
-                    actions: [
-                        { type: 'ASSIGN_CATEGORY', parameters: { categoryId: categories[0].id }, enabled: true }
-                    ],
-                    priority: 1,
-                    enabled: true
-                }
-            ]
+            }
         });
     }
     static async getOrganizationDashboard(accountId) {

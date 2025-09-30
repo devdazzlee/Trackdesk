@@ -2,7 +2,7 @@ export interface DashboardWidget {
     id: string;
     accountId: string;
     name: string;
-    type: 'CHART' | 'TABLE' | 'METRIC' | 'LIST' | 'CUSTOM';
+    type: "CHART" | "TABLE" | "METRIC" | "LIST" | "CUSTOM";
     title: string;
     description: string;
     dataSource: string;
@@ -12,12 +12,12 @@ export interface DashboardWidget {
     size: WidgetSize;
     permissions: string[];
     roles: string[];
-    status: 'ACTIVE' | 'INACTIVE';
+    status: "ACTIVE" | "INACTIVE";
     createdAt: Date;
     updatedAt: Date;
 }
 export interface WidgetSettings {
-    chartType?: 'LINE' | 'BAR' | 'PIE' | 'DOUGHNUT' | 'AREA' | 'SCATTER';
+    chartType?: "LINE" | "BAR" | "PIE" | "DOUGHNUT" | "AREA" | "SCATTER";
     colors: string[];
     showLegend: boolean;
     showGrid: boolean;
@@ -44,12 +44,12 @@ export interface ReportTemplate {
     accountId: string;
     name: string;
     description: string;
-    type: 'DASHBOARD' | 'ANALYTICS' | 'FINANCIAL' | 'PERFORMANCE' | 'CUSTOM';
+    type: "DASHBOARD" | "ANALYTICS" | "FINANCIAL" | "PERFORMANCE" | "CUSTOM";
     category: string;
     template: ReportTemplateData;
     isPublic: boolean;
     isDefault: boolean;
-    status: 'ACTIVE' | 'INACTIVE';
+    status: "ACTIVE" | "INACTIVE";
     createdAt: Date;
     updatedAt: Date;
 }
@@ -89,7 +89,7 @@ export interface FilterSettings {
 export interface Filter {
     id: string;
     name: string;
-    type: 'SELECT' | 'MULTI_SELECT' | 'DATE' | 'DATE_RANGE' | 'NUMBER' | 'TEXT';
+    type: "SELECT" | "MULTI_SELECT" | "DATE" | "DATE_RANGE" | "NUMBER" | "TEXT";
     field: string;
     options?: string[];
     defaultValue?: any;
@@ -124,7 +124,7 @@ export interface CustomReport {
     exportSettings: ExportSettings;
     permissions: string[];
     roles: string[];
-    status: 'ACTIVE' | 'INACTIVE' | 'DRAFT';
+    status: "ACTIVE" | "INACTIVE" | "DRAFT";
     isPublic: boolean;
     createdBy: string;
     createdAt: Date;
@@ -134,13 +134,13 @@ export interface ReportSchedule {
     id: string;
     reportId: string;
     name: string;
-    frequency: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'YEARLY' | 'CUSTOM';
+    frequency: "DAILY" | "WEEKLY" | "MONTHLY" | "QUARTERLY" | "YEARLY" | "CUSTOM";
     time: string;
     timezone: string;
     recipients: string[];
     format: string;
     filters: Record<string, any>;
-    status: 'ACTIVE' | 'INACTIVE' | 'PAUSED';
+    status: "ACTIVE" | "INACTIVE" | "PAUSED";
     lastRun?: Date;
     nextRun?: Date;
     createdAt: Date;
@@ -150,7 +150,7 @@ export interface ReportExecution {
     id: string;
     reportId: string;
     scheduleId?: string;
-    status: 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED';
+    status: "PENDING" | "RUNNING" | "COMPLETED" | "FAILED";
     startedAt: Date;
     completedAt?: Date;
     duration?: number;

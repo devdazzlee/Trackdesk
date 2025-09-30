@@ -1,25 +1,23 @@
-import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcryptjs';
+import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
-
-export interface RegistrationForm {
-  id: string;
-  accountId: string;
-  name: string;
-  description: string;
-  fields: RegistrationField[];
-  settings: RegistrationSettings;
-  status: 'ACTIVE' | 'INACTIVE' | 'DRAFT';
-  createdAt: Date;
-  updatedAt: Date;
-}
 
 export interface RegistrationField {
   id: string;
   name: string;
   label: string;
-  type: 'TEXT' | 'EMAIL' | 'PASSWORD' | 'PHONE' | 'SELECT' | 'CHECKBOX' | 'RADIO' | 'TEXTAREA' | 'FILE' | 'DATE';
+  type:
+    | "TEXT"
+    | "EMAIL"
+    | "PASSWORD"
+    | "PHONE"
+    | "SELECT"
+    | "CHECKBOX"
+    | "RADIO"
+    | "TEXTAREA"
+    | "FILE"
+    | "DATE";
   required: boolean;
   placeholder?: string;
   options?: string[];
@@ -51,7 +49,7 @@ export interface RegistrationSubmission {
   id: string;
   formId: string;
   data: Record<string, any>;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'UNDER_REVIEW';
+  status: "PENDING" | "APPROVED" | "REJECTED" | "UNDER_REVIEW";
   submittedAt: Date;
   reviewedAt?: Date;
   reviewedBy?: string;
@@ -66,7 +64,7 @@ export interface RegistrationWorkflow {
   name: string;
   description: string;
   steps: WorkflowStep[];
-  status: 'ACTIVE' | 'INACTIVE';
+  status: "ACTIVE" | "INACTIVE";
   createdAt: Date;
   updatedAt: Date;
 }
@@ -74,7 +72,7 @@ export interface RegistrationWorkflow {
 export interface WorkflowStep {
   id: string;
   name: string;
-  type: 'FORM' | 'APPROVAL' | 'EMAIL' | 'WEBHOOK' | 'CONDITION';
+  type: "FORM" | "APPROVAL" | "EMAIL" | "WEBHOOK" | "CONDITION";
   order: number;
   settings: any;
   conditions?: WorkflowCondition[];
@@ -82,99 +80,106 @@ export interface WorkflowStep {
 
 export interface WorkflowCondition {
   field: string;
-  operator: 'EQUALS' | 'NOT_EQUALS' | 'CONTAINS' | 'GREATER_THAN' | 'LESS_THAN';
+  operator: "EQUALS" | "NOT_EQUALS" | "CONTAINS" | "GREATER_THAN" | "LESS_THAN";
   value: any;
 }
 
 export class RegistrationModel {
-  static async createForm(data: Partial<RegistrationForm>): Promise<RegistrationForm> {
-    return await prisma.registrationForm.create({
+  static async createForm(data: any): Promise<any> {
+    return (await prisma.registrationForm.create({
       data: {
         accountId: data.accountId!,
         name: data.name!,
-        description: data.description || '',
-        fields: data.fields || [],
-        settings: data.settings || {
+        description: data.description || "",
+        fields: (data.fields || []) as any,
+        settings: (data.settings || {
           allowRegistration: true,
           requireApproval: true,
           requireEmailVerification: true,
           autoAssignTier: false,
-          welcomeEmail: true
-        },
-        status: data.status || 'DRAFT'
-      }
-    }) as RegistrationForm;
+          welcomeEmail: true,
+        }) as any,
+        status: data.status || "DRAFT",
+      },
+    })) as unknown as any;
   }
 
-  static async findFormById(id: string): Promise<RegistrationForm | null> {
-    return await prisma.registrationForm.findUnique({
-      where: { id }
-    }) as RegistrationForm | null;
+  static async findFormById(id: string): Promise<any | null> {
+    return (await prisma.registrationForm.findUnique({
+      where: { id },
+    })) as unknown as any | null;
   }
 
-  static async findActiveForm(accountId: string): Promise<RegistrationForm | null> {
-    return await prisma.registrationForm.findFirst({
+  static async findActiveForm(accountId: string): Promise<any | null> {
+    return (await prisma.registrationForm.findFirst({
       where: {
         accountId,
-        status: 'ACTIVE'
-      }
-    }) as RegistrationForm | null;
+        status: "ACTIVE",
+      },
+    })) as unknown as any | null;
   }
 
-  static async updateForm(id: string, data: Partial<RegistrationForm>): Promise<RegistrationForm> {
-    return await prisma.registrationForm.update({
+  static async updateForm(id: string, data: any): Promise<any> {
+    return (await prisma.registrationForm.update({
       where: { id },
       data: {
         ...data,
-        updatedAt: new Date()
-      }
-    }) as RegistrationForm;
+        fields: data.fields as any,
+        settings: data.settings as any,
+        updatedAt: new Date(),
+      },
+    })) as unknown as any;
   }
 
   static async deleteForm(id: string): Promise<void> {
     await prisma.registrationForm.delete({
-      where: { id }
+      where: { id },
     });
   }
 
-  static async listForms(accountId: string, filters: any = {}): Promise<RegistrationForm[]> {
+  static async listForms(accountId: string, filters: any = {}): Promise<any[]> {
     const where: any = { accountId };
-    
+
     if (filters.status) where.status = filters.status;
 
-    return await prisma.registrationForm.findMany({
+    return (await prisma.registrationForm.findMany({
       where,
-      orderBy: { createdAt: 'desc' }
-    }) as RegistrationForm[];
+      orderBy: { createdAt: "desc" },
+    })) as unknown as any[];
   }
 
-  static async submitRegistration(formId: string, data: Record<string, any>, ipAddress: string, userAgent: string): Promise<RegistrationSubmission> {
+  static async submitRegistration(
+    formId: string,
+    data: Record<string, any>,
+    ipAddress: string,
+    userAgent: string
+  ): Promise<RegistrationSubmission> {
     const form = await this.findFormById(formId);
     if (!form) {
-      throw new Error('Registration form not found');
+      throw new Error("Registration form not found");
     }
 
-    if (form.status !== 'ACTIVE') {
-      throw new Error('Registration form is not active');
+    if (form.status !== "ACTIVE") {
+      throw new Error("Registration form is not active");
     }
 
     // Validate required fields
     const validation = await this.validateSubmission(form, data);
     if (!validation.valid) {
-      throw new Error(`Validation failed: ${validation.errors.join(', ')}`);
+      throw new Error(`Validation failed: ${validation.errors.join(", ")}`);
     }
 
     // Create submission
-    const submission = await prisma.registrationSubmission.create({
+    const submission = (await prisma.registrationSubmission.create({
       data: {
         formId,
-        data,
-        status: 'PENDING',
+        data: data as any,
+        status: "PENDING",
         submittedAt: new Date(),
         ipAddress,
-        userAgent
-      }
-    }) as RegistrationSubmission;
+        userAgent,
+      },
+    })) as unknown as RegistrationSubmission;
 
     // Process submission based on form settings
     await this.processSubmission(submission, form);
@@ -182,11 +187,17 @@ export class RegistrationModel {
     return submission;
   }
 
-  private static async validateSubmission(form: RegistrationForm, data: Record<string, any>): Promise<{ valid: boolean; errors: string[] }> {
+  private static async validateSubmission(
+    form: any,
+    data: Record<string, any>
+  ): Promise<{ valid: boolean; errors: string[] }> {
     const errors: string[] = [];
 
-    for (const field of form.fields) {
-      if (field.required && (!data[field.name] || data[field.name].toString().trim() === '')) {
+    for (const field of form.fields as any) {
+      if (
+        field.required &&
+        (!data[field.name] || data[field.name].toString().trim() === "")
+      ) {
         errors.push(`${field.label} is required`);
         continue;
       }
@@ -196,27 +207,36 @@ export class RegistrationModel {
         const validation = field.validation;
 
         if (validation.minLength && value.length < validation.minLength) {
-          errors.push(`${field.label} must be at least ${validation.minLength} characters`);
+          errors.push(
+            `${field.label} must be at least ${validation.minLength} characters`
+          );
         }
 
         if (validation.maxLength && value.length > validation.maxLength) {
-          errors.push(`${field.label} must be no more than ${validation.maxLength} characters`);
+          errors.push(
+            `${field.label} must be no more than ${validation.maxLength} characters`
+          );
         }
 
         if (validation.pattern && !new RegExp(validation.pattern).test(value)) {
-          errors.push(validation.customMessage || `${field.label} format is invalid`);
+          errors.push(
+            validation.customMessage || `${field.label} format is invalid`
+          );
         }
       }
     }
 
     return {
       valid: errors.length === 0,
-      errors
+      errors,
     };
   }
 
-  private static async processSubmission(submission: RegistrationSubmission, form: RegistrationForm): Promise<void> {
-    const settings = form.settings;
+  private static async processSubmission(
+    submission: RegistrationSubmission,
+    form: any
+  ): Promise<void> {
+    const settings = form.settings as any;
 
     if (settings.requireApproval) {
       // Keep status as PENDING for manual approval
@@ -224,183 +244,210 @@ export class RegistrationModel {
     }
 
     // Auto-approve and create user/affiliate
-    await this.approveSubmission(submission.id, 'system', 'Auto-approved');
+    await this.approveSubmission(submission.id, "system", "Auto-approved");
   }
 
-  static async approveSubmission(submissionId: string, reviewedBy: string, notes?: string): Promise<RegistrationSubmission> {
+  static async approveSubmission(
+    submissionId: string,
+    reviewedBy: string,
+    notes?: string
+  ): Promise<RegistrationSubmission> {
     const submission = await prisma.registrationSubmission.findUnique({
-      where: { id: submissionId }
+      where: { id: submissionId },
     });
 
     if (!submission) {
-      throw new Error('Submission not found');
+      throw new Error("Submission not found");
     }
 
     const form = await this.findFormById(submission.formId);
     if (!form) {
-      throw new Error('Form not found');
+      throw new Error("Form not found");
     }
 
     // Update submission status
-    const updatedSubmission = await prisma.registrationSubmission.update({
+    const updatedSubmission = (await prisma.registrationSubmission.update({
       where: { id: submissionId },
       data: {
-        status: 'APPROVED',
+        status: "APPROVED",
         reviewedAt: new Date(),
         reviewedBy,
-        notes
-      }
-    }) as RegistrationSubmission;
+        notes,
+      },
+    })) as unknown as RegistrationSubmission;
 
     // Create user and affiliate
-    await this.createUserFromSubmission(submission, form);
+    await this.createUserFromSubmission(submission as any, form);
 
     return updatedSubmission;
   }
 
-  static async rejectSubmission(submissionId: string, reviewedBy: string, notes: string): Promise<RegistrationSubmission> {
-    return await prisma.registrationSubmission.update({
+  static async rejectSubmission(
+    submissionId: string,
+    reviewedBy: string,
+    notes: string
+  ): Promise<RegistrationSubmission> {
+    return (await prisma.registrationSubmission.update({
       where: { id: submissionId },
       data: {
-        status: 'REJECTED',
+        status: "REJECTED",
         reviewedAt: new Date(),
         reviewedBy,
-        notes
-      }
-    }) as RegistrationSubmission;
+        notes,
+      },
+    })) as unknown as RegistrationSubmission;
   }
 
-  private static async createUserFromSubmission(submission: RegistrationSubmission, form: RegistrationForm): Promise<void> {
-    const data = submission.data;
-    
+  private static async createUserFromSubmission(
+    submission: RegistrationSubmission,
+    form: any
+  ): Promise<void> {
+    const data = submission.data as any;
+
     // Create user
     const hashedPassword = await bcrypt.hash(data.password, 12);
-    
+
     const user = await prisma.user.create({
       data: {
         email: data.email,
         password: hashedPassword,
         firstName: data.firstName,
         lastName: data.lastName,
-        role: 'AFFILIATE',
-        status: 'ACTIVE'
-      }
+        role: "AFFILIATE",
+        status: "ACTIVE",
+      },
     });
 
     // Create affiliate profile
     const affiliate = await prisma.affiliateProfile.create({
       data: {
         userId: user.id,
-        companyName: data.companyName || '',
-        website: data.website || '',
-        phone: data.phone || '',
-        address: data.address || '',
-        taxId: data.taxId || '',
-        bankAccount: data.bankAccount || '',
-        status: 'ACTIVE',
-        tier: form.settings.defaultTierId || null
-      }
+        companyName: data.companyName || "",
+        website: data.website || "",
+        phone: data.phone || "",
+        address: (data.address || {}) as any,
+        taxId: data.taxId || "",
+        bankAccount: data.bankAccount || "",
+        paymentMethod: "BANK_TRANSFER",
+        status: "ACTIVE",
+        tier: (form.settings as any).defaultTierId || "BRONZE",
+      },
     });
 
     // Send welcome email if enabled
-    if (form.settings.welcomeEmail) {
+    if ((form.settings as any).welcomeEmail) {
       // Implementation for sending welcome email
-      console.log('Sending welcome email to:', user.email);
+      console.log("Sending welcome email to:", user.email);
     }
   }
 
-  static async getSubmissions(formId: string, filters: any = {}, page: number = 1, limit: number = 20): Promise<RegistrationSubmission[]> {
+  static async getSubmissions(
+    formId: string,
+    filters: any = {},
+    page: number = 1,
+    limit: number = 20
+  ): Promise<RegistrationSubmission[]> {
     const skip = (page - 1) * limit;
     const where: any = { formId };
-    
+
     if (filters.status) where.status = filters.status;
     if (filters.startDate && filters.endDate) {
       where.submittedAt = {
         gte: filters.startDate,
-        lte: filters.endDate
+        lte: filters.endDate,
       };
     }
 
-    return await prisma.registrationSubmission.findMany({
+    return (await prisma.registrationSubmission.findMany({
       where,
       skip,
       take: limit,
-      orderBy: { submittedAt: 'desc' }
-    }) as RegistrationSubmission[];
+      orderBy: { submittedAt: "desc" },
+    })) as unknown as RegistrationSubmission[];
   }
 
-  static async createWorkflow(data: Partial<RegistrationWorkflow>): Promise<RegistrationWorkflow> {
-    return await prisma.registrationWorkflow.create({
+  static async createWorkflow(data: any): Promise<any> {
+    return (await prisma.registrationWorkflow.create({
       data: {
         accountId: data.accountId!,
         name: data.name!,
-        description: data.description || '',
-        steps: data.steps || [],
-        status: data.status || 'ACTIVE'
-      }
-    }) as RegistrationWorkflow;
+        description: data.description || "",
+        steps: (data.steps || []) as any,
+        status: data.status || "ACTIVE",
+        form: {
+          connect: { id: data.formId },
+        },
+      },
+    })) as unknown as any;
   }
 
-  static async findWorkflowById(id: string): Promise<RegistrationWorkflow | null> {
-    return await prisma.registrationWorkflow.findUnique({
-      where: { id }
-    }) as RegistrationWorkflow | null;
+  static async findWorkflowById(id: string): Promise<any | null> {
+    return (await prisma.registrationWorkflow.findUnique({
+      where: { id },
+    })) as unknown as any | null;
   }
 
-  static async updateWorkflow(id: string, data: Partial<RegistrationWorkflow>): Promise<RegistrationWorkflow> {
-    return await prisma.registrationWorkflow.update({
+  static async updateWorkflow(id: string, data: any): Promise<any> {
+    return (await prisma.registrationWorkflow.update({
       where: { id },
       data: {
         ...data,
-        updatedAt: new Date()
-      }
-    }) as RegistrationWorkflow;
+        steps: data.steps as any,
+        updatedAt: new Date(),
+      },
+    })) as unknown as any;
   }
 
   static async deleteWorkflow(id: string): Promise<void> {
     await prisma.registrationWorkflow.delete({
-      where: { id }
+      where: { id },
     });
   }
 
-  static async listWorkflows(accountId: string): Promise<RegistrationWorkflow[]> {
-    return await prisma.registrationWorkflow.findMany({
+  static async listWorkflows(accountId: string): Promise<any[]> {
+    return (await prisma.registrationWorkflow.findMany({
       where: { accountId },
-      orderBy: { createdAt: 'desc' }
-    }) as RegistrationWorkflow[];
+      orderBy: { createdAt: "desc" },
+    })) as unknown as any[];
   }
 
-  static async executeWorkflow(workflowId: string, submissionData: Record<string, any>): Promise<void> {
+  static async executeWorkflow(
+    workflowId: string,
+    submissionData: Record<string, any>
+  ): Promise<void> {
     const workflow = await this.findWorkflowById(workflowId);
     if (!workflow) {
-      throw new Error('Workflow not found');
+      throw new Error("Workflow not found");
     }
 
-    if (workflow.status !== 'ACTIVE') {
-      throw new Error('Workflow is not active');
+    if (workflow.status !== "ACTIVE") {
+      throw new Error("Workflow is not active");
     }
 
     // Execute workflow steps in order
-    for (const step of workflow.steps) {
+    for (const step of workflow.steps as any) {
       await this.executeWorkflowStep(step, submissionData);
     }
   }
 
-  private static async executeWorkflowStep(step: WorkflowStep, data: Record<string, any>): Promise<void> {
+  private static async executeWorkflowStep(
+    step: WorkflowStep,
+    data: Record<string, any>
+  ): Promise<void> {
     // Check conditions if any
     if (step.conditions) {
-      const conditionsMet = step.conditions.every(condition => {
+      const conditionsMet = step.conditions.every((condition) => {
         const value = data[condition.field];
         switch (condition.operator) {
-          case 'EQUALS':
+          case "EQUALS":
             return value === condition.value;
-          case 'NOT_EQUALS':
+          case "NOT_EQUALS":
             return value !== condition.value;
-          case 'CONTAINS':
+          case "CONTAINS":
             return String(value).includes(String(condition.value));
-          case 'GREATER_THAN':
+          case "GREATER_THAN":
             return Number(value) > Number(condition.value);
-          case 'LESS_THAN':
+          case "LESS_THAN":
             return Number(value) < Number(condition.value);
           default:
             return false;
@@ -414,167 +461,177 @@ export class RegistrationModel {
 
     // Execute step based on type
     switch (step.type) {
-      case 'FORM':
+      case "FORM":
         // Handle form submission
         break;
-      case 'APPROVAL':
+      case "APPROVAL":
         // Handle approval process
         break;
-      case 'EMAIL':
+      case "EMAIL":
         // Send email
         break;
-      case 'WEBHOOK':
+      case "WEBHOOK":
         // Call webhook
         break;
-      case 'CONDITION':
+      case "CONDITION":
         // Handle conditional logic
         break;
     }
   }
 
-  static async getRegistrationStats(accountId: string, startDate?: Date, endDate?: Date): Promise<any> {
+  static async getRegistrationStats(
+    accountId: string,
+    startDate?: Date,
+    endDate?: Date
+  ): Promise<any> {
     const where: any = {
-      form: { accountId }
+      form: { accountId },
     };
-    
+
     if (startDate && endDate) {
       where.submittedAt = {
         gte: startDate,
-        lte: endDate
+        lte: endDate,
       };
     }
 
     const submissions = await prisma.registrationSubmission.findMany({
       where,
       include: {
-        form: true
-      }
+        form: true,
+      },
     });
 
     const stats = {
       totalSubmissions: submissions.length,
-      pendingSubmissions: submissions.filter(s => s.status === 'PENDING').length,
-      approvedSubmissions: submissions.filter(s => s.status === 'APPROVED').length,
-      rejectedSubmissions: submissions.filter(s => s.status === 'REJECTED').length,
+      pendingSubmissions: submissions.filter((s) => s.status === "PENDING")
+        .length,
+      approvedSubmissions: submissions.filter((s) => s.status === "APPROVED")
+        .length,
+      rejectedSubmissions: submissions.filter((s) => s.status === "REJECTED")
+        .length,
       approvalRate: 0,
       byStatus: {} as Record<string, number>,
       byForm: {} as Record<string, number>,
-      byDay: {} as Record<string, number>
+      byDay: {} as Record<string, number>,
     };
 
     // Calculate approval rate
     if (submissions.length > 0) {
-      stats.approvalRate = (stats.approvedSubmissions / submissions.length) * 100;
+      stats.approvalRate =
+        (stats.approvedSubmissions / submissions.length) * 100;
     }
 
     // Count by status
-    submissions.forEach(submission => {
-      stats.byStatus[submission.status] = (stats.byStatus[submission.status] || 0) + 1;
-      stats.byForm[submission.formId] = (stats.byForm[submission.formId] || 0) + 1;
-      
-      const day = submission.submittedAt.toISOString().split('T')[0];
+    submissions.forEach((submission) => {
+      stats.byStatus[submission.status] =
+        (stats.byStatus[submission.status] || 0) + 1;
+      stats.byForm[submission.formId] =
+        (stats.byForm[submission.formId] || 0) + 1;
+
+      const day = submission.submittedAt.toISOString().split("T")[0];
       stats.byDay[day] = (stats.byDay[day] || 0) + 1;
     });
 
     return stats;
   }
 
-  static async createDefaultForm(accountId: string): Promise<RegistrationForm> {
+  static async createDefaultForm(accountId: string): Promise<any> {
     const defaultFields: RegistrationField[] = [
       {
-        id: 'firstName',
-        name: 'firstName',
-        label: 'First Name',
-        type: 'TEXT',
+        id: "firstName",
+        name: "firstName",
+        label: "First Name",
+        type: "TEXT",
         required: true,
-        placeholder: 'Enter your first name',
+        placeholder: "Enter your first name",
         validation: {
           minLength: 2,
-          maxLength: 50
+          maxLength: 50,
         },
-        order: 1
+        order: 1,
       },
       {
-        id: 'lastName',
-        name: 'lastName',
-        label: 'Last Name',
-        type: 'TEXT',
+        id: "lastName",
+        name: "lastName",
+        label: "Last Name",
+        type: "TEXT",
         required: true,
-        placeholder: 'Enter your last name',
+        placeholder: "Enter your last name",
         validation: {
           minLength: 2,
-          maxLength: 50
+          maxLength: 50,
         },
-        order: 2
+        order: 2,
       },
       {
-        id: 'email',
-        name: 'email',
-        label: 'Email Address',
-        type: 'EMAIL',
+        id: "email",
+        name: "email",
+        label: "Email Address",
+        type: "EMAIL",
         required: true,
-        placeholder: 'Enter your email address',
+        placeholder: "Enter your email address",
         validation: {
-          pattern: '^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$',
-          customMessage: 'Please enter a valid email address'
+          pattern: "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$",
+          customMessage: "Please enter a valid email address",
         },
-        order: 3
+        order: 3,
       },
       {
-        id: 'password',
-        name: 'password',
-        label: 'Password',
-        type: 'PASSWORD',
+        id: "password",
+        name: "password",
+        label: "Password",
+        type: "PASSWORD",
         required: true,
-        placeholder: 'Enter your password',
+        placeholder: "Enter your password",
         validation: {
           minLength: 8,
-          maxLength: 128
+          maxLength: 128,
         },
-        order: 4
+        order: 4,
       },
       {
-        id: 'companyName',
-        name: 'companyName',
-        label: 'Company Name',
-        type: 'TEXT',
+        id: "companyName",
+        name: "companyName",
+        label: "Company Name",
+        type: "TEXT",
         required: false,
-        placeholder: 'Enter your company name',
-        order: 5
+        placeholder: "Enter your company name",
+        order: 5,
       },
       {
-        id: 'website',
-        name: 'website',
-        label: 'Website',
-        type: 'TEXT',
+        id: "website",
+        name: "website",
+        label: "Website",
+        type: "TEXT",
         required: false,
-        placeholder: 'Enter your website URL',
-        order: 6
+        placeholder: "Enter your website URL",
+        order: 6,
       },
       {
-        id: 'phone',
-        name: 'phone',
-        label: 'Phone Number',
-        type: 'PHONE',
+        id: "phone",
+        name: "phone",
+        label: "Phone Number",
+        type: "PHONE",
         required: false,
-        placeholder: 'Enter your phone number',
-        order: 7
-      }
+        placeholder: "Enter your phone number",
+        order: 7,
+      },
     ];
 
     return await this.createForm({
       accountId,
-      name: 'Default Affiliate Registration',
-      description: 'Standard registration form for new affiliates',
+      name: "Default Affiliate Registration",
+      description: "Standard registration form for new affiliates",
       fields: defaultFields,
       settings: {
         allowRegistration: true,
         requireApproval: true,
         requireEmailVerification: true,
         autoAssignTier: true,
-        welcomeEmail: true
+        welcomeEmail: true,
       },
-      status: 'ACTIVE'
+      status: "ACTIVE",
     });
   }
 
@@ -589,20 +646,18 @@ export class RegistrationModel {
     return {
       form,
       submissions,
-      exportedAt: new Date().toISOString()
+      exportedAt: new Date().toISOString(),
     };
   }
 
-  static async importFormData(accountId: string, formData: any): Promise<RegistrationForm> {
+  static async importFormData(accountId: string, formData: any): Promise<any> {
     return await this.createForm({
       accountId,
       name: formData.name,
       description: formData.description,
       fields: formData.fields,
       settings: formData.settings,
-      status: 'DRAFT'
+      status: "DRAFT",
     });
   }
 }
-
-

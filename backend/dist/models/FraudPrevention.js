@@ -5,32 +5,39 @@ const client_1 = require("@prisma/client");
 const prisma = new client_1.PrismaClient();
 class FraudPreventionModel {
     static async createRule(data) {
-        return await prisma.fraudRule.create({
+        const result = await prisma.fraudRule.create({
             data: {
                 name: data.name,
-                description: data.description || '',
+                description: data.description || "",
                 type: data.type,
-                conditions: data.conditions || [],
-                actions: data.actions || [],
-                severity: data.severity || 'MEDIUM',
-                status: data.status || 'ACTIVE',
-            }
+                conditions: (data.conditions || []),
+                actions: (data.actions || []),
+                severity: data.severity || "MEDIUM",
+                status: data.status || "ACTIVE",
+            },
         });
+        return result;
     }
     static async findRuleById(id) {
-        return await prisma.fraudRule.findUnique({
-            where: { id }
+        const result = await prisma.fraudRule.findUnique({
+            where: { id },
         });
+        return result;
     }
     static async updateRule(id, data) {
-        return await prisma.fraudRule.update({
+        const result = await prisma.fraudRule.update({
             where: { id },
-            data
+            data: {
+                ...data,
+                conditions: data.conditions,
+                actions: data.actions,
+            },
         });
+        return result;
     }
     static async deleteRule(id) {
         await prisma.fraudRule.delete({
-            where: { id }
+            where: { id },
         });
     }
     static async listRules(filters = {}) {
@@ -41,33 +48,34 @@ class FraudPreventionModel {
             where.type = filters.type;
         if (filters.severity)
             where.severity = filters.severity;
-        return await prisma.fraudRule.findMany({
+        const results = await prisma.fraudRule.findMany({
             where,
-            orderBy: { createdAt: 'desc' }
+            orderBy: { createdAt: "desc" },
         });
+        return results;
     }
     static async detectFraud(data, ipAddress, userAgent, affiliateId, clickId, conversionId) {
-        const activeRules = await this.listRules({ status: 'ACTIVE' });
+        const activeRules = await this.listRules({ status: "ACTIVE" });
         const fraudEvents = [];
         for (const rule of activeRules) {
             const score = this.calculateFraudScore(rule, data);
             if (score > 0) {
-                const fraudEvent = await prisma.fraudEvent.create({
+                const fraudEvent = (await prisma.fraudEvent.create({
                     data: {
                         ruleId: rule.id,
                         type: rule.type,
                         severity: rule.severity,
-                        data,
+                        data: data,
                         score,
-                        status: 'DETECTED',
+                        status: "DETECTED",
                         action: this.executeFraudActions(rule.actions, data),
                         ipAddress,
                         userAgent,
                         affiliateId,
                         clickId,
-                        conversionId
-                    }
-                });
+                        conversionId,
+                    },
+                }));
                 fraudEvents.push(fraudEvent);
             }
         }
@@ -86,28 +94,34 @@ class FraudPreventionModel {
     static evaluateCondition(condition, data) {
         const fieldValue = this.getFieldValue(data, condition.field);
         switch (condition.operator) {
-            case 'EQUALS':
+            case "EQUALS":
                 return fieldValue === condition.value ? 1 : 0;
-            case 'NOT_EQUALS':
+            case "NOT_EQUALS":
                 return fieldValue !== condition.value ? 1 : 0;
-            case 'CONTAINS':
+            case "CONTAINS":
                 return String(fieldValue).includes(String(condition.value)) ? 1 : 0;
-            case 'NOT_CONTAINS':
+            case "NOT_CONTAINS":
                 return !String(fieldValue).includes(String(condition.value)) ? 1 : 0;
-            case 'GREATER_THAN':
+            case "GREATER_THAN":
                 return Number(fieldValue) > Number(condition.value) ? 1 : 0;
-            case 'LESS_THAN':
+            case "LESS_THAN":
                 return Number(fieldValue) < Number(condition.value) ? 1 : 0;
-            case 'IN':
-                return Array.isArray(condition.value) && condition.value.includes(fieldValue) ? 1 : 0;
-            case 'NOT_IN':
-                return Array.isArray(condition.value) && !condition.value.includes(fieldValue) ? 1 : 0;
+            case "IN":
+                return Array.isArray(condition.value) &&
+                    condition.value.includes(fieldValue)
+                    ? 1
+                    : 0;
+            case "NOT_IN":
+                return Array.isArray(condition.value) &&
+                    !condition.value.includes(fieldValue)
+                    ? 1
+                    : 0;
             default:
                 return 0;
         }
     }
     static getFieldValue(data, field) {
-        const fields = field.split('.');
+        const fields = field.split(".");
         let value = data;
         for (const f of fields) {
             value = value?.[f];
@@ -118,27 +132,27 @@ class FraudPreventionModel {
         const executedActions = [];
         for (const action of actions) {
             switch (action.type) {
-                case 'BLOCK':
-                    executedActions.push('BLOCKED');
+                case "BLOCK":
+                    executedActions.push("BLOCKED");
                     break;
-                case 'FLAG':
-                    executedActions.push('FLAGGED');
+                case "FLAG":
+                    executedActions.push("FLAGGED");
                     break;
-                case 'REDIRECT':
-                    executedActions.push('REDIRECTED');
+                case "REDIRECT":
+                    executedActions.push("REDIRECTED");
                     break;
-                case 'NOTIFY':
-                    executedActions.push('NOTIFIED');
+                case "NOTIFY":
+                    executedActions.push("NOTIFIED");
                     break;
-                case 'PAUSE_AFFILIATE':
-                    executedActions.push('AFFILIATE_PAUSED');
+                case "PAUSE_AFFILIATE":
+                    executedActions.push("AFFILIATE_PAUSED");
                     break;
-                case 'REJECT_CONVERSION':
-                    executedActions.push('CONVERSION_REJECTED');
+                case "REJECT_CONVERSION":
+                    executedActions.push("CONVERSION_REJECTED");
                     break;
             }
         }
-        return executedActions.join(', ');
+        return executedActions.join(", ");
     }
     static async getFraudEvents(filters = {}, page = 1, limit = 50) {
         const skip = (page - 1) * limit;
@@ -154,35 +168,37 @@ class FraudPreventionModel {
         if (filters.startDate && filters.endDate) {
             where.createdAt = {
                 gte: filters.startDate,
-                lte: filters.endDate
+                lte: filters.endDate,
             };
         }
-        return await prisma.fraudEvent.findMany({
+        const results = await prisma.fraudEvent.findMany({
             where,
             skip,
             take: limit,
-            orderBy: { createdAt: 'desc' }
+            orderBy: { createdAt: "desc" },
         });
+        return results;
     }
     static async updateFraudEventStatus(id, status) {
         const updateData = { status };
-        if (status === 'REVIEWED') {
+        if (status === "REVIEWED") {
             updateData.reviewedAt = new Date();
         }
-        else if (status === 'RESOLVED') {
+        else if (status === "RESOLVED") {
             updateData.resolvedAt = new Date();
         }
-        return await prisma.fraudEvent.update({
+        const result = await prisma.fraudEvent.update({
             where: { id },
-            data: updateData
+            data: updateData,
         });
+        return result;
     }
     static async getFraudStats(startDate, endDate) {
         const where = {};
         if (startDate && endDate) {
             where.createdAt = {
                 gte: startDate,
-                lte: endDate
+                lte: endDate,
             };
         }
         const events = await prisma.fraudEvent.findMany({
@@ -190,10 +206,10 @@ class FraudPreventionModel {
             include: {
                 affiliate: {
                     include: {
-                        user: true
-                    }
-                }
-            }
+                        user: true,
+                    },
+                },
+            },
         });
         const stats = {
             totalEvents: events.length,
@@ -202,20 +218,25 @@ class FraudPreventionModel {
             eventsByStatus: {},
             topAffiliates: [],
             topIPs: [],
-            topCountries: []
+            topCountries: [],
         };
-        events.forEach(event => {
-            stats.eventsByType[event.type] = (stats.eventsByType[event.type] || 0) + 1;
-            stats.eventsBySeverity[event.severity] = (stats.eventsBySeverity[event.severity] || 0) + 1;
-            stats.eventsByStatus[event.status] = (stats.eventsByStatus[event.status] || 0) + 1;
+        events.forEach((event) => {
+            stats.eventsByType[event.type] =
+                (stats.eventsByType[event.type] || 0) + 1;
+            stats.eventsBySeverity[event.severity] =
+                (stats.eventsBySeverity[event.severity] || 0) + 1;
+            stats.eventsByStatus[event.status] =
+                (stats.eventsByStatus[event.status] || 0) + 1;
         });
         const affiliateCounts = {};
-        events.forEach(event => {
+        events.forEach((event) => {
             if (event.affiliateId) {
                 if (!affiliateCounts[event.affiliateId]) {
                     affiliateCounts[event.affiliateId] = {
                         count: 0,
-                        name: event.affiliate?.user ? `${event.affiliate.user.firstName} ${event.affiliate.user.lastName}` : 'Unknown'
+                        name: event.affiliate?.user
+                            ? `${event.affiliate.user.firstName} ${event.affiliate.user.lastName}`
+                            : "Unknown",
                     };
                 }
                 affiliateCounts[event.affiliateId].count++;
@@ -226,7 +247,7 @@ class FraudPreventionModel {
             .sort((a, b) => b.count - a.count)
             .slice(0, 10);
         const ipCounts = {};
-        events.forEach(event => {
+        events.forEach((event) => {
             ipCounts[event.ipAddress] = (ipCounts[event.ipAddress] || 0) + 1;
         });
         stats.topIPs = Object.entries(ipCounts)
@@ -234,8 +255,9 @@ class FraudPreventionModel {
             .sort((a, b) => b.count - a.count)
             .slice(0, 10);
         const countryCounts = {};
-        events.forEach(event => {
-            const country = event.data?.country || 'Unknown';
+        events.forEach((event) => {
+            const eventData = event.data;
+            const country = eventData?.country || "Unknown";
             countryCounts[country] = (countryCounts[country] || 0) + 1;
         });
         stats.topCountries = Object.entries(countryCounts)
@@ -247,37 +269,62 @@ class FraudPreventionModel {
     static async createDefaultRules() {
         const defaultRules = [
             {
-                name: 'High Click Rate Detection',
-                description: 'Detects unusually high click rates from single IP',
-                type: 'CLICK_FRAUD',
+                name: "High Click Rate Detection",
+                description: "Detects unusually high click rates from single IP",
+                type: "CLICK_FRAUD",
                 conditions: [
-                    { field: 'clicks_per_hour', operator: 'GREATER_THAN', value: 100, weight: 1 },
-                    { field: 'ip_address', operator: 'EQUALS', value: 'same', weight: 1 }
+                    {
+                        field: "clicks_per_hour",
+                        operator: "GREATER_THAN",
+                        value: 100,
+                        weight: 1,
+                    },
+                    {
+                        field: "ip_address",
+                        operator: "EQUALS",
+                        value: "same",
+                        weight: 1,
+                    },
                 ],
-                actions: [{ type: 'FLAG', parameters: {} }],
-                severity: 'HIGH'
+                actions: [{ type: "FLAG", parameters: {} }],
+                severity: "HIGH",
             },
             {
-                name: 'Suspicious User Agent',
-                description: 'Detects suspicious or bot user agents',
-                type: 'TRAFFIC_QUALITY',
+                name: "Suspicious User Agent",
+                description: "Detects suspicious or bot user agents",
+                type: "TRAFFIC_QUALITY",
                 conditions: [
-                    { field: 'user_agent', operator: 'CONTAINS', value: 'bot', weight: 1 },
-                    { field: 'user_agent', operator: 'EQUALS', value: '', weight: 1 }
+                    {
+                        field: "user_agent",
+                        operator: "CONTAINS",
+                        value: "bot",
+                        weight: 1,
+                    },
+                    {
+                        field: "user_agent",
+                        operator: "EQUALS",
+                        value: "",
+                        weight: 1,
+                    },
                 ],
-                actions: [{ type: 'BLOCK', parameters: {} }],
-                severity: 'MEDIUM'
+                actions: [{ type: "BLOCK", parameters: {} }],
+                severity: "MEDIUM",
             },
             {
-                name: 'Geo Blocking',
-                description: 'Blocks traffic from specific countries',
-                type: 'GEO_BLOCKING',
+                name: "Geo Blocking",
+                description: "Blocks traffic from specific countries",
+                type: "GEO_BLOCKING",
                 conditions: [
-                    { field: 'country', operator: 'IN', value: ['CN', 'RU', 'KP'], weight: 1 }
+                    {
+                        field: "country",
+                        operator: "IN",
+                        value: ["CN", "RU", "KP"],
+                        weight: 1,
+                    },
                 ],
-                actions: [{ type: 'BLOCK', parameters: {} }],
-                severity: 'HIGH'
-            }
+                actions: [{ type: "BLOCK", parameters: {} }],
+                severity: "HIGH",
+            },
         ];
         const createdRules = [];
         for (const ruleData of defaultRules) {

@@ -5,11 +5,11 @@ const client_1 = require("@prisma/client");
 const prisma = new client_1.PrismaClient();
 class DataVisibilityModel {
     static async createRule(data) {
-        return await prisma.dataVisibilityRule.create({
+        return (await prisma.dataVisibilityRule.create({
             data: {
                 accountId: data.accountId,
                 name: data.name,
-                description: data.description || '',
+                description: data.description || "",
                 type: data.type,
                 scope: data.scope,
                 conditions: data.conditions || [],
@@ -22,29 +22,29 @@ class DataVisibilityModel {
                     restrictedFields: [],
                     allowedRoles: [],
                     allowedUsers: [],
-                    allowedAffiliates: []
+                    allowedAffiliates: [],
                 },
-                status: data.status || 'ACTIVE'
-            }
-        });
+                status: data.status || "ACTIVE",
+            },
+        }));
     }
     static async findById(id) {
-        return await prisma.dataVisibilityRule.findUnique({
-            where: { id }
-        });
+        return (await prisma.dataVisibilityRule.findUnique({
+            where: { id },
+        }));
     }
     static async update(id, data) {
-        return await prisma.dataVisibilityRule.update({
+        return (await prisma.dataVisibilityRule.update({
             where: { id },
             data: {
                 ...data,
-                updatedAt: new Date()
-            }
-        });
+                updatedAt: new Date(),
+            },
+        }));
     }
     static async delete(id) {
         await prisma.dataVisibilityRule.delete({
-            where: { id }
+            where: { id },
         });
     }
     static async list(accountId, filters = {}) {
@@ -55,42 +55,42 @@ class DataVisibilityModel {
             where.scope = filters.scope;
         if (filters.status)
             where.status = filters.status;
-        return await prisma.dataVisibilityRule.findMany({
+        return (await prisma.dataVisibilityRule.findMany({
             where,
-            orderBy: { createdAt: 'desc' }
-        });
+            orderBy: { createdAt: "desc" },
+        }));
     }
     static async checkAccess(userId, resourceType, resourceId, action, userRole, affiliateId) {
         const user = await prisma.user.findUnique({
-            where: { id: userId }
+            where: { id: userId },
         });
         if (!user) {
-            return { allowed: false, reason: 'User not found' };
+            return { allowed: false, reason: "User not found" };
         }
         const rules = await prisma.dataVisibilityRule.findMany({
             where: {
                 accountId: user.id,
-                status: 'ACTIVE'
-            }
+                status: "ACTIVE",
+            },
         });
         let allowed = false;
-        let reason = 'No matching rules found';
+        let reason = "No matching rules found";
         const maskedFields = [];
         for (const rule of rules) {
-            if (rule.type !== resourceType.toUpperCase() && rule.type !== 'GLOBAL') {
+            if (rule.type !== resourceType.toUpperCase() && rule.type !== "GLOBAL") {
                 continue;
             }
-            if (rule.scope === 'ROLE_BASED') {
+            if (rule.scope === "ROLE_BASED") {
                 if (!rule.permissions.allowedRoles.includes(userRole)) {
                     continue;
                 }
             }
-            else if (rule.scope === 'USER_BASED') {
+            else if (rule.scope === "USER_BASED") {
                 if (!rule.permissions.allowedUsers.includes(userId)) {
                     continue;
                 }
             }
-            else if (rule.scope === 'AFFILIATE_BASED' && affiliateId) {
+            else if (rule.scope === "AFFILIATE_BASED" && affiliateId) {
                 if (!rule.permissions.allowedAffiliates.includes(affiliateId)) {
                     continue;
                 }
@@ -101,34 +101,34 @@ class DataVisibilityModel {
             }
             const permissions = rule.permissions;
             switch (action.toUpperCase()) {
-                case 'VIEW':
+                case "VIEW":
                     if (permissions.view) {
                         allowed = true;
-                        reason = 'Access granted by rule';
+                        reason = "Access granted by rule";
                     }
                     break;
-                case 'EDIT':
+                case "EDIT":
                     if (permissions.edit) {
                         allowed = true;
-                        reason = 'Edit access granted by rule';
+                        reason = "Edit access granted by rule";
                     }
                     break;
-                case 'DELETE':
+                case "DELETE":
                     if (permissions.delete) {
                         allowed = true;
-                        reason = 'Delete access granted by rule';
+                        reason = "Delete access granted by rule";
                     }
                     break;
-                case 'EXPORT':
+                case "EXPORT":
                     if (permissions.export) {
                         allowed = true;
-                        reason = 'Export access granted by rule';
+                        reason = "Export access granted by rule";
                     }
                     break;
-                case 'SHARE':
+                case "SHARE":
                     if (permissions.share) {
                         allowed = true;
-                        reason = 'Share access granted by rule';
+                        reason = "Share access granted by rule";
                     }
                     break;
             }
@@ -136,7 +136,7 @@ class DataVisibilityModel {
                 maskedFields.push(...permissions.restrictedFields);
             }
         }
-        await this.logAccess(userId, resourceType, resourceId, action, '127.0.0.1', 'System', allowed, reason);
+        await this.logAccess(userId, resourceType, resourceId, action, "127.0.0.1", "System", allowed, reason);
         return { allowed, reason, maskedFields };
     }
     static async evaluateConditions(conditions, resourceType, resourceId) {
@@ -144,10 +144,10 @@ class DataVisibilityModel {
             return true;
         }
         let result = true;
-        let logic = 'AND';
+        let logic = "AND";
         for (const condition of conditions) {
             const conditionResult = await this.evaluateCondition(condition, resourceType, resourceId);
-            if (logic === 'AND') {
+            if (logic === "AND") {
                 result = result && conditionResult;
             }
             else {
@@ -161,7 +161,7 @@ class DataVisibilityModel {
         return true;
     }
     static async logAccess(userId, resourceType, resourceId, action, ipAddress, userAgent, success, reason) {
-        return await prisma.dataAccessLog.create({
+        return (await prisma.dataAccessLog.create({
             data: {
                 userId,
                 resourceType,
@@ -171,9 +171,9 @@ class DataVisibilityModel {
                 userAgent,
                 timestamp: new Date(),
                 success,
-                reason
-            }
-        });
+                reason,
+            },
+        }));
     }
     static async getAccessLogs(filters = {}, page = 1, limit = 50) {
         const skip = (page - 1) * limit;
@@ -189,46 +189,46 @@ class DataVisibilityModel {
         if (filters.startDate && filters.endDate) {
             where.timestamp = {
                 gte: filters.startDate,
-                lte: filters.endDate
+                lte: filters.endDate,
             };
         }
-        return await prisma.dataAccessLog.findMany({
+        return (await prisma.dataAccessLog.findMany({
             where,
             skip,
             take: limit,
-            orderBy: { timestamp: 'desc' }
-        });
+            orderBy: { timestamp: "desc" },
+        }));
     }
     static async createMaskingRule(data) {
-        return await prisma.dataMaskingRule.create({
+        return (await prisma.dataMaskingRule.create({
             data: {
                 accountId: data.accountId,
                 field: data.field,
                 type: data.type,
-                pattern: data.pattern || '',
-                replacement: data.replacement || '***',
+                pattern: data.pattern || "",
+                replacement: data.replacement || "***",
                 conditions: data.conditions || [],
-                status: data.status || 'ACTIVE'
-            }
-        });
+                status: data.status || "ACTIVE",
+            },
+        }));
     }
     static async findMaskingRuleById(id) {
-        return await prisma.dataMaskingRule.findUnique({
-            where: { id }
-        });
+        return (await prisma.dataMaskingRule.findUnique({
+            where: { id },
+        }));
     }
     static async updateMaskingRule(id, data) {
-        return await prisma.dataMaskingRule.update({
+        return (await prisma.dataMaskingRule.update({
             where: { id },
             data: {
                 ...data,
-                updatedAt: new Date()
-            }
-        });
+                updatedAt: new Date(),
+            },
+        }));
     }
     static async deleteMaskingRule(id) {
         await prisma.dataMaskingRule.delete({
-            where: { id }
+            where: { id },
         });
     }
     static async listMaskingRules(accountId, filters = {}) {
@@ -239,14 +239,14 @@ class DataVisibilityModel {
             where.type = filters.type;
         if (filters.status)
             where.status = filters.status;
-        return await prisma.dataMaskingRule.findMany({
+        return (await prisma.dataMaskingRule.findMany({
             where,
-            orderBy: { createdAt: 'desc' }
-        });
+            orderBy: { createdAt: "desc" },
+        }));
     }
     static async applyMasking(data, userId, userRole) {
         const user = await prisma.user.findUnique({
-            where: { id: userId }
+            where: { id: userId },
         });
         if (!user) {
             return data;
@@ -254,8 +254,8 @@ class DataVisibilityModel {
         const maskingRules = await prisma.dataMaskingRule.findMany({
             where: {
                 accountId: user.id,
-                status: 'ACTIVE'
-            }
+                status: "ACTIVE",
+            },
         });
         const maskedData = { ...data };
         for (const rule of maskingRules) {
@@ -268,20 +268,26 @@ class DataVisibilityModel {
     static maskValue(value, rule) {
         const stringValue = String(value);
         switch (rule.type) {
-            case 'PARTIAL':
+            case "PARTIAL":
                 if (stringValue.length <= 4) {
                     return rule.replacement;
                 }
-                return stringValue.substring(0, 2) + rule.replacement + stringValue.substring(stringValue.length - 2);
-            case 'FULL':
+                return (stringValue.substring(0, 2) +
+                    rule.replacement +
+                    stringValue.substring(stringValue.length - 2));
+            case "FULL":
                 return rule.replacement;
-            case 'HASH':
-                const crypto = require('crypto');
-                return crypto.createHash('sha256').update(stringValue).digest('hex').substring(0, 8);
-            case 'ENCRYPT':
-                return 'ENCRYPTED_' + stringValue.substring(0, 4);
-            case 'REDACT':
-                return stringValue.replace(new RegExp(rule.pattern, 'g'), rule.replacement);
+            case "HASH":
+                const crypto = require("crypto");
+                return crypto
+                    .createHash("sha256")
+                    .update(stringValue)
+                    .digest("hex")
+                    .substring(0, 8);
+            case "ENCRYPT":
+                return "ENCRYPTED_" + stringValue.substring(0, 4);
+            case "REDACT":
+                return stringValue.replace(new RegExp(rule.pattern, "g"), rule.replacement);
             default:
                 return stringValue;
         }
@@ -291,25 +297,26 @@ class DataVisibilityModel {
         if (startDate && endDate) {
             where.timestamp = {
                 gte: startDate,
-                lte: endDate
+                lte: endDate,
             };
         }
         const accessLogs = await prisma.dataAccessLog.findMany({
-            where
+            where,
         });
         const stats = {
             totalAccessAttempts: accessLogs.length,
-            successfulAccess: accessLogs.filter(log => log.success).length,
-            failedAccess: accessLogs.filter(log => !log.success).length,
+            successfulAccess: accessLogs.filter((log) => log.success).length,
+            failedAccess: accessLogs.filter((log) => !log.success).length,
             byAction: {},
             byResourceType: {},
             byUser: {},
             topUsers: [],
-            topResources: []
+            topResources: [],
         };
-        accessLogs.forEach(log => {
+        accessLogs.forEach((log) => {
             stats.byAction[log.action] = (stats.byAction[log.action] || 0) + 1;
-            stats.byResourceType[log.resourceType] = (stats.byResourceType[log.resourceType] || 0) + 1;
+            stats.byResourceType[log.resourceType] =
+                (stats.byResourceType[log.resourceType] || 0) + 1;
             stats.byUser[log.userId] = (stats.byUser[log.userId] || 0) + 1;
         });
         stats.topUsers = Object.entries(stats.byUser)
@@ -325,10 +332,10 @@ class DataVisibilityModel {
     static async createDefaultRules(accountId) {
         const defaultRules = [
             {
-                name: 'Admin Full Access',
-                description: 'Administrators have full access to all data',
-                type: 'GLOBAL',
-                scope: 'ROLE_BASED',
+                name: "Admin Full Access",
+                description: "Administrators have full access to all data",
+                type: "SYSTEM_DATA",
+                scope: "ROLE_BASED",
                 conditions: [],
                 permissions: {
                     view: true,
@@ -337,16 +344,16 @@ class DataVisibilityModel {
                     export: true,
                     share: true,
                     restrictedFields: [],
-                    allowedRoles: ['ADMIN'],
+                    allowedRoles: ["ADMIN"],
                     allowedUsers: [],
-                    allowedAffiliates: []
-                }
+                    allowedAffiliates: [],
+                },
             },
             {
-                name: 'Manager Limited Access',
-                description: 'Managers have limited access to affiliate data',
-                type: 'AFFILIATE_DATA',
-                scope: 'ROLE_BASED',
+                name: "Manager Limited Access",
+                description: "Managers have limited access to affiliate data",
+                type: "AFFILIATE_DATA",
+                scope: "ROLE_BASED",
                 conditions: [],
                 permissions: {
                     view: true,
@@ -354,17 +361,17 @@ class DataVisibilityModel {
                     delete: false,
                     export: true,
                     share: false,
-                    restrictedFields: ['ssn', 'bankAccount', 'taxId'],
-                    allowedRoles: ['MANAGER'],
+                    restrictedFields: ["ssn", "bankAccount", "taxId"],
+                    allowedRoles: ["MANAGER"],
                     allowedUsers: [],
-                    allowedAffiliates: []
-                }
+                    allowedAffiliates: [],
+                },
             },
             {
-                name: 'Affiliate Own Data',
-                description: 'Affiliates can only view their own data',
-                type: 'AFFILIATE_DATA',
-                scope: 'USER_BASED',
+                name: "Affiliate Own Data",
+                description: "Affiliates can only view their own data",
+                type: "AFFILIATE_DATA",
+                scope: "USER_BASED",
                 conditions: [],
                 permissions: {
                     view: true,
@@ -372,18 +379,18 @@ class DataVisibilityModel {
                     delete: false,
                     export: false,
                     share: false,
-                    restrictedFields: ['ssn', 'bankAccount'],
-                    allowedRoles: ['AFFILIATE'],
+                    restrictedFields: ["ssn", "bankAccount"],
+                    allowedRoles: ["AFFILIATE"],
                     allowedUsers: [],
-                    allowedAffiliates: []
-                }
-            }
+                    allowedAffiliates: [],
+                },
+            },
         ];
         const createdRules = [];
         for (const ruleData of defaultRules) {
             const rule = await this.createRule({
                 accountId,
-                ...ruleData
+                ...ruleData,
             });
             createdRules.push(rule);
         }
@@ -392,39 +399,39 @@ class DataVisibilityModel {
     static async createDefaultMaskingRules(accountId) {
         const defaultRules = [
             {
-                field: 'ssn',
-                type: 'PARTIAL',
-                pattern: '',
-                replacement: '***-**-****',
-                conditions: []
+                field: "ssn",
+                type: "PARTIAL",
+                pattern: "",
+                replacement: "***-**-****",
+                conditions: [],
             },
             {
-                field: 'bankAccount',
-                type: 'PARTIAL',
-                pattern: '',
-                replacement: '****',
-                conditions: []
+                field: "bankAccount",
+                type: "PARTIAL",
+                pattern: "",
+                replacement: "****",
+                conditions: [],
             },
             {
-                field: 'taxId',
-                type: 'PARTIAL',
-                pattern: '',
-                replacement: '***-**-****',
-                conditions: []
+                field: "taxId",
+                type: "PARTIAL",
+                pattern: "",
+                replacement: "***-**-****",
+                conditions: [],
             },
             {
-                field: 'phone',
-                type: 'PARTIAL',
-                pattern: '',
-                replacement: '***-***-****',
-                conditions: []
-            }
+                field: "phone",
+                type: "PARTIAL",
+                pattern: "",
+                replacement: "***-***-****",
+                conditions: [],
+            },
         ];
         const createdRules = [];
         for (const ruleData of defaultRules) {
             const rule = await this.createMaskingRule({
                 accountId,
-                ...ruleData
+                ...ruleData,
             });
             createdRules.push(rule);
         }
@@ -436,7 +443,7 @@ class DataVisibilityModel {
         return {
             rules,
             maskingRules,
-            exportedAt: new Date().toISOString()
+            exportedAt: new Date().toISOString(),
         };
     }
     static async importDataVisibilityConfig(accountId, config) {
@@ -444,7 +451,7 @@ class DataVisibilityModel {
             for (const ruleData of config.rules) {
                 await this.createRule({
                     accountId,
-                    ...ruleData
+                    ...ruleData,
                 });
             }
         }
@@ -452,7 +459,7 @@ class DataVisibilityModel {
             for (const maskingRuleData of config.maskingRules) {
                 await this.createMaskingRule({
                     accountId,
-                    ...maskingRuleData
+                    ...maskingRuleData,
                 });
             }
         }

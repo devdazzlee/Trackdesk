@@ -9,15 +9,16 @@ class TiersModel {
             data: {
                 accountId: data.accountId,
                 name: data.name,
-                description: data.description || '',
+                description: data.description || "",
                 level: data.level,
+                commissionRate: data.commissionRate || 0,
                 requirements: data.requirements || {
                     minimumClicks: 0,
                     minimumConversions: 0,
                     minimumEarnings: 0,
                     minimumReferrals: 0,
                     timePeriod: 30,
-                    otherRequirements: []
+                    otherRequirements: [],
                 },
                 benefits: data.benefits || {
                     commissionRate: 0,
@@ -27,15 +28,15 @@ class TiersModel {
                     exclusiveOffers: false,
                     higherPayouts: false,
                     marketingMaterials: false,
-                    dedicatedManager: false
+                    dedicatedManager: false,
                 },
-                status: data.status || 'ACTIVE'
-            }
+                status: data.status || "ACTIVE",
+            },
         });
     }
     static async findById(id) {
         return await prisma.tier.findUnique({
-            where: { id }
+            where: { id },
         });
     }
     static async update(id, data) {
@@ -43,13 +44,13 @@ class TiersModel {
             where: { id },
             data: {
                 ...data,
-                updatedAt: new Date()
-            }
+                updatedAt: new Date(),
+            },
         });
     }
     static async delete(id) {
         await prisma.tier.delete({
-            where: { id }
+            where: { id },
         });
     }
     static async list(accountId, filters = {}) {
@@ -60,51 +61,51 @@ class TiersModel {
             where.level = filters.level;
         return await prisma.tier.findMany({
             where,
-            orderBy: { level: 'asc' }
+            orderBy: { level: "asc" },
         });
     }
     static async assignTier(affiliateId, tierId, assignedBy, reason, expiresAt) {
         await prisma.tierAssignment.updateMany({
             where: {
                 affiliateId,
-                status: 'ACTIVE'
+                status: "ACTIVE",
             },
-            data: { status: 'INACTIVE' }
+            data: { status: "INACTIVE" },
         });
-        return await prisma.tierAssignment.create({
+        return (await prisma.tierAssignment.create({
             data: {
                 affiliateId,
                 tierId,
                 assignedAt: new Date(),
                 assignedBy,
                 reason,
-                status: 'ACTIVE',
-                expiresAt
-            }
-        });
+                status: "ACTIVE",
+                expiresAt,
+            },
+        }));
     }
     static async getAffiliateTier(affiliateId) {
         const assignment = await prisma.tierAssignment.findFirst({
             where: {
                 affiliateId,
-                status: 'ACTIVE'
+                status: "ACTIVE",
             },
             include: {
-                tier: true
-            }
+                tier: true,
+            },
         });
         return assignment?.tier || null;
     }
     static async calculateTierProgress(affiliateId, tierId) {
         const tier = await this.findById(tierId);
         if (!tier) {
-            throw new Error('Tier not found');
+            throw new Error("Tier not found");
         }
         const affiliate = await prisma.affiliateProfile.findUnique({
-            where: { id: affiliateId }
+            where: { id: affiliateId },
         });
         if (!affiliate) {
-            throw new Error('Affiliate not found');
+            throw new Error("Affiliate not found");
         }
         const requirements = tier.requirements;
         const currentClicks = affiliate.totalClicks;
@@ -115,16 +116,20 @@ class TiersModel {
         const conversionProgress = Math.min((currentConversions / requirements.minimumConversions) * 100, 100);
         const earningsProgress = Math.min((currentEarnings / requirements.minimumEarnings) * 100, 100);
         const referralProgress = Math.min((currentReferrals / requirements.minimumReferrals) * 100, 100);
-        const progressPercentage = (clickProgress + conversionProgress + earningsProgress + referralProgress) / 4;
+        const progressPercentage = (clickProgress +
+            conversionProgress +
+            earningsProgress +
+            referralProgress) /
+            4;
         const nextTier = await prisma.tier.findFirst({
             where: {
                 accountId: tier.accountId,
                 level: { gt: tier.level },
-                status: 'ACTIVE'
+                status: "ACTIVE",
             },
-            orderBy: { level: 'asc' }
+            orderBy: { level: "asc" },
         });
-        return await prisma.tierProgress.upsert({
+        return (await prisma.tierProgress.upsert({
             where: { affiliateId_tierId: { affiliateId, tierId } },
             update: {
                 currentClicks,
@@ -133,7 +138,7 @@ class TiersModel {
                 currentReferrals,
                 progressPercentage,
                 nextTierId: nextTier?.id,
-                lastUpdated: new Date()
+                lastUpdated: new Date(),
             },
             create: {
                 affiliateId,
@@ -144,53 +149,54 @@ class TiersModel {
                 currentReferrals,
                 progressPercentage,
                 nextTierId: nextTier?.id,
-                lastUpdated: new Date()
-            }
-        });
+                lastUpdated: new Date(),
+            },
+        }));
     }
     static async getAffiliateProgress(affiliateId) {
-        return await prisma.tierProgress.findMany({
+        return (await prisma.tierProgress.findMany({
             where: { affiliateId },
             include: {
                 tier: true,
-                nextTier: true
+                nextTier: true,
             },
-            orderBy: { lastUpdated: 'desc' }
-        });
+            orderBy: { lastUpdated: "desc" },
+        }));
     }
     static async checkTierEligibility(affiliateId) {
         const affiliate = await prisma.affiliateProfile.findUnique({
-            where: { id: affiliateId }
+            where: { id: affiliateId },
         });
         if (!affiliate) {
-            return { eligible: false, reason: 'Affiliate not found' };
+            return { eligible: false, reason: "Affiliate not found" };
         }
         const currentTier = await this.getAffiliateTier(affiliateId);
         const allTiers = await prisma.tier.findMany({
             where: {
                 accountId: affiliate.userId,
-                status: 'ACTIVE'
+                status: "ACTIVE",
             },
-            orderBy: { level: 'desc' }
+            orderBy: { level: "desc" },
         });
         for (const tier of allTiers) {
             if (currentTier && tier.level <= currentTier.level)
                 continue;
             const requirements = tier.requirements;
             const meetsRequirements = affiliate.totalClicks >= requirements.minimumClicks &&
-                affiliate.totalConversions >= requirements.minimumConversions &&
+                affiliate.totalConversions >=
+                    requirements.minimumConversions &&
                 affiliate.totalEarnings >= requirements.minimumEarnings;
             if (meetsRequirements) {
                 return { eligible: true, tier };
             }
         }
-        return { eligible: false, reason: 'Requirements not met' };
+        return { eligible: false, reason: "Requirements not met" };
     }
     static async autoAssignTiers(accountId) {
         const affiliates = await prisma.affiliateProfile.findMany({
             where: {
-                status: 'ACTIVE'
-            }
+                status: "ACTIVE",
+            },
         });
         let assigned = 0;
         const errors = [];
@@ -198,7 +204,7 @@ class TiersModel {
             try {
                 const eligibility = await this.checkTierEligibility(affiliate.id);
                 if (eligibility.eligible && eligibility.tier) {
-                    await this.assignTier(affiliate.id, eligibility.tier.id, 'system', 'Automatic tier assignment based on performance');
+                    await this.assignTier(affiliate.id, eligibility.tier.id, "system", "Automatic tier assignment based on performance");
                     assigned++;
                 }
             }
@@ -213,53 +219,55 @@ class TiersModel {
         const assignments = await prisma.tierAssignment.findMany({
             where: {
                 tier: { accountId },
-                status: 'ACTIVE'
+                status: "ACTIVE",
             },
             include: {
                 tier: true,
-                affiliate: true
-            }
+                affiliate: true,
+            },
         });
         const stats = {
             totalTiers: tiers.length,
-            activeTiers: tiers.filter(t => t.status === 'ACTIVE').length,
+            activeTiers: tiers.filter((t) => t.status === "ACTIVE").length,
             totalAssignments: assignments.length,
             byTier: {},
             averageProgress: 0,
-            topPerformers: []
+            topPerformers: [],
         };
-        tiers.forEach(tier => {
-            const tierAssignments = assignments.filter(a => a.tierId === tier.id);
+        tiers.forEach((tier) => {
+            const tierAssignments = assignments.filter((a) => a.tierId === tier.id);
             stats.byTier[tier.id] = {
                 name: tier.name,
                 level: tier.level,
                 assignments: tierAssignments.length,
-                averageEarnings: tierAssignments.reduce((sum, a) => sum + (a.affiliate?.totalEarnings || 0), 0) / tierAssignments.length || 0
+                averageEarnings: tierAssignments.reduce((sum, a) => sum + (a.affiliate?.totalEarnings || 0), 0) / tierAssignments.length || 0,
             };
         });
         const progressRecords = await prisma.tierProgress.findMany({
             where: {
-                tier: { accountId }
-            }
+                tier: { accountId },
+            },
         });
         if (progressRecords.length > 0) {
-            stats.averageProgress = progressRecords.reduce((sum, p) => sum + p.progressPercentage, 0) / progressRecords.length;
+            stats.averageProgress =
+                progressRecords.reduce((sum, p) => sum + p.progressPercentage, 0) /
+                    progressRecords.length;
         }
         const topProgress = progressRecords
             .sort((a, b) => b.progressPercentage - a.progressPercentage)
             .slice(0, 10);
-        stats.topPerformers = topProgress.map(progress => ({
+        stats.topPerformers = topProgress.map((progress) => ({
             affiliateId: progress.affiliateId,
-            name: 'Affiliate',
-            progress: progress.progressPercentage
+            name: "Affiliate",
+            progress: progress.progressPercentage,
         }));
         return stats;
     }
     static async createDefaultTiers(accountId) {
         const defaultTiers = [
             {
-                name: 'Bronze',
-                description: 'Entry level tier for new affiliates',
+                name: "Bronze",
+                description: "Entry level tier for new affiliates",
                 level: 1,
                 requirements: {
                     minimumClicks: 0,
@@ -267,7 +275,7 @@ class TiersModel {
                     minimumEarnings: 0,
                     minimumReferrals: 0,
                     timePeriod: 30,
-                    otherRequirements: []
+                    otherRequirements: [],
                 },
                 benefits: {
                     commissionRate: 5,
@@ -277,12 +285,12 @@ class TiersModel {
                     exclusiveOffers: false,
                     higherPayouts: false,
                     marketingMaterials: true,
-                    dedicatedManager: false
-                }
+                    dedicatedManager: false,
+                },
             },
             {
-                name: 'Silver',
-                description: 'Intermediate tier for active affiliates',
+                name: "Silver",
+                description: "Intermediate tier for active affiliates",
                 level: 2,
                 requirements: {
                     minimumClicks: 1000,
@@ -290,22 +298,22 @@ class TiersModel {
                     minimumEarnings: 500,
                     minimumReferrals: 0,
                     timePeriod: 30,
-                    otherRequirements: []
+                    otherRequirements: [],
                 },
                 benefits: {
                     commissionRate: 7,
                     bonusRate: 1,
                     prioritySupport: true,
-                    customFeatures: ['Advanced reporting'],
+                    customFeatures: ["Advanced reporting"],
                     exclusiveOffers: true,
                     higherPayouts: false,
                     marketingMaterials: true,
-                    dedicatedManager: false
-                }
+                    dedicatedManager: false,
+                },
             },
             {
-                name: 'Gold',
-                description: 'Advanced tier for high-performing affiliates',
+                name: "Gold",
+                description: "Advanced tier for high-performing affiliates",
                 level: 3,
                 requirements: {
                     minimumClicks: 5000,
@@ -313,22 +321,22 @@ class TiersModel {
                     minimumEarnings: 2500,
                     minimumReferrals: 0,
                     timePeriod: 30,
-                    otherRequirements: []
+                    otherRequirements: [],
                 },
                 benefits: {
                     commissionRate: 10,
                     bonusRate: 2,
                     prioritySupport: true,
-                    customFeatures: ['Advanced reporting', 'Custom landing pages'],
+                    customFeatures: ["Advanced reporting", "Custom landing pages"],
                     exclusiveOffers: true,
                     higherPayouts: true,
                     marketingMaterials: true,
-                    dedicatedManager: true
-                }
+                    dedicatedManager: true,
+                },
             },
             {
-                name: 'Platinum',
-                description: 'Elite tier for top-performing affiliates',
+                name: "Platinum",
+                description: "Elite tier for top-performing affiliates",
                 level: 4,
                 requirements: {
                     minimumClicks: 10000,
@@ -336,25 +344,29 @@ class TiersModel {
                     minimumEarnings: 5000,
                     minimumReferrals: 0,
                     timePeriod: 30,
-                    otherRequirements: []
+                    otherRequirements: [],
                 },
                 benefits: {
                     commissionRate: 15,
                     bonusRate: 5,
                     prioritySupport: true,
-                    customFeatures: ['Advanced reporting', 'Custom landing pages', 'API access'],
+                    customFeatures: [
+                        "Advanced reporting",
+                        "Custom landing pages",
+                        "API access",
+                    ],
                     exclusiveOffers: true,
                     higherPayouts: true,
                     marketingMaterials: true,
-                    dedicatedManager: true
-                }
-            }
+                    dedicatedManager: true,
+                },
+            },
         ];
         const createdTiers = [];
         for (const tierData of defaultTiers) {
             const tier = await this.create({
                 accountId,
-                ...tierData
+                ...tierData,
             });
             createdTiers.push(tier);
         }
@@ -373,13 +385,13 @@ class TiersModel {
                     exclusiveOffers: false,
                     higherPayouts: false,
                     marketingMaterials: false,
-                    dedicatedManager: false
-                }
+                    dedicatedManager: false,
+                },
             };
         }
         return {
             tier: currentTier,
-            benefits: currentTier.benefits
+            benefits: currentTier.benefits,
         };
     }
     static async updateTierProgress(affiliateId) {
@@ -389,26 +401,26 @@ class TiersModel {
         }
         const eligibility = await this.checkTierEligibility(affiliateId);
         if (eligibility.eligible && eligibility.tier) {
-            await this.assignTier(affiliateId, eligibility.tier.id, 'system', 'Automatic tier upgrade based on performance');
+            await this.assignTier(affiliateId, eligibility.tier.id, "system", "Automatic tier upgrade based on performance");
         }
     }
     static async getTierLeaderboard(accountId, limit = 10) {
         const progressRecords = await prisma.tierProgress.findMany({
             where: {
-                tier: { accountId }
+                tier: { accountId },
             },
             include: {
                 tier: true,
                 affiliate: {
                     include: {
-                        user: true
-                    }
-                }
+                        user: true,
+                    },
+                },
             },
-            orderBy: { progressPercentage: 'desc' },
-            take: limit
+            orderBy: { progressPercentage: "desc" },
+            take: limit,
         });
-        return progressRecords.map(progress => ({
+        return progressRecords.map((progress) => ({
             affiliateId: progress.affiliateId,
             affiliateName: `${progress.affiliate?.user?.firstName} ${progress.affiliate?.user?.lastName}`,
             tierName: progress.tier.name,
@@ -416,7 +428,7 @@ class TiersModel {
             progress: progress.progressPercentage,
             currentEarnings: progress.currentEarnings,
             currentClicks: progress.currentClicks,
-            currentConversions: progress.currentConversions
+            currentConversions: progress.currentConversions,
         }));
     }
 }

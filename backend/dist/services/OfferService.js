@@ -12,7 +12,7 @@ class OfferService {
             where.OR = [
                 { name: { contains: search } },
                 { description: { contains: search } },
-                { category: { contains: search } }
+                { category: { contains: search } },
             ];
         }
         if (status) {
@@ -26,9 +26,9 @@ class OfferService {
                 where,
                 skip,
                 take: limit,
-                orderBy: { createdAt: 'desc' }
+                orderBy: { createdAt: "desc" },
             }),
-            prisma.offer.count({ where })
+            prisma.offer.count({ where }),
         ]);
         return {
             offers,
@@ -36,8 +36,8 @@ class OfferService {
                 page,
                 limit,
                 total,
-                pages: Math.ceil(total / limit)
-            }
+                pages: Math.ceil(total / limit),
+            },
         };
     }
     async getOfferById(id) {
@@ -53,23 +53,24 @@ class OfferService {
                                     select: {
                                         firstName: true,
                                         lastName: true,
-                                        email: true
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+                                        email: true,
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
         });
         if (!offer) {
-            throw new Error('Offer not found');
+            throw new Error("Offer not found");
         }
         return offer;
     }
-    async createOffer(data) {
+    async createOffer(data, accountId) {
         const offer = await prisma.offer.create({
             data: {
+                accountId,
                 name: data.name,
                 description: data.description,
                 category: data.category,
@@ -77,8 +78,8 @@ class OfferService {
                 startDate: new Date(data.startDate),
                 endDate: data.endDate ? new Date(data.endDate) : null,
                 terms: data.terms,
-                requirements: data.requirements
-            }
+                requirements: data.requirements,
+            },
         });
         return offer;
     }
@@ -94,14 +95,14 @@ class OfferService {
                 endDate: data.endDate ? new Date(data.endDate) : undefined,
                 terms: data.terms,
                 requirements: data.requirements,
-                status: data.status
-            }
+                status: data.status,
+            },
         });
         return offer;
     }
     async deleteOffer(id) {
         await prisma.offer.delete({
-            where: { id }
+            where: { id },
         });
     }
     async getOfferApplications(offerId, params) {
@@ -116,7 +117,7 @@ class OfferService {
                 where,
                 skip,
                 take: limit,
-                orderBy: { createdAt: 'desc' },
+                orderBy: { createdAt: "desc" },
                 include: {
                     affiliate: {
                         include: {
@@ -124,14 +125,14 @@ class OfferService {
                                 select: {
                                     firstName: true,
                                     lastName: true,
-                                    email: true
-                                }
-                            }
-                        }
-                    }
-                }
+                                    email: true,
+                                },
+                            },
+                        },
+                    },
+                },
             }),
-            prisma.offerApplication.count({ where })
+            prisma.offerApplication.count({ where }),
         ]);
         return {
             applications,
@@ -139,23 +140,23 @@ class OfferService {
                 page,
                 limit,
                 total,
-                pages: Math.ceil(total / limit)
-            }
+                pages: Math.ceil(total / limit),
+            },
         };
     }
     async applyForOffer(offerId, userId, data) {
         const affiliate = await prisma.affiliateProfile.findUnique({
-            where: { userId }
+            where: { userId },
         });
         if (!affiliate) {
-            throw new Error('Affiliate profile not found');
+            throw new Error("Affiliate profile not found");
         }
         const application = await prisma.offerApplication.create({
             data: {
                 offerId,
                 affiliateId: affiliate.id,
-                message: data.message
-            }
+                message: data.message,
+            },
         });
         return application;
     }
@@ -164,14 +165,14 @@ class OfferService {
             where: { id: applicationId },
             data: {
                 status: data.status,
-                message: data.message
-            }
+                message: data.message,
+            },
         });
         return application;
     }
     async deleteApplication(applicationId) {
         await prisma.offerApplication.delete({
-            where: { id: applicationId }
+            where: { id: applicationId },
         });
     }
     async getOfferCreatives(offerId, params) {
@@ -186,9 +187,9 @@ class OfferService {
                 where,
                 skip,
                 take: limit,
-                orderBy: { createdAt: 'desc' }
+                orderBy: { createdAt: "desc" },
             }),
-            prisma.creative.count({ where })
+            prisma.creative.count({ where }),
         ]);
         return {
             creatives,
@@ -196,8 +197,8 @@ class OfferService {
                 page,
                 limit,
                 total,
-                pages: Math.ceil(total / limit)
-            }
+                pages: Math.ceil(total / limit),
+            },
         };
     }
     async createCreative(offerId, data) {
@@ -209,8 +210,8 @@ class OfferService {
                 size: data.size,
                 format: data.format,
                 url: data.url,
-                downloadUrl: data.downloadUrl
-            }
+                downloadUrl: data.downloadUrl,
+            },
         });
         return creative;
     }
@@ -223,57 +224,57 @@ class OfferService {
                 size: data.size,
                 format: data.format,
                 url: data.url,
-                downloadUrl: data.downloadUrl
-            }
+                downloadUrl: data.downloadUrl,
+            },
         });
         return creative;
     }
     async deleteCreative(creativeId) {
         await prisma.creative.delete({
-            where: { id: creativeId }
+            where: { id: creativeId },
         });
     }
     async getOfferAnalytics(offerId, params) {
         return {
             totalClicks: 2500,
             totalConversions: 85,
-            totalRevenue: 4250.00,
+            totalRevenue: 4250.0,
             conversionRate: 3.4,
             topAffiliates: [
-                { name: 'John Doe', conversions: 25, earnings: 750.00 },
-                { name: 'Jane Smith', conversions: 20, earnings: 600.00 },
-                { name: 'Mike Johnson', conversions: 15, earnings: 450.00 }
-            ]
+                { name: "John Doe", conversions: 25, earnings: 750.0 },
+                { name: "Jane Smith", conversions: 20, earnings: 600.0 },
+                { name: "Mike Johnson", conversions: 15, earnings: 450.0 },
+            ],
         };
     }
     async getOfferClicks(offerId, params) {
         return {
             totalClicks: 2500,
             clicksByDay: [
-                { date: '2024-01-01', clicks: 120 },
-                { date: '2024-01-02', clicks: 135 },
-                { date: '2024-01-03', clicks: 110 }
+                { date: "2024-01-01", clicks: 120 },
+                { date: "2024-01-02", clicks: 135 },
+                { date: "2024-01-03", clicks: 110 },
             ],
             clicksByCountry: [
-                { country: 'USA', clicks: 1000 },
-                { country: 'Canada', clicks: 500 },
-                { country: 'UK', clicks: 300 }
-            ]
+                { country: "USA", clicks: 1000 },
+                { country: "Canada", clicks: 500 },
+                { country: "UK", clicks: 300 },
+            ],
         };
     }
     async getOfferConversions(offerId, params) {
         return {
             totalConversions: 85,
             conversionsByDay: [
-                { date: '2024-01-01', conversions: 4 },
-                { date: '2024-01-02', conversions: 5 },
-                { date: '2024-01-03', conversions: 3 }
+                { date: "2024-01-01", conversions: 4 },
+                { date: "2024-01-02", conversions: 5 },
+                { date: "2024-01-03", conversions: 3 },
             ],
             conversionsByAffiliate: [
-                { affiliate: 'John Doe', conversions: 25 },
-                { affiliate: 'Jane Smith', conversions: 20 },
-                { affiliate: 'Mike Johnson', conversions: 15 }
-            ]
+                { affiliate: "John Doe", conversions: 25 },
+                { affiliate: "Jane Smith", conversions: 20 },
+                { affiliate: "Mike Johnson", conversions: 15 },
+            ],
         };
     }
 }

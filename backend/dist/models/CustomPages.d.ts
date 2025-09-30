@@ -7,10 +7,10 @@ export interface CustomPage {
     description: string;
     content: string;
     htmlContent: string;
-    type: 'LANDING' | 'TERMS' | 'PRIVACY' | 'HELP' | 'FAQ' | 'CUSTOM';
+    type: "LANDING" | "TERMS" | "PRIVACY" | "HELP" | "FAQ" | "CUSTOM";
     category: string;
-    status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
-    visibility: 'PUBLIC' | 'PRIVATE' | 'AUTHENTICATED' | 'ROLE_BASED';
+    status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
+    visibility: "PUBLIC" | "PRIVATE" | "AUTHENTICATED" | "ROLE_BASED";
     roles: string[];
     permissions: string[];
     seo: SEOSettings;
@@ -37,8 +37,8 @@ export interface SEOSettings {
     sitemap: boolean;
 }
 export interface DesignSettings {
-    layout: 'DEFAULT' | 'CUSTOM' | 'LANDING' | 'BLOG';
-    theme: 'LIGHT' | 'DARK' | 'CUSTOM';
+    layout: "DEFAULT" | "CUSTOM" | "LANDING" | "BLOG";
+    theme: "LIGHT" | "DARK" | "CUSTOM";
     colors: {
         primary: string;
         secondary: string;
@@ -81,7 +81,7 @@ export interface PageTemplate {
     template: CustomPage;
     isPublic: boolean;
     isDefault: boolean;
-    status: 'ACTIVE' | 'INACTIVE';
+    status: "ACTIVE" | "INACTIVE";
     createdAt: Date;
     updatedAt: Date;
 }
@@ -102,7 +102,7 @@ export interface PageComment {
     parentId?: string;
     userId: string;
     content: string;
-    status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'SPAM';
+    status: "PENDING" | "APPROVED" | "REJECTED" | "SPAM";
     ipAddress: string;
     userAgent: string;
     createdAt: Date;

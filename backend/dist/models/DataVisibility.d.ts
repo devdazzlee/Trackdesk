@@ -3,19 +3,19 @@ export interface DataVisibilityRule {
     accountId: string;
     name: string;
     description: string;
-    type: 'AFFILIATE_DATA' | 'FINANCIAL_DATA' | 'PERFORMANCE_DATA' | 'PERSONAL_DATA' | 'SYSTEM_DATA';
-    scope: 'GLOBAL' | 'ROLE_BASED' | 'USER_BASED' | 'AFFILIATE_BASED';
+    type: "AFFILIATE_DATA" | "FINANCIAL_DATA" | "PERFORMANCE_DATA" | "PERSONAL_DATA" | "SYSTEM_DATA";
+    scope: "GLOBAL" | "ROLE_BASED" | "USER_BASED" | "AFFILIATE_BASED";
     conditions: VisibilityCondition[];
     permissions: VisibilityPermissions;
-    status: 'ACTIVE' | 'INACTIVE';
+    status: "ACTIVE" | "INACTIVE";
     createdAt: Date;
     updatedAt: Date;
 }
 export interface VisibilityCondition {
     field: string;
-    operator: 'EQUALS' | 'NOT_EQUALS' | 'IN' | 'NOT_IN' | 'GREATER_THAN' | 'LESS_THAN' | 'CONTAINS';
+    operator: "EQUALS" | "NOT_EQUALS" | "IN" | "NOT_IN" | "GREATER_THAN" | "LESS_THAN" | "CONTAINS";
     value: any;
-    logic: 'AND' | 'OR';
+    logic: "AND" | "OR";
 }
 export interface VisibilityPermissions {
     view: boolean;
@@ -33,7 +33,7 @@ export interface DataAccessLog {
     userId: string;
     resourceType: string;
     resourceId: string;
-    action: 'VIEW' | 'EDIT' | 'DELETE' | 'EXPORT' | 'SHARE';
+    action: "VIEW" | "EDIT" | "DELETE" | "EXPORT" | "SHARE";
     ipAddress: string;
     userAgent: string;
     timestamp: Date;
@@ -44,11 +44,11 @@ export interface DataMaskingRule {
     id: string;
     accountId: string;
     field: string;
-    type: 'PARTIAL' | 'FULL' | 'HASH' | 'ENCRYPT' | 'REDACT';
+    type: "PARTIAL" | "FULL" | "HASH" | "ENCRYPT" | "REDACT";
     pattern: string;
     replacement: string;
     conditions: VisibilityCondition[];
-    status: 'ACTIVE' | 'INACTIVE';
+    status: "ACTIVE" | "INACTIVE";
     createdAt: Date;
     updatedAt: Date;
 }

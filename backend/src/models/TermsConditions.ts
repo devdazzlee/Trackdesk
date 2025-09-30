@@ -1,119 +1,94 @@
-import { PrismaClient } from '@prisma/client';
+import {
+  PrismaClient,
+  TermsConditions,
+  TermsAcceptance,
+  TermsTemplate,
+} from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-export interface TermsConditions {
-  id: string;
-  accountId: string;
-  type: 'AFFILIATE_TERMS' | 'PRIVACY_POLICY' | 'COOKIE_POLICY' | 'DATA_PROCESSING' | 'COMMISSION_TERMS' | 'PAYOUT_TERMS' | 'CUSTOM';
-  title: string;
-  content: string;
-  version: string;
-  status: 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
-  effectiveDate: Date;
-  expiryDate?: Date;
-  requiresAcceptance: boolean;
-  acceptanceRequired: string[]; // User roles that must accept
-  lastModifiedBy: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface TermsAcceptance {
-  id: string;
-  termsId: string;
-  userId: string;
-  userRole: string;
-  acceptedAt: Date;
-  ipAddress: string;
-  userAgent: string;
-  version: string;
-}
-
-export interface TermsTemplate {
-  id: string;
-  name: string;
-  description: string;
-  type: string;
-  category: 'LEGAL' | 'BUSINESS' | 'TECHNICAL' | 'COMPLIANCE';
-  content: string;
-  variables: string[];
-  isDefault: boolean;
-  isPublic: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
+// TermsAcceptance and TermsTemplate are now imported from Prisma
 
 export class TermsConditionsModel {
-  static async create(data: Partial<TermsConditions>): Promise<TermsConditions> {
+  static async create(data: any): Promise<TermsConditions> {
     return await prisma.termsConditions.create({
       data: {
         accountId: data.accountId!,
         type: data.type!,
         title: data.title!,
         content: data.content!,
-        version: data.version || '1.0',
-        status: data.status || 'DRAFT',
+        version: data.version || "1.0",
+        status: data.status || "DRAFT",
         effectiveDate: data.effectiveDate || new Date(),
         expiryDate: data.expiryDate,
         requiresAcceptance: data.requiresAcceptance || false,
         acceptanceRequired: data.acceptanceRequired || [],
-        lastModifiedBy: data.lastModifiedBy!
-      }
-    }) as TermsConditions;
+        lastModifiedBy: data.lastModifiedBy!,
+      },
+    });
   }
 
   static async findById(id: string): Promise<TermsConditions | null> {
     return await prisma.termsConditions.findUnique({
-      where: { id }
-    }) as TermsConditions | null;
+      where: { id },
+    });
   }
 
-  static async findByAccountAndType(accountId: string, type: string): Promise<TermsConditions | null> {
+  static async findByAccountAndType(
+    accountId: string,
+    type: string
+  ): Promise<TermsConditions | null> {
     return await prisma.termsConditions.findFirst({
       where: {
         accountId,
         type: type as any,
-        status: 'ACTIVE'
+        status: "ACTIVE",
       },
-      orderBy: { effectiveDate: 'desc' }
-    }) as TermsConditions | null;
+      orderBy: { effectiveDate: "desc" },
+    });
   }
 
-  static async update(id: string, data: Partial<TermsConditions>): Promise<TermsConditions> {
+  static async update(
+    id: string,
+    data: Partial<TermsConditions>
+  ): Promise<TermsConditions> {
     return await prisma.termsConditions.update({
       where: { id },
       data: {
         ...data,
-        updatedAt: new Date()
-      }
-    }) as TermsConditions;
+        updatedAt: new Date(),
+      },
+    });
   }
 
   static async delete(id: string): Promise<void> {
     await prisma.termsConditions.update({
       where: { id },
-      data: { status: 'ARCHIVED' }
+      data: { status: "ARCHIVED" },
     });
   }
 
-  static async list(accountId: string, filters: any = {}): Promise<TermsConditions[]> {
+  static async list(
+    accountId: string,
+    filters: any = {}
+  ): Promise<TermsConditions[]> {
     const where: any = { accountId };
-    
+
     if (filters.type) where.type = filters.type;
     if (filters.status) where.status = filters.status;
-    if (filters.requiresAcceptance !== undefined) where.requiresAcceptance = filters.requiresAcceptance;
+    if (filters.requiresAcceptance !== undefined)
+      where.requiresAcceptance = filters.requiresAcceptance;
 
     return await prisma.termsConditions.findMany({
       where,
-      orderBy: { effectiveDate: 'desc' }
-    }) as TermsConditions[];
+      orderBy: { effectiveDate: "desc" },
+    });
   }
 
   static async activate(id: string, userId: string): Promise<TermsConditions> {
     const terms = await this.findById(id);
     if (!terms) {
-      throw new Error('Terms not found');
+      throw new Error("Terms not found");
     }
 
     // Archive previous active version of the same type
@@ -121,27 +96,36 @@ export class TermsConditionsModel {
       where: {
         accountId: terms.accountId,
         type: terms.type,
-        status: 'ACTIVE'
+        status: "ACTIVE",
       },
-      data: { status: 'ARCHIVED' }
+      data: { status: "ARCHIVED" },
     });
 
     // Activate new version
     return await this.update(id, {
-      status: 'ACTIVE',
-      lastModifiedBy: userId
+      status: "ACTIVE",
+      lastModifiedBy: userId,
     });
   }
 
-  static async acceptTerms(termsId: string, userId: string, userRole: string, ipAddress: string, userAgent: string): Promise<TermsAcceptance> {
+  static async acceptTerms(
+    termsId: string,
+    userId: string,
+    userRole: string,
+    ipAddress: string,
+    userAgent: string
+  ): Promise<TermsAcceptance> {
     const terms = await this.findById(termsId);
     if (!terms) {
-      throw new Error('Terms not found');
+      throw new Error("Terms not found");
     }
 
     // Check if user role is required to accept
-    if (terms.acceptanceRequired.length > 0 && !terms.acceptanceRequired.includes(userRole)) {
-      throw new Error('User role is not required to accept these terms');
+    if (
+      terms.acceptanceRequired.length > 0 &&
+      !terms.acceptanceRequired.includes(userRole)
+    ) {
+      throw new Error("User role is not required to accept these terms");
     }
 
     // Check if already accepted
@@ -149,15 +133,15 @@ export class TermsConditionsModel {
       where: {
         termsId,
         userId,
-        version: terms.version
-      }
+        version: terms.version,
+      },
     });
 
     if (existingAcceptance) {
-      throw new Error('Terms already accepted');
+      throw new Error("Terms already accepted");
     }
 
-    return await prisma.termsAcceptance.create({
+    return (await prisma.termsAcceptance.create({
       data: {
         termsId,
         userId,
@@ -165,12 +149,15 @@ export class TermsConditionsModel {
         acceptedAt: new Date(),
         ipAddress,
         userAgent,
-        version: terms.version
-      }
-    }) as TermsAcceptance;
+        version: terms.version,
+      },
+    })) as TermsAcceptance;
   }
 
-  static async getAcceptanceStatus(termsId: string, userId: string): Promise<{ accepted: boolean; acceptance?: TermsAcceptance }> {
+  static async getAcceptanceStatus(
+    termsId: string,
+    userId: string
+  ): Promise<{ accepted: boolean; acceptance?: TermsAcceptance }> {
     const terms = await this.findById(termsId);
     if (!terms) {
       return { accepted: false };
@@ -180,36 +167,40 @@ export class TermsConditionsModel {
       where: {
         termsId,
         userId,
-        version: terms.version
-      }
+        version: terms.version,
+      },
     });
 
     return {
       accepted: !!acceptance,
-      acceptance
+      acceptance,
     };
   }
 
   static async getUserAcceptances(userId: string): Promise<TermsAcceptance[]> {
-    return await prisma.termsAcceptance.findMany({
+    return (await prisma.termsAcceptance.findMany({
       where: { userId },
       include: {
-        terms: true
+        terms: true,
       },
-      orderBy: { acceptedAt: 'desc' }
-    }) as TermsAcceptance[];
+      orderBy: { acceptedAt: "desc" },
+    })) as TermsAcceptance[];
   }
 
-  static async getRequiredAcceptances(userId: string, userRole: string, accountId: string): Promise<TermsConditions[]> {
+  static async getRequiredAcceptances(
+    userId: string,
+    userRole: string,
+    accountId: string
+  ): Promise<TermsConditions[]> {
     const requiredTerms = await prisma.termsConditions.findMany({
       where: {
         accountId,
-        status: 'ACTIVE',
+        status: "ACTIVE",
         requiresAcceptance: true,
         acceptanceRequired: {
-          has: userRole
-        }
-      }
+          has: userRole,
+        },
+      },
     });
 
     const pendingTerms: TermsConditions[] = [];
@@ -224,53 +215,60 @@ export class TermsConditionsModel {
     return pendingTerms;
   }
 
-  static async createTemplate(data: Partial<TermsTemplate>): Promise<TermsTemplate> {
-    return await prisma.termsTemplate.create({
+  static async createTemplate(
+    data: Partial<TermsTemplate>
+  ): Promise<TermsTemplate> {
+    return (await prisma.termsTemplate.create({
       data: {
         name: data.name!,
-        description: data.description || '',
+        description: data.description || "",
         type: data.type!,
         category: data.category!,
         content: data.content!,
         variables: data.variables || [],
         isDefault: data.isDefault || false,
-        isPublic: data.isPublic || false
-      }
-    }) as TermsTemplate;
+        isPublic: data.isPublic || false,
+      },
+    })) as TermsTemplate;
   }
 
   static async findTemplateById(id: string): Promise<TermsTemplate | null> {
-    return await prisma.termsTemplate.findUnique({
-      where: { id }
-    }) as TermsTemplate | null;
+    return (await prisma.termsTemplate.findUnique({
+      where: { id },
+    })) as TermsTemplate | null;
   }
 
   static async listTemplates(filters: any = {}): Promise<TermsTemplate[]> {
     const where: any = {};
-    
+
     if (filters.type) where.type = filters.type;
     if (filters.category) where.category = filters.category;
     if (filters.isPublic !== undefined) where.isPublic = filters.isPublic;
     if (filters.isDefault !== undefined) where.isDefault = filters.isDefault;
 
-    return await prisma.termsTemplate.findMany({
+    return (await prisma.termsTemplate.findMany({
       where,
-      orderBy: { createdAt: 'desc' }
-    }) as TermsTemplate[];
+      orderBy: { createdAt: "desc" },
+    })) as TermsTemplate[];
   }
 
-  static async generateFromTemplate(templateId: string, accountId: string, variables: Record<string, string>, userId: string): Promise<TermsConditions> {
+  static async generateFromTemplate(
+    templateId: string,
+    accountId: string,
+    variables: Record<string, string>,
+    userId: string
+  ): Promise<TermsConditions> {
     const template = await this.findTemplateById(templateId);
     if (!template) {
-      throw new Error('Template not found');
+      throw new Error("Template not found");
     }
 
     let content = template.content;
-    
+
     // Replace variables
     for (const [key, value] of Object.entries(variables)) {
       const placeholder = `{{${key}}}`;
-      content = content.replace(new RegExp(placeholder, 'g'), value);
+      content = content.replace(new RegExp(placeholder, "g"), value);
     }
 
     return await this.create({
@@ -278,17 +276,17 @@ export class TermsConditionsModel {
       type: template.type as any,
       title: template.name,
       content,
-      lastModifiedBy: userId
+      lastModifiedBy: userId,
     });
   }
 
   static async createDefaultTemplates(): Promise<TermsTemplate[]> {
     const defaultTemplates = [
       {
-        name: 'Affiliate Program Terms',
-        description: 'Standard terms and conditions for affiliate programs',
-        type: 'AFFILIATE_TERMS',
-        category: 'LEGAL' as const,
+        name: "Affiliate Program Terms",
+        description: "Standard terms and conditions for affiliate programs",
+        type: "AFFILIATE_TERMS",
+        category: "LEGAL" as const,
         content: `
           <h1>Affiliate Program Terms and Conditions</h1>
           
@@ -307,7 +305,7 @@ export class TermsConditionsModel {
           <p>Commissions are paid at a rate of {{commissionRate}}% for qualified sales. Commissions are subject to the following terms:</p>
           <ul>
             <li>Commissions are paid {{payoutSchedule}}</li>
-            <li>Minimum payout threshold is ${{minimumPayout}}</li>
+            <li>Minimum payout threshold is $50</li>
             <li>Commissions may be reversed for returns or chargebacks</li>
           </ul>
           
@@ -328,15 +326,22 @@ export class TermsConditionsModel {
           
           <p><strong>Last Updated:</strong> {{effectiveDate}}</p>
         `,
-        variables: ['companyName', 'commissionRate', 'payoutSchedule', 'minimumPayout', 'noticePeriod', 'effectiveDate'],
+        variables: [
+          "companyName",
+          "commissionRate",
+          "payoutSchedule",
+          "minimumPayout",
+          "noticePeriod",
+          "effectiveDate",
+        ],
         isDefault: true,
-        isPublic: true
+        isPublic: true,
       },
       {
-        name: 'Privacy Policy',
-        description: 'Standard privacy policy template',
-        type: 'PRIVACY_POLICY',
-        category: 'LEGAL' as const,
+        name: "Privacy Policy",
+        description: "Standard privacy policy template",
+        type: "PRIVACY_POLICY",
+        category: "LEGAL" as const,
         content: `
           <h1>Privacy Policy</h1>
           
@@ -369,10 +374,10 @@ export class TermsConditionsModel {
           
           <p><strong>Last Updated:</strong> {{effectiveDate}}</p>
         `,
-        variables: ['effectiveDate'],
+        variables: ["effectiveDate"],
         isDefault: true,
-        isPublic: true
-      }
+        isPublic: true,
+      },
     ];
 
     const createdTemplates: TermsTemplate[] = [];
@@ -384,14 +389,17 @@ export class TermsConditionsModel {
     return createdTemplates;
   }
 
-  static async getTermsHistory(accountId: string, type: string): Promise<TermsConditions[]> {
+  static async getTermsHistory(
+    accountId: string,
+    type: string
+  ): Promise<TermsConditions[]> {
     return await prisma.termsConditions.findMany({
       where: {
         accountId,
-        type: type as any
+        type: type as any,
       },
-      orderBy: { effectiveDate: 'desc' }
-    }) as TermsConditions[];
+      orderBy: { effectiveDate: "desc" },
+    });
   }
 
   static async getAcceptanceStats(termsId: string): Promise<any> {
@@ -401,26 +409,28 @@ export class TermsConditionsModel {
     }
 
     const acceptances = await prisma.termsAcceptance.findMany({
-      where: { termsId }
+      where: { termsId },
     });
 
     const stats = {
       totalAcceptances: acceptances.length,
       byRole: {} as Record<string, number>,
       byDate: {} as Record<string, number>,
-      byVersion: {} as Record<string, number>
+      byVersion: {} as Record<string, number>,
     };
 
-    acceptances.forEach(acceptance => {
+    acceptances.forEach((acceptance) => {
       // By role
-      stats.byRole[acceptance.userRole] = (stats.byRole[acceptance.userRole] || 0) + 1;
-      
+      stats.byRole[acceptance.userRole] =
+        (stats.byRole[acceptance.userRole] || 0) + 1;
+
       // By date
-      const date = acceptance.acceptedAt.toISOString().split('T')[0];
+      const date = acceptance.acceptedAt.toISOString().split("T")[0];
       stats.byDate[date] = (stats.byDate[date] || 0) + 1;
-      
+
       // By version
-      stats.byVersion[acceptance.version] = (stats.byVersion[acceptance.version] || 0) + 1;
+      stats.byVersion[acceptance.version] =
+        (stats.byVersion[acceptance.version] || 0) + 1;
     });
 
     return stats;
@@ -433,31 +443,35 @@ export class TermsConditionsModel {
     }
 
     const acceptances = await prisma.termsAcceptance.findMany({
-      where: { termsId }
+      where: { termsId },
     });
 
     return {
       terms,
       acceptances,
-      exportedAt: new Date().toISOString()
+      exportedAt: new Date().toISOString(),
     };
   }
 
-  static async importTerms(accountId: string, termsData: any, userId: string): Promise<TermsConditions> {
+  static async importTerms(
+    accountId: string,
+    termsData: any,
+    userId: string
+  ): Promise<TermsConditions> {
     return await this.create({
       accountId,
       type: termsData.type,
       title: termsData.title,
       content: termsData.content,
       version: termsData.version,
-      status: 'DRAFT',
+      status: "DRAFT",
       effectiveDate: new Date(termsData.effectiveDate),
-      expiryDate: termsData.expiryDate ? new Date(termsData.expiryDate) : undefined,
+      expiryDate: termsData.expiryDate
+        ? new Date(termsData.expiryDate)
+        : undefined,
       requiresAcceptance: termsData.requiresAcceptance,
       acceptanceRequired: termsData.acceptanceRequired,
-      lastModifiedBy: userId
+      lastModifiedBy: userId,
     });
   }
 }
-
-

@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -6,14 +6,14 @@ export interface Postback {
   id: string;
   name: string;
   url: string;
-  method: 'GET' | 'POST';
+  method: "GET" | "POST";
   events: string[];
   parameters: PostbackParameter[];
   headers: Record<string, string>;
   timeout: number;
   retryAttempts: number;
   retryDelay: number;
-  status: 'ACTIVE' | 'INACTIVE' | 'ERROR';
+  status: "ACTIVE" | "INACTIVE" | "ERROR";
   lastTriggered?: Date;
   successCount: number;
   failureCount: number;
@@ -26,7 +26,7 @@ export interface Postback {
 export interface PostbackParameter {
   name: string;
   value: string;
-  type: 'STATIC' | 'DYNAMIC' | 'CUSTOM';
+  type: "STATIC" | "DYNAMIC" | "CUSTOM";
   required: boolean;
 }
 
@@ -46,76 +46,82 @@ export interface PostbackLog {
 }
 
 export class PostbackModel {
-  static async create(data: Partial<Postback>): Promise<Postback> {
-    return await prisma.postback.create({
+  static async create(data: any): Promise<any> {
+    return (await prisma.postback.create({
       data: {
+        accountId: data.accountId!,
         name: data.name!,
         url: data.url!,
-        method: data.method || 'POST',
+        method: data.method || "POST",
         events: data.events || [],
-        parameters: data.parameters || [],
-        headers: data.headers || {},
-        timeout: data.timeout || 30,
-        retryAttempts: data.retryAttempts || 3,
-        retryDelay: data.retryDelay || 5,
-        status: data.status || 'ACTIVE',
-        successCount: 0,
-        failureCount: 0,
-        affiliateId: data.affiliateId,
-        offerId: data.offerId,
-      }
-    }) as Postback;
+        parameters: (data.parameters || []) as any,
+        headers: (data.headers || {}) as any,
+        status: data.status || "ACTIVE",
+      },
+    })) as unknown as any;
   }
 
-  static async findById(id: string): Promise<Postback | null> {
-    return await prisma.postback.findUnique({
-      where: { id }
-    }) as Postback | null;
-  }
-
-  static async update(id: string, data: Partial<Postback>): Promise<Postback> {
-    return await prisma.postback.update({
+  static async findById(id: string): Promise<any | null> {
+    return (await prisma.postback.findUnique({
       where: { id },
-      data
-    }) as Postback;
+    })) as unknown as any | null;
+  }
+
+  static async update(id: string, data: any): Promise<any> {
+    return (await prisma.postback.update({
+      where: { id },
+      data: {
+        ...data,
+        parameters: data.parameters as any,
+        headers: data.headers as any,
+        updatedAt: new Date(),
+      },
+    })) as unknown as any;
   }
 
   static async delete(id: string): Promise<void> {
     await prisma.postback.delete({
-      where: { id }
+      where: { id },
     });
   }
 
-  static async list(filters: any = {}, page: number = 1, limit: number = 10): Promise<Postback[]> {
+  static async list(
+    filters: any = {},
+    page: number = 1,
+    limit: number = 10
+  ): Promise<any[]> {
     const skip = (page - 1) * limit;
     const where: any = {};
 
     if (filters.status) where.status = filters.status;
-    if (filters.affiliateId) where.affiliateId = filters.affiliateId;
-    if (filters.offerId) where.offerId = filters.offerId;
+    if (filters.accountId) where.accountId = filters.accountId;
     if (filters.event) where.events = { has: filters.event };
 
-    return await prisma.postback.findMany({
+    return (await prisma.postback.findMany({
       where,
       skip,
       take: limit,
-      orderBy: { createdAt: 'desc' }
-    }) as Postback[];
+      orderBy: { createdAt: "desc" },
+    })) as unknown as any[];
   }
 
-  static async triggerPostback(postbackId: string, event: string, data: any): Promise<PostbackLog> {
+  static async triggerPostback(
+    postbackId: string,
+    event: string,
+    data: any
+  ): Promise<any> {
     const postback = await this.findById(postbackId);
     if (!postback) {
-      throw new Error('Postback not found');
+      throw new Error("Postback not found");
     }
 
     if (!postback.events.includes(event)) {
-      throw new Error('Event not configured for this postback');
+      throw new Error("Event not configured for this postback");
     }
 
     const startTime = Date.now();
     let success = false;
-    let response: any = null;
+    let responseData: any = null;
     let statusCode: number = 0;
     let error: string | undefined;
 
@@ -125,15 +131,16 @@ export class PostbackModel {
       const urlParams = new URLSearchParams();
 
       // Add dynamic parameters
-      for (const param of postback.parameters) {
-        if (param.type === 'STATIC') {
+      const parameters = (postback.parameters as any) || [];
+      for (const param of parameters) {
+        if (param.type === "STATIC") {
           urlParams.append(param.name, param.value);
-        } else if (param.type === 'DYNAMIC') {
+        } else if (param.type === "DYNAMIC") {
           const value = this.getDynamicValue(param.value, data);
           if (value) {
             urlParams.append(param.name, value);
           }
-        } else if (param.type === 'CUSTOM') {
+        } else if (param.type === "CUSTOM") {
           const value = this.getCustomValue(param.value, data);
           if (value) {
             urlParams.append(param.name, value);
@@ -141,21 +148,21 @@ export class PostbackModel {
         }
       }
 
-      if (postback.method === 'GET') {
-        url += (url.includes('?') ? '&' : '?') + urlParams.toString();
+      if (postback.method === "GET") {
+        url += (url.includes("?") ? "&" : "?") + urlParams.toString();
       }
 
       // Make HTTP request
       const fetchOptions: any = {
         method: postback.method,
         headers: {
-          'Content-Type': 'application/json',
-          ...postback.headers
+          "Content-Type": "application/json",
+          ...(postback.headers as any),
         },
-        timeout: postback.timeout * 1000
+        timeout: 30000, // 30 seconds default timeout
       };
 
-      if (postback.method === 'POST') {
+      if (postback.method === "POST") {
         fetchOptions.body = JSON.stringify(data);
       }
 
@@ -164,11 +171,10 @@ export class PostbackModel {
       success = response.ok;
 
       if (success) {
-        response = await response.json();
+        responseData = await response.json();
       } else {
         error = `HTTP ${statusCode}: ${response.statusText}`;
       }
-
     } catch (err: any) {
       error = err.message;
       success = false;
@@ -177,31 +183,23 @@ export class PostbackModel {
     const responseTime = Date.now() - startTime;
 
     // Log the postback attempt
-    const log = await prisma.postbackLog.create({
+    const log = (await prisma.postbackLog.create({
       data: {
         postbackId,
         event,
-        url: postback.url,
-        method: postback.method,
-        payload: data,
-        response,
-        statusCode,
-        success,
-        error,
-        triggeredAt: new Date(),
-        responseTime
-      }
-    }) as PostbackLog;
+        data: data as any,
+        response: responseData as any,
+        status: success ? "SUCCESS" : "FAILED",
+      },
+    })) as unknown as any;
 
-    // Update postback statistics
+    // Update postback status
     await prisma.postback.update({
       where: { id: postbackId },
       data: {
-        lastTriggered: new Date(),
-        successCount: success ? { increment: 1 } : undefined,
-        failureCount: success ? undefined : { increment: 1 },
-        status: success ? 'ACTIVE' : 'ERROR'
-      }
+        status: success ? "ACTIVE" : "ERROR",
+        updatedAt: new Date(),
+      },
     });
 
     return log;
@@ -209,21 +207,21 @@ export class PostbackModel {
 
   private static getDynamicValue(param: string, data: any): string | null {
     const mappings: Record<string, string> = {
-      'click_id': data.clickId || '',
-      'affiliate_id': data.affiliateId || '',
-      'offer_id': data.offerId || '',
-      'conversion_id': data.conversionId || '',
-      'order_id': data.orderId || '',
-      'customer_id': data.customerId || '',
-      'amount': data.amount?.toString() || '',
-      'currency': data.currency || '',
-      'timestamp': new Date().toISOString(),
-      'ip_address': data.ipAddress || '',
-      'user_agent': data.userAgent || '',
-      'country': data.country || '',
-      'device': data.device || '',
-      'browser': data.browser || '',
-      'os': data.os || ''
+      click_id: data.clickId || "",
+      affiliate_id: data.affiliateId || "",
+      offer_id: data.offerId || "",
+      conversion_id: data.conversionId || "",
+      order_id: data.orderId || "",
+      customer_id: data.customerId || "",
+      amount: data.amount?.toString() || "",
+      currency: data.currency || "",
+      timestamp: new Date().toISOString(),
+      ip_address: data.ipAddress || "",
+      user_agent: data.userAgent || "",
+      country: data.country || "",
+      device: data.device || "",
+      browser: data.browser || "",
+      os: data.os || "",
     };
 
     return mappings[param] || null;
@@ -239,19 +237,21 @@ export class PostbackModel {
     }
   }
 
-  static async getLogs(postbackId: string, page: number = 1, limit: number = 50): Promise<PostbackLog[]> {
+  static async getLogs(
+    postbackId: string,
+    page: number = 1,
+    limit: number = 50
+  ): Promise<any[]> {
     const skip = (page - 1) * limit;
-    return await prisma.postbackLog.findMany({
+    return (await prisma.postbackLog.findMany({
       where: { postbackId },
       skip,
       take: limit,
-      orderBy: { triggeredAt: 'desc' }
-    }) as PostbackLog[];
+      orderBy: { createdAt: "desc" },
+    })) as unknown as any[];
   }
 
-  static async testPostback(postbackId: string, testData: any): Promise<PostbackLog> {
-    return await this.triggerPostback(postbackId, 'test', testData);
+  static async testPostback(postbackId: string, testData: any): Promise<any> {
+    return await this.triggerPostback(postbackId, "test", testData);
   }
 }
-
-

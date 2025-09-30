@@ -2,22 +2,22 @@ export interface FraudRule {
     id: string;
     name: string;
     description: string;
-    type: 'CLICK_FRAUD' | 'CONVERSION_FRAUD' | 'TRAFFIC_QUALITY' | 'GEO_BLOCKING' | 'DEVICE_FINGERPRINTING';
+    type: "CLICK_FRAUD" | "CONVERSION_FRAUD" | "TRAFFIC_QUALITY" | "GEO_BLOCKING" | "DEVICE_FINGERPRINTING";
     conditions: FraudCondition[];
     actions: FraudAction[];
-    severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-    status: 'ACTIVE' | 'INACTIVE';
+    severity: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+    status: "ACTIVE" | "INACTIVE";
     createdAt: Date;
     updatedAt: Date;
 }
 export interface FraudCondition {
     field: string;
-    operator: 'EQUALS' | 'NOT_EQUALS' | 'CONTAINS' | 'NOT_CONTAINS' | 'GREATER_THAN' | 'LESS_THAN' | 'IN' | 'NOT_IN';
+    operator: "EQUALS" | "NOT_EQUALS" | "CONTAINS" | "NOT_CONTAINS" | "GREATER_THAN" | "LESS_THAN" | "IN" | "NOT_IN";
     value: any;
     weight: number;
 }
 export interface FraudAction {
-    type: 'BLOCK' | 'FLAG' | 'REDIRECT' | 'NOTIFY' | 'PAUSE_AFFILIATE' | 'REJECT_CONVERSION';
+    type: "BLOCK" | "FLAG" | "REDIRECT" | "NOTIFY" | "PAUSE_AFFILIATE" | "REJECT_CONVERSION";
     parameters: Record<string, any>;
 }
 export interface FraudEvent {
@@ -27,7 +27,7 @@ export interface FraudEvent {
     severity: string;
     data: any;
     score: number;
-    status: 'DETECTED' | 'REVIEWED' | 'RESOLVED' | 'FALSE_POSITIVE';
+    status: "DETECTED" | "REVIEWED" | "RESOLVED" | "FALSE_POSITIVE";
     action: string;
     ipAddress: string;
     userAgent: string;

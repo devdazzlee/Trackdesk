@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -8,19 +8,26 @@ export interface ConversionType {
   name: string;
   description: string;
   code: string;
-  category: 'SALE' | 'LEAD' | 'SIGNUP' | 'DOWNLOAD' | 'CLICK' | 'VIEW' | 'CUSTOM';
+  category:
+    | "SALE"
+    | "LEAD"
+    | "SIGNUP"
+    | "DOWNLOAD"
+    | "CLICK"
+    | "VIEW"
+    | "CUSTOM";
   value: ConversionValue;
   tracking: TrackingSettings;
   validation: ValidationSettings;
   attribution: AttributionSettings;
-  status: 'ACTIVE' | 'INACTIVE';
+  status: "ACTIVE" | "INACTIVE";
   isDefault: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
 
 export interface ConversionValue {
-  type: 'FIXED' | 'PERCENTAGE' | 'DYNAMIC' | 'CUSTOM';
+  type: "FIXED" | "PERCENTAGE" | "DYNAMIC" | "CUSTOM";
   fixedAmount?: number;
   percentage?: number;
   field?: string;
@@ -31,7 +38,7 @@ export interface ConversionValue {
 }
 
 export interface TrackingSettings {
-  method: 'PIXEL' | 'POSTBACK' | 'API' | 'JAVASCRIPT' | 'SERVER_TO_SERVER';
+  method: "PIXEL" | "POSTBACK" | "API" | "JAVASCRIPT" | "SERVER_TO_SERVER";
   pixelCode?: string;
   postbackUrl?: string;
   apiEndpoint?: string;
@@ -54,9 +61,15 @@ export interface ValidationSettings {
 export interface ValidationRule {
   id: string;
   name: string;
-  type: 'REQUIRED_FIELD' | 'FIELD_FORMAT' | 'FIELD_VALUE' | 'CUSTOM_LOGIC';
+  type: "REQUIRED_FIELD" | "FIELD_FORMAT" | "FIELD_VALUE" | "CUSTOM_LOGIC";
   field: string;
-  operator: 'EQUALS' | 'NOT_EQUALS' | 'CONTAINS' | 'GREATER_THAN' | 'LESS_THAN' | 'REGEX';
+  operator:
+    | "EQUALS"
+    | "NOT_EQUALS"
+    | "CONTAINS"
+    | "GREATER_THAN"
+    | "LESS_THAN"
+    | "REGEX";
   value: any;
   message: string;
   enabled: boolean;
@@ -87,13 +100,20 @@ export interface AttributionRule {
 
 export interface AttributionCondition {
   field: string;
-  operator: 'EQUALS' | 'NOT_EQUALS' | 'CONTAINS' | 'GREATER_THAN' | 'LESS_THAN' | 'IN' | 'NOT_IN';
+  operator:
+    | "EQUALS"
+    | "NOT_EQUALS"
+    | "CONTAINS"
+    | "GREATER_THAN"
+    | "LESS_THAN"
+    | "IN"
+    | "NOT_IN";
   value: any;
-  logic: 'AND' | 'OR';
+  logic: "AND" | "OR";
 }
 
 export interface AttributionAction {
-  type: 'ASSIGN_CREDIT' | 'MODIFY_CREDIT' | 'EXCLUDE' | 'INCLUDE' | 'CUSTOM';
+  type: "ASSIGN_CREDIT" | "MODIFY_CREDIT" | "EXCLUDE" | "INCLUDE" | "CUSTOM";
   parameters: Record<string, any>;
   enabled: boolean;
 }
@@ -108,7 +128,7 @@ export interface ConversionEvent {
   sessionId?: string;
   value: number;
   currency: string;
-  status: 'PENDING' | 'VALIDATED' | 'APPROVED' | 'REJECTED' | 'FRAUD';
+  status: "PENDING" | "VALIDATED" | "APPROVED" | "REJECTED" | "FRAUD";
   data: any;
   ipAddress: string;
   userAgent: string;
@@ -123,7 +143,7 @@ export interface ConversionValidation {
   id: string;
   conversionEventId: string;
   ruleId: string;
-  status: 'PASSED' | 'FAILED' | 'SKIPPED';
+  status: "PASSED" | "FAILED" | "SKIPPED";
   message: string;
   data: any;
   timestamp: Date;
@@ -131,99 +151,110 @@ export interface ConversionValidation {
 
 export class ConversionTypesModel {
   static async create(data: Partial<ConversionType>): Promise<ConversionType> {
-    return await prisma.conversionType.create({
+    return (await (prisma as any).conversionType.create({
       data: {
         accountId: data.accountId!,
         name: data.name!,
-        description: data.description || '',
+        description: data.description || "",
         code: data.code!,
         category: data.category!,
         value: data.value || {
-          type: 'FIXED',
+          type: "FIXED",
           fixedAmount: 0,
-          currency: 'USD'
+          currency: "USD",
         },
         tracking: data.tracking || {
-          method: 'PIXEL',
+          method: "PIXEL",
           parameters: {},
           customFields: {},
           requireValidation: false,
           allowDuplicates: true,
-          duplicateWindow: 0
+          duplicateWindow: 0,
         },
         validation: data.validation || {
           enabled: false,
           rules: [],
           timeout: 30,
           retryAttempts: 3,
-          retryDelay: 5
+          retryDelay: 5,
         },
         attribution: data.attribution || {
           enabled: true,
           lookbackWindow: 30,
           clickLookbackWindow: 30,
-          attributionModel: 'last_click',
+          attributionModel: "last_click",
           includeDirectTraffic: true,
           includeOrganicTraffic: true,
           includePaidTraffic: true,
           includeSocialTraffic: true,
           includeEmailTraffic: true,
           includeReferralTraffic: true,
-          customRules: []
+          customRules: [],
         },
-        status: data.status || 'ACTIVE',
-        isDefault: data.isDefault || false
-      }
-    }) as ConversionType;
+        status: data.status || "ACTIVE",
+        isDefault: data.isDefault || false,
+      },
+    })) as ConversionType;
   }
 
   static async findById(id: string): Promise<ConversionType | null> {
-    return await prisma.conversionType.findUnique({
-      where: { id }
-    }) as ConversionType | null;
+    return (await (prisma as any).conversionType.findUnique({
+      where: { id },
+    })) as ConversionType | null;
   }
 
-  static async findByCode(accountId: string, code: string): Promise<ConversionType | null> {
-    return await prisma.conversionType.findFirst({
+  static async findByCode(
+    accountId: string,
+    code: string
+  ): Promise<ConversionType | null> {
+    return (await (prisma as any).conversionType.findFirst({
       where: {
         accountId,
         code,
-        status: 'ACTIVE'
-      }
-    }) as ConversionType | null;
+        status: "ACTIVE",
+      },
+    })) as ConversionType | null;
   }
 
-  static async update(id: string, data: Partial<ConversionType>): Promise<ConversionType> {
-    return await prisma.conversionType.update({
+  static async update(
+    id: string,
+    data: Partial<ConversionType>
+  ): Promise<ConversionType> {
+    return (await (prisma as any).conversionType.update({
       where: { id },
       data: {
         ...data,
-        updatedAt: new Date()
-      }
-    }) as ConversionType;
+        updatedAt: new Date(),
+      },
+    })) as ConversionType;
   }
 
   static async delete(id: string): Promise<void> {
-    await prisma.conversionType.delete({
-      where: { id }
+    await (prisma as any).conversionType.delete({
+      where: { id },
     });
   }
 
-  static async list(accountId: string, filters: any = {}): Promise<ConversionType[]> {
+  static async list(
+    accountId: string,
+    filters: any = {}
+  ): Promise<ConversionType[]> {
     const where: any = { accountId };
-    
+
     if (filters.status) where.status = filters.status;
     if (filters.category) where.category = filters.category;
     if (filters.isDefault !== undefined) where.isDefault = filters.isDefault;
 
-    return await prisma.conversionType.findMany({
+    return (await (prisma as any).conversionType.findMany({
       where,
-      orderBy: { name: 'asc' }
-    }) as ConversionType[];
+      orderBy: { name: "asc" },
+    })) as ConversionType[];
   }
 
-  static async createEvent(data: Partial<ConversionEvent>): Promise<ConversionEvent> {
-    return await prisma.conversionEvent.create({
+  static async createEvent(
+    data: Partial<ConversionEvent>
+  ): Promise<ConversionEvent> {
+    return (await (prisma as any).conversionEvent.create({
       data: {
         conversionTypeId: data.conversionTypeId!,
         affiliateId: data.affiliateId!,
@@ -232,69 +263,83 @@ export class ConversionTypesModel {
         userId: data.userId,
         sessionId: data.sessionId,
         value: data.value!,
-        currency: data.currency || 'USD',
-        status: 'PENDING',
+        currency: data.currency || "USD",
+        status: "PENDING",
         data: data.data || {},
         ipAddress: data.ipAddress!,
         userAgent: data.userAgent!,
-        timestamp: data.timestamp || new Date()
-      }
-    }) as ConversionEvent;
+        timestamp: data.timestamp || new Date(),
+      } as any,
+    })) as ConversionEvent;
   }
 
   static async findEventById(id: string): Promise<ConversionEvent | null> {
-    return await prisma.conversionEvent.findUnique({
-      where: { id }
-    }) as ConversionEvent | null;
+    return (await (prisma as any).conversionEvent.findUnique({
+      where: { id },
+    })) as ConversionEvent | null;
   }
 
-  static async updateEvent(id: string, data: Partial<ConversionEvent>): Promise<ConversionEvent> {
-    return await prisma.conversionEvent.update({
+  static async updateEvent(
+    id: string,
+    data: Partial<ConversionEvent>
+  ): Promise<ConversionEvent> {
+    return (await (prisma as any).conversionEvent.update({
       where: { id },
       data: {
         ...data,
-        updatedAt: new Date()
-      }
-    }) as ConversionEvent;
+        updatedAt: new Date(),
+      } as any,
+    })) as ConversionEvent;
   }
 
   static async deleteEvent(id: string): Promise<void> {
-    await prisma.conversionEvent.delete({
-      where: { id }
+    await (prisma as any).conversionEvent.delete({
+      where: { id },
     });
   }
 
-  static async listEvents(conversionTypeId: string, filters: any = {}, page: number = 1, limit: number = 50): Promise<ConversionEvent[]> {
+  static async listEvents(
+    conversionTypeId: string,
+    filters: any = {},
+    page: number = 1,
+    limit: number = 50
+  ): Promise<ConversionEvent[]> {
     const skip = (page - 1) * limit;
     const where: any = { conversionTypeId };
-    
+
     if (filters.status) where.status = filters.status;
     if (filters.affiliateId) where.affiliateId = filters.affiliateId;
     if (filters.offerId) where.offerId = filters.offerId;
     if (filters.startDate && filters.endDate) {
       where.timestamp = {
         gte: filters.startDate,
-        lte: filters.endDate
+        lte: filters.endDate,
       };
     }
 
-    return await prisma.conversionEvent.findMany({
+    return (await (prisma as any).conversionEvent.findMany({
       where,
       skip,
       take: limit,
-      orderBy: { timestamp: 'desc' }
-    }) as ConversionEvent[];
+      orderBy: { timestamp: "desc" },
+    })) as ConversionEvent[];
   }
 
-  static async validateEvent(eventId: string): Promise<{ valid: boolean; errors: string[]; warnings: string[] }> {
+  static async validateEvent(
+    eventId: string
+  ): Promise<{ valid: boolean; errors: string[]; warnings: string[] }> {
     const event = await this.findEventById(eventId);
     if (!event) {
-      return { valid: false, errors: ['Event not found'], warnings: [] };
+      return { valid: false, errors: ["Event not found"], warnings: [] };
     }
 
     const conversionType = await this.findById(event.conversionTypeId);
     if (!conversionType) {
-      return { valid: false, errors: ['Conversion type not found'], warnings: [] };
+      return {
+        valid: false,
+        errors: ["Conversion type not found"],
+        warnings: [],
+      };
     }
 
     const errors: string[] = [];
@@ -310,9 +355,9 @@ export class ConversionTypesModel {
       if (!rule.enabled) continue;
 
       const validation = await this.validateRule(rule, event);
-      if (validation.status === 'FAILED') {
+      if (validation.status === "FAILED") {
         errors.push(validation.message);
-      } else if (validation.status === 'SKIPPED') {
+      } else if (validation.status === "SKIPPED") {
         warnings.push(validation.message);
       }
     }
@@ -320,167 +365,191 @@ export class ConversionTypesModel {
     // Update event status
     if (errors.length === 0) {
       await this.updateEvent(eventId, {
-        status: 'VALIDATED',
-        validatedAt: new Date()
+        status: "VALIDATED",
+        validatedAt: new Date(),
       });
     } else {
       await this.updateEvent(eventId, {
-        status: 'REJECTED',
+        status: "REJECTED",
         rejectedAt: new Date(),
-        rejectionReason: errors.join('; ')
+        rejectionReason: errors.join("; "),
       });
     }
 
     return { valid: errors.length === 0, errors, warnings };
   }
 
-  private static async validateRule(rule: ValidationRule, event: ConversionEvent): Promise<ConversionValidation> {
-    let status: 'PASSED' | 'FAILED' | 'SKIPPED' = 'PASSED';
-    let message = '';
+  private static async validateRule(
+    rule: ValidationRule,
+    event: ConversionEvent
+  ): Promise<ConversionValidation> {
+    let status: "PASSED" | "FAILED" | "SKIPPED" = "PASSED";
+    let message = "";
 
     try {
       const value = this.getFieldValue(event.data, rule.field);
-      
+
       switch (rule.type) {
-        case 'REQUIRED_FIELD':
-          if (!value || value === '') {
-            status = 'FAILED';
+        case "REQUIRED_FIELD":
+          if (!value || value === "") {
+            status = "FAILED";
             message = rule.message;
           }
           break;
 
-        case 'FIELD_FORMAT':
+        case "FIELD_FORMAT":
           if (value && !this.validateFormat(value, rule.value)) {
-            status = 'FAILED';
+            status = "FAILED";
             message = rule.message;
           }
           break;
 
-        case 'FIELD_VALUE':
+        case "FIELD_VALUE":
           if (!this.validateValue(value, rule.operator, rule.value)) {
-            status = 'FAILED';
+            status = "FAILED";
             message = rule.message;
           }
           break;
 
-        case 'CUSTOM_LOGIC':
+        case "CUSTOM_LOGIC":
           // Implement custom logic validation
           break;
       }
     } catch (error: any) {
-      status = 'SKIPPED';
+      status = "SKIPPED";
       message = `Validation error: ${error.message}`;
     }
 
-    return await prisma.conversionValidation.create({
+    return (await (prisma as any).conversionValidation.create({
       data: {
         conversionEventId: event.id,
         ruleId: rule.id,
         status,
         message,
         data: { rule, event: event.data },
-        timestamp: new Date()
-      }
-    }) as ConversionValidation;
+        timestamp: new Date(),
+      },
+    })) as ConversionValidation;
   }
 
   private static getFieldValue(data: any, field: string): any {
-    const fields = field.split('.');
+    const fields = field.split(".");
     let value = data;
-    
+
     for (const f of fields) {
       value = value?.[f];
     }
-    
+
     return value;
   }
 
   private static validateFormat(value: any, format: string): boolean {
-    if (format === 'email') {
+    if (format === "email") {
       return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value));
-    } else if (format === 'phone') {
+    } else if (format === "phone") {
       return /^\+?[\d\s\-\(\)]+$/.test(String(value));
-    } else if (format === 'url') {
+    } else if (format === "url") {
       try {
         new URL(String(value));
         return true;
       } catch {
         return false;
       }
-    } else if (format.startsWith('regex:')) {
+    } else if (format.startsWith("regex:")) {
       const regex = new RegExp(format.substring(6));
       return regex.test(String(value));
     }
-    
+
     return true;
   }
 
-  private static validateValue(value: any, operator: string, expectedValue: any): boolean {
+  private static validateValue(
+    value: any,
+    operator: string,
+    expectedValue: any
+  ): boolean {
     switch (operator) {
-      case 'EQUALS':
+      case "EQUALS":
         return value === expectedValue;
-      case 'NOT_EQUALS':
+      case "NOT_EQUALS":
         return value !== expectedValue;
-      case 'CONTAINS':
+      case "CONTAINS":
         return String(value).includes(String(expectedValue));
-      case 'GREATER_THAN':
+      case "GREATER_THAN":
         return Number(value) > Number(expectedValue);
-      case 'LESS_THAN':
+      case "LESS_THAN":
         return Number(value) < Number(expectedValue);
       default:
         return true;
     }
   }
 
-  static async approveEvent(eventId: string, approvedBy: string): Promise<ConversionEvent> {
+  static async approveEvent(
+    eventId: string,
+    approvedBy: string
+  ): Promise<ConversionEvent> {
     return await this.updateEvent(eventId, {
-      status: 'APPROVED',
-      approvedAt: new Date()
+      status: "APPROVED",
+      approvedAt: new Date(),
     });
   }
 
-  static async rejectEvent(eventId: string, rejectedBy: string, reason: string): Promise<ConversionEvent> {
+  static async rejectEvent(
+    eventId: string,
+    rejectedBy: string,
+    reason: string
+  ): Promise<ConversionEvent> {
     return await this.updateEvent(eventId, {
-      status: 'REJECTED',
+      status: "REJECTED",
       rejectedAt: new Date(),
-      rejectionReason: reason
+      rejectionReason: reason,
     });
   }
 
-  static async markAsFraud(eventId: string, markedBy: string, reason: string): Promise<ConversionEvent> {
+  static async markAsFraud(
+    eventId: string,
+    markedBy: string,
+    reason: string
+  ): Promise<ConversionEvent> {
     return await this.updateEvent(eventId, {
-      status: 'FRAUD',
+      status: "FRAUD",
       rejectedAt: new Date(),
-      rejectionReason: reason
+      rejectionReason: reason,
     });
   }
 
-  static async calculateValue(conversionTypeId: string, data: any): Promise<number> {
+  static async calculateValue(
+    conversionTypeId: string,
+    data: any
+  ): Promise<number> {
     const conversionType = await this.findById(conversionTypeId);
     if (!conversionType) {
-      throw new Error('Conversion type not found');
+      throw new Error("Conversion type not found");
     }
 
     const valueSettings = conversionType.value;
     let value = 0;
 
     switch (valueSettings.type) {
-      case 'FIXED':
+      case "FIXED":
         value = valueSettings.fixedAmount || 0;
         break;
 
-      case 'PERCENTAGE':
-        const baseValue = this.getFieldValue(data, valueSettings.field || 'orderValue');
+      case "PERCENTAGE":
+        const baseValue = this.getFieldValue(
+          data,
+          valueSettings.field || "orderValue"
+        );
         value = (baseValue * (valueSettings.percentage || 0)) / 100;
         break;
 
-      case 'DYNAMIC':
-        value = this.getFieldValue(data, valueSettings.field || 'orderValue');
+      case "DYNAMIC":
+        value = this.getFieldValue(data, valueSettings.field || "orderValue");
         break;
 
-      case 'CUSTOM':
+      case "CUSTOM":
         // Implement custom formula calculation
-        value = this.evaluateFormula(valueSettings.formula || '0', data);
+        value = this.evaluateFormula(valueSettings.formula || "0", data);
         break;
     }
 
@@ -502,9 +571,12 @@ export class ConversionTypesModel {
       let evaluatedFormula = formula;
       for (const [key, value] of Object.entries(data)) {
         const placeholder = `{{${key}}}`;
-        evaluatedFormula = evaluatedFormula.replace(new RegExp(placeholder, 'g'), String(value));
+        evaluatedFormula = evaluatedFormula.replace(
+          new RegExp(placeholder, "g"),
+          String(value)
+        );
       }
-      
+
       // Evaluate the formula (this is a simplified implementation)
       return eval(evaluatedFormula) || 0;
     } catch (error) {
@@ -512,67 +584,76 @@ export class ConversionTypesModel {
     }
   }
 
-  static async getConversionStats(accountId: string, startDate?: Date, endDate?: Date): Promise<any> {
+  static async getConversionStats(
+    accountId: string,
+    startDate?: Date,
+    endDate?: Date
+  ): Promise<any> {
     const where: any = { conversionType: { accountId } };
-    
+
     if (startDate && endDate) {
       where.timestamp = {
         gte: startDate,
-        lte: endDate
+        lte: endDate,
       };
     }
 
-    const events = await prisma.conversionEvent.findMany({
+    const events = await (prisma as any).conversionEvent.findMany({
       where,
       include: {
-        conversionType: true
-      }
+        conversionType: true,
+      } as any,
     });
 
     const stats = {
       totalEvents: events.length,
-      pendingEvents: events.filter(e => e.status === 'PENDING').length,
-      validatedEvents: events.filter(e => e.status === 'VALIDATED').length,
-      approvedEvents: events.filter(e => e.status === 'APPROVED').length,
-      rejectedEvents: events.filter(e => e.status === 'REJECTED').length,
-      fraudEvents: events.filter(e => e.status === 'FRAUD').length,
+      pendingEvents: events.filter((e) => (e as any).status === "PENDING")
+        .length,
+      validatedEvents: events.filter((e) => (e as any).status === "VALIDATED")
+        .length,
+      approvedEvents: events.filter((e) => (e as any).status === "APPROVED")
+        .length,
+      rejectedEvents: events.filter((e) => (e as any).status === "REJECTED")
+        .length,
+      fraudEvents: events.filter((e) => (e as any).status === "FRAUD").length,
       totalValue: events.reduce((sum, e) => sum + e.value, 0),
       byType: {} as Record<string, any>,
       byStatus: {} as Record<string, number>,
       byCategory: {} as Record<string, any>,
       byAffiliate: {} as Record<string, any>,
-      byOffer: {} as Record<string, any>
+      byOffer: {} as Record<string, any>,
     };
 
     // Aggregate by type, status, category, affiliate, and offer
-    events.forEach(event => {
+    events.forEach((event) => {
       const type = event.conversionType.name;
       const category = event.conversionType.category;
-      
+
       // By type
       if (!stats.byType[type]) {
         stats.byType[type] = { count: 0, value: 0 };
       }
       stats.byType[type].count++;
       stats.byType[type].value += event.value;
-      
+
       // By status
-      stats.byStatus[event.status] = (stats.byStatus[event.status] || 0) + 1;
-      
+      stats.byStatus[(event as any).status] =
+        (stats.byStatus[(event as any).status] || 0) + 1;
+
       // By category
       if (!stats.byCategory[category]) {
         stats.byCategory[category] = { count: 0, value: 0 };
       }
       stats.byCategory[category].count++;
       stats.byCategory[category].value += event.value;
-      
+
       // By affiliate
       if (!stats.byAffiliate[event.affiliateId]) {
         stats.byAffiliate[event.affiliateId] = { count: 0, value: 0 };
       }
       stats.byAffiliate[event.affiliateId].count++;
       stats.byAffiliate[event.affiliateId].value += event.value;
-      
+
       // By offer
       if (!stats.byOffer[event.offerId]) {
         stats.byOffer[event.offerId] = { count: 0, value: 0 };
@@ -584,161 +665,163 @@ export class ConversionTypesModel {
     return stats;
   }
 
-  static async createDefaultTypes(accountId: string): Promise<ConversionType[]> {
+  static async createDefaultTypes(
+    accountId: string
+  ): Promise<ConversionType[]> {
     const defaultTypes = [
       {
-        name: 'Sale',
-        description: 'Product or service sale',
-        code: 'SALE',
-        category: 'SALE' as const,
+        name: "Sale",
+        description: "Product or service sale",
+        code: "SALE",
+        category: "SALE" as const,
         value: {
-          type: 'DYNAMIC',
-          field: 'orderValue',
-          currency: 'USD'
+          type: "DYNAMIC",
+          field: "orderValue",
+          currency: "USD",
         },
         tracking: {
-          method: 'PIXEL',
+          method: "PIXEL",
           parameters: {
-            orderId: '{{orderId}}',
-            orderValue: '{{orderValue}}',
-            currency: '{{currency}}'
+            orderId: "{{orderId}}",
+            orderValue: "{{orderValue}}",
+            currency: "{{currency}}",
           },
           customFields: {},
           requireValidation: true,
           allowDuplicates: false,
-          duplicateWindow: 60
+          duplicateWindow: 60,
         },
         validation: {
           enabled: true,
           rules: [
             {
-              id: 'required_order_id',
-              name: 'Required Order ID',
-              type: 'REQUIRED_FIELD',
-              field: 'orderId',
-              operator: 'EQUALS',
-              value: '',
-              message: 'Order ID is required',
-              enabled: true
+              id: "required_order_id",
+              name: "Required Order ID",
+              type: "REQUIRED_FIELD",
+              field: "orderId",
+              operator: "EQUALS",
+              value: "",
+              message: "Order ID is required",
+              enabled: true,
             },
             {
-              id: 'required_order_value',
-              name: 'Required Order Value',
-              type: 'REQUIRED_FIELD',
-              field: 'orderValue',
-              operator: 'GREATER_THAN',
+              id: "required_order_value",
+              name: "Required Order Value",
+              type: "REQUIRED_FIELD",
+              field: "orderValue",
+              operator: "GREATER_THAN",
               value: 0,
-              message: 'Order value must be greater than 0',
-              enabled: true
-            }
+              message: "Order value must be greater than 0",
+              enabled: true,
+            },
           ],
           timeout: 30,
           retryAttempts: 3,
-          retryDelay: 5
+          retryDelay: 5,
         },
-        isDefault: true
+        isDefault: true,
       },
       {
-        name: 'Lead',
-        description: 'Lead generation',
-        code: 'LEAD',
-        category: 'LEAD' as const,
+        name: "Lead",
+        description: "Lead generation",
+        code: "LEAD",
+        category: "LEAD" as const,
         value: {
-          type: 'FIXED',
+          type: "FIXED",
           fixedAmount: 10,
-          currency: 'USD'
+          currency: "USD",
         },
         tracking: {
-          method: 'PIXEL',
+          method: "PIXEL",
           parameters: {
-            leadId: '{{leadId}}',
-            email: '{{email}}',
-            phone: '{{phone}}'
+            leadId: "{{leadId}}",
+            email: "{{email}}",
+            phone: "{{phone}}",
           },
           customFields: {},
           requireValidation: true,
           allowDuplicates: false,
-          duplicateWindow: 30
+          duplicateWindow: 30,
         },
         validation: {
           enabled: true,
           rules: [
             {
-              id: 'required_lead_id',
-              name: 'Required Lead ID',
-              type: 'REQUIRED_FIELD',
-              field: 'leadId',
-              operator: 'EQUALS',
-              value: '',
-              message: 'Lead ID is required',
-              enabled: true
+              id: "required_lead_id",
+              name: "Required Lead ID",
+              type: "REQUIRED_FIELD",
+              field: "leadId",
+              operator: "EQUALS",
+              value: "",
+              message: "Lead ID is required",
+              enabled: true,
             },
             {
-              id: 'valid_email',
-              name: 'Valid Email',
-              type: 'FIELD_FORMAT',
-              field: 'email',
-              operator: 'REGEX',
-              value: 'email',
-              message: 'Valid email is required',
-              enabled: true
-            }
+              id: "valid_email",
+              name: "Valid Email",
+              type: "FIELD_FORMAT",
+              field: "email",
+              operator: "REGEX",
+              value: "email",
+              message: "Valid email is required",
+              enabled: true,
+            },
           ],
           timeout: 30,
           retryAttempts: 3,
-          retryDelay: 5
+          retryDelay: 5,
         },
-        isDefault: true
+        isDefault: true,
       },
       {
-        name: 'Signup',
-        description: 'User registration',
-        code: 'SIGNUP',
-        category: 'SIGNUP' as const,
+        name: "Signup",
+        description: "User registration",
+        code: "SIGNUP",
+        category: "SIGNUP" as const,
         value: {
-          type: 'FIXED',
+          type: "FIXED",
           fixedAmount: 5,
-          currency: 'USD'
+          currency: "USD",
         },
         tracking: {
-          method: 'PIXEL',
+          method: "PIXEL",
           parameters: {
-            userId: '{{userId}}',
-            email: '{{email}}'
+            userId: "{{userId}}",
+            email: "{{email}}",
           },
           customFields: {},
           requireValidation: true,
           allowDuplicates: false,
-          duplicateWindow: 0
+          duplicateWindow: 0,
         },
         validation: {
           enabled: true,
           rules: [
             {
-              id: 'required_user_id',
-              name: 'Required User ID',
-              type: 'REQUIRED_FIELD',
-              field: 'userId',
-              operator: 'EQUALS',
-              value: '',
-              message: 'User ID is required',
-              enabled: true
-            }
+              id: "required_user_id",
+              name: "Required User ID",
+              type: "REQUIRED_FIELD",
+              field: "userId",
+              operator: "EQUALS",
+              value: "",
+              message: "User ID is required",
+              enabled: true,
+            },
           ],
           timeout: 30,
           retryAttempts: 3,
-          retryDelay: 5
+          retryDelay: 5,
         },
-        isDefault: true
-      }
+        isDefault: true,
+      },
     ];
 
     const createdTypes: ConversionType[] = [];
     for (const typeData of defaultTypes) {
       const type = await this.create({
         accountId,
-        ...typeData
-      });
+        ...typeData,
+      } as any);
       createdTypes.push(type);
     }
 
@@ -751,9 +834,7 @@ export class ConversionTypesModel {
 
     return {
       types,
-      stats
+      stats,
     };
   }
 }
-
-

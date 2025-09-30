@@ -58,7 +58,7 @@ export interface EmailMessage {
 
 export class EmailTemplateModel {
   static async create(data: Partial<EmailTemplate>): Promise<EmailTemplate> {
-    return await prisma.emailTemplate.create({
+    return await (prisma as any).emailTemplate.create({
       data: {
         name: data.name!,
         type: data.type!,
@@ -72,13 +72,13 @@ export class EmailTemplateModel {
   }
 
   static async findById(id: string): Promise<EmailTemplate | null> {
-    return await prisma.emailTemplate.findUnique({
+    return await (prisma as any).emailTemplate.findUnique({
       where: { id }
     }) as EmailTemplate | null;
   }
 
   static async findByType(type: string): Promise<EmailTemplate | null> {
-    return await prisma.emailTemplate.findFirst({
+    return await (prisma as any).emailTemplate.findFirst({
       where: { 
         type: type as any,
         status: 'ACTIVE'
@@ -87,14 +87,14 @@ export class EmailTemplateModel {
   }
 
   static async update(id: string, data: Partial<EmailTemplate>): Promise<EmailTemplate> {
-    return await prisma.emailTemplate.update({
+    return await (prisma as any).emailTemplate.update({
       where: { id },
       data
     }) as EmailTemplate;
   }
 
   static async delete(id: string): Promise<void> {
-    await prisma.emailTemplate.delete({
+    await (prisma as any).emailTemplate.delete({
       where: { id }
     });
   }
@@ -105,7 +105,7 @@ export class EmailTemplateModel {
     if (filters.status) where.status = filters.status;
     if (filters.type) where.type = filters.type;
 
-    return await prisma.emailTemplate.findMany({
+    return await (prisma as any).emailTemplate.findMany({
       where,
       orderBy: { createdAt: 'desc' }
     }) as EmailTemplate[];
@@ -135,7 +135,7 @@ export class EmailTemplateModel {
   }
 
   static async createCampaign(data: Partial<EmailCampaign>): Promise<EmailCampaign> {
-    return await prisma.emailCampaign.create({
+    return await (prisma as any).emailCampaign.create({
       data: {
         name: data.name!,
         description: data.description || '',
@@ -155,20 +155,20 @@ export class EmailTemplateModel {
   }
 
   static async findCampaignById(id: string): Promise<EmailCampaign | null> {
-    return await prisma.emailCampaign.findUnique({
+    return await (prisma as any).emailCampaign.findUnique({
       where: { id }
     }) as EmailCampaign | null;
   }
 
   static async updateCampaign(id: string, data: Partial<EmailCampaign>): Promise<EmailCampaign> {
-    return await prisma.emailCampaign.update({
+    return await (prisma as any).emailCampaign.update({
       where: { id },
       data
     }) as EmailCampaign;
   }
 
   static async deleteCampaign(id: string): Promise<void> {
-    await prisma.emailCampaign.delete({
+    await (prisma as any).emailCampaign.delete({
       where: { id }
     });
   }
@@ -180,7 +180,7 @@ export class EmailTemplateModel {
     if (filters.status) where.status = filters.status;
     if (filters.recipientType) where.recipientType = filters.recipientType;
 
-    return await prisma.emailCampaign.findMany({
+    return await (prisma as any).emailCampaign.findMany({
       where,
       skip,
       take: limit,
@@ -193,7 +193,7 @@ export class EmailTemplateModel {
     
     const trackingId = this.generateTrackingId();
     
-    const message = await prisma.emailMessage.create({
+    const message = await (prisma as any).emailMessage.create({
       data: {
         templateId,
         recipientId,
@@ -338,7 +338,7 @@ export class EmailTemplateModel {
         break;
     }
 
-    return await prisma.emailMessage.update({
+    return await (prisma as any).emailMessage.update({
       where: { id: messageId },
       data: updateData
     }) as EmailMessage;
@@ -355,7 +355,7 @@ export class EmailTemplateModel {
       };
     }
 
-    const messages = await prisma.emailMessage.findMany({
+    const messages = await (prisma as any).emailMessage.findMany({
       where
     });
 
@@ -435,8 +435,8 @@ export class EmailTemplateModel {
         htmlContent: `
           <h1>Commission Earned!</h1>
           <p>Congratulations {{firstName}}!</p>
-          <p>You have earned ${{amount}} commission from {{offerName}}.</p>
-          <p>Your total earnings are now ${{totalEarnings}}.</p>
+          <p>You have earned $\{\{amount\}\} commission from \{\{offerName\}\}.</p>
+          <p>Your total earnings are now $\{\{totalEarnings\}\}.</p>
           <p>Keep up the great work!</p>
         `,
         textContent: 'Congratulations {{firstName}}! You earned ${{amount}} commission.',
@@ -449,7 +449,7 @@ export class EmailTemplateModel {
         htmlContent: `
           <h1>Payout Processed</h1>
           <p>Hello {{firstName}},</p>
-          <p>Your payout of ${{amount}} has been successfully processed via {{paymentMethod}}.</p>
+          <p>Your payout of $\{\{amount\}\} has been successfully processed via \{\{paymentMethod\}\}.</p>
           <p>Transaction ID: {{transactionId}}</p>
           <p>Thank you for your partnership!</p>
         `,

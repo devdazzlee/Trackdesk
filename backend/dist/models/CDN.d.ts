@@ -1,12 +1,12 @@
 export interface CDNConfig {
     id: string;
     name: string;
-    type: 'CLOUDFLARE' | 'AWS_CLOUDFRONT' | 'GOOGLE_CLOUD_CDN' | 'CUSTOM';
+    type: "CLOUDFLARE" | "AWS_CLOUDFRONT" | "GOOGLE_CLOUD_CDN" | "CUSTOM";
     domain: string;
     apiKey?: string;
     apiSecret?: string;
     settings: CDNSettings;
-    status: 'ACTIVE' | 'INACTIVE' | 'ERROR';
+    status: "ACTIVE" | "INACTIVE" | "ERROR";
     createdAt: Date;
     updatedAt: Date;
 }
@@ -26,13 +26,13 @@ export interface CDNSettings {
 export interface CDNAsset {
     id: string;
     name: string;
-    type: 'IMAGE' | 'VIDEO' | 'DOCUMENT' | 'SCRIPT' | 'STYLESHEET' | 'FONT';
+    type: "IMAGE" | "VIDEO" | "DOCUMENT" | "SCRIPT" | "STYLESHEET" | "FONT";
     originalUrl: string;
     cdnUrl: string;
     size: number;
     mimeType: string;
     hash: string;
-    status: 'UPLOADING' | 'ACTIVE' | 'ERROR' | 'DELETED';
+    status: "UPLOADING" | "ACTIVE" | "ERROR" | "DELETED";
     metadata: any;
     createdAt: Date;
     updatedAt: Date;

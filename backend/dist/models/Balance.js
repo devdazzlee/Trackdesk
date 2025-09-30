@@ -5,12 +5,12 @@ const client_1 = require("@prisma/client");
 const prisma = new client_1.PrismaClient();
 class BalanceModel {
     static async getBalance(affiliateId) {
-        return await prisma.balance.findUnique({
-            where: { affiliateId }
-        });
+        return (await prisma.balance.findUnique({
+            where: { affiliateId },
+        }));
     }
-    static async createBalance(affiliateId, currency = 'USD') {
-        return await prisma.balance.create({
+    static async createBalance(affiliateId, currency = "USD") {
+        return (await prisma.balance.create({
             data: {
                 affiliateId,
                 openBalance: 0,
@@ -18,177 +18,177 @@ class BalanceModel {
                 pendingBalance: 0,
                 holdBalance: 0,
                 currency,
-                lastUpdated: new Date()
-            }
-        });
+                lastUpdated: new Date(),
+            },
+        }));
     }
     static async updateBalance(affiliateId, updates) {
-        return await prisma.balance.update({
+        return (await prisma.balance.update({
             where: { affiliateId },
             data: {
                 ...updates,
-                lastUpdated: new Date()
-            }
-        });
+                lastUpdated: new Date(),
+            },
+        }));
     }
     static async addCommission(affiliateId, amount, conversionId, description) {
-        const transaction = await prisma.balanceTransaction.create({
+        const transaction = (await prisma.balanceTransaction.create({
             data: {
                 affiliateId,
-                type: 'COMMISSION',
+                type: "COMMISSION",
                 amount,
-                currency: 'USD',
+                currency: "USD",
                 description,
                 referenceId: conversionId,
-                referenceType: 'CONVERSION',
-                status: 'PROCESSED',
-                processedAt: new Date()
-            }
-        });
+                referenceType: "CONVERSION",
+                status: "PROCESSED",
+                processedAt: new Date(),
+            },
+        }));
         await this.updateBalance(affiliateId, {
-            openBalance: { increment: amount }
+            openBalance: amount,
         });
         return transaction;
     }
     static async holdAmount(affiliateId, amount, reason) {
-        const transaction = await prisma.balanceTransaction.create({
+        const transaction = (await prisma.balanceTransaction.create({
             data: {
                 affiliateId,
-                type: 'HOLD',
+                type: "HOLD",
                 amount: -amount,
-                currency: 'USD',
+                currency: "USD",
                 description: `Hold: ${reason}`,
-                status: 'PROCESSED',
-                processedAt: new Date()
-            }
-        });
+                status: "PROCESSED",
+                processedAt: new Date(),
+            },
+        }));
         await this.updateBalance(affiliateId, {
-            openBalance: { decrement: amount },
-            holdBalance: { increment: amount }
+            openBalance: -amount,
+            holdBalance: amount,
         });
         return transaction;
     }
     static async releaseHold(affiliateId, amount, reason) {
-        const transaction = await prisma.balanceTransaction.create({
+        const transaction = (await prisma.balanceTransaction.create({
             data: {
                 affiliateId,
-                type: 'RELEASE',
+                type: "RELEASE",
                 amount,
-                currency: 'USD',
+                currency: "USD",
                 description: `Release: ${reason}`,
-                status: 'PROCESSED',
-                processedAt: new Date()
-            }
-        });
+                status: "PROCESSED",
+                processedAt: new Date(),
+            },
+        }));
         await this.updateBalance(affiliateId, {
-            holdBalance: { decrement: amount },
-            openBalance: { increment: amount }
+            holdBalance: -amount,
+            openBalance: amount,
         });
         return transaction;
     }
     static async processPayout(affiliateId, amount, method, paymentDetails) {
-        const payoutRequest = await prisma.payoutRequest.create({
+        const payoutRequest = (await prisma.payoutRequest.create({
             data: {
                 affiliateId,
                 amount,
-                currency: 'USD',
+                currency: "USD",
                 method: method,
-                status: 'PENDING',
+                status: "PENDING",
                 paymentDetails,
-                requestedAt: new Date()
-            }
-        });
+                requestedAt: new Date(),
+            },
+        }));
         await this.updateBalance(affiliateId, {
-            openBalance: { decrement: amount },
-            pendingBalance: { increment: amount }
+            openBalance: -amount,
+            pendingBalance: amount,
         });
         return payoutRequest;
     }
     static async approvePayout(payoutId, approvedBy) {
         const payout = await prisma.payoutRequest.findUnique({
-            where: { id: payoutId }
+            where: { id: payoutId },
         });
         if (!payout) {
-            throw new Error('Payout request not found');
+            throw new Error("Payout request not found");
         }
-        const updatedPayout = await prisma.payoutRequest.update({
+        const updatedPayout = (await prisma.payoutRequest.update({
             where: { id: payoutId },
             data: {
-                status: 'APPROVED',
+                status: "APPROVED",
                 approvedAt: new Date(),
-                approvedBy
-            }
-        });
+                approvedBy,
+            },
+        }));
         await this.updateBalance(payout.affiliateId, {
-            pendingBalance: { decrement: payout.amount },
-            settledBalance: { increment: payout.amount }
+            pendingBalance: -(payout.amount || 0),
+            settledBalance: payout.amount || 0,
         });
         return updatedPayout;
     }
     static async completePayout(payoutId, processedBy) {
         const payout = await prisma.payoutRequest.findUnique({
-            where: { id: payoutId }
+            where: { id: payoutId },
         });
         if (!payout) {
-            throw new Error('Payout request not found');
+            throw new Error("Payout request not found");
         }
-        const updatedPayout = await prisma.payoutRequest.update({
+        const updatedPayout = (await prisma.payoutRequest.update({
             where: { id: payoutId },
             data: {
-                status: 'COMPLETED',
+                status: "COMPLETED",
                 processedAt: new Date(),
                 completedAt: new Date(),
-                processedBy
-            }
-        });
+                processedBy,
+            },
+        }));
         await prisma.balanceTransaction.create({
             data: {
                 affiliateId: payout.affiliateId,
-                type: 'PAYOUT',
-                amount: -payout.amount,
-                currency: payout.currency,
+                type: "PAYOUT",
+                amount: -(payout.amount || 0),
+                currency: payout.currency || "USD",
                 description: `Payout via ${payout.method}`,
                 referenceId: payoutId,
-                referenceType: 'PAYOUT',
-                status: 'PROCESSED',
-                processedAt: new Date()
-            }
+                referenceType: "PAYOUT",
+                status: "PROCESSED",
+                processedAt: new Date(),
+            },
         });
         await this.updateBalance(payout.affiliateId, {
-            settledBalance: { decrement: payout.amount }
+            settledBalance: -(payout.amount || 0),
         });
         return updatedPayout;
     }
     static async failPayout(payoutId, reason, processedBy) {
         const payout = await prisma.payoutRequest.findUnique({
-            where: { id: payoutId }
+            where: { id: payoutId },
         });
         if (!payout) {
-            throw new Error('Payout request not found');
+            throw new Error("Payout request not found");
         }
-        const updatedPayout = await prisma.payoutRequest.update({
+        const updatedPayout = (await prisma.payoutRequest.update({
             where: { id: payoutId },
             data: {
-                status: 'FAILED',
+                status: "FAILED",
                 processedAt: new Date(),
                 processedBy,
-                failureReason: reason
-            }
-        });
+                failureReason: reason,
+            },
+        }));
         await this.updateBalance(payout.affiliateId, {
-            pendingBalance: { decrement: payout.amount },
-            openBalance: { increment: payout.amount }
+            pendingBalance: -(payout.amount || 0),
+            openBalance: payout.amount || 0,
         });
         return updatedPayout;
     }
     static async getBalanceTransactions(affiliateId, page = 1, limit = 50) {
         const skip = (page - 1) * limit;
-        return await prisma.balanceTransaction.findMany({
+        return (await prisma.balanceTransaction.findMany({
             where: { affiliateId },
             skip,
             take: limit,
-            orderBy: { createdAt: 'desc' }
-        });
+            orderBy: { createdAt: "desc" },
+        }));
     }
     static async getPayoutRequests(filters = {}, page = 1, limit = 50) {
         const skip = (page - 1) * limit;
@@ -202,15 +202,15 @@ class BalanceModel {
         if (filters.startDate && filters.endDate) {
             where.requestedAt = {
                 gte: filters.startDate,
-                lte: filters.endDate
+                lte: filters.endDate,
             };
         }
-        return await prisma.payoutRequest.findMany({
+        return (await prisma.payoutRequest.findMany({
             where,
             skip,
             take: limit,
-            orderBy: { requestedAt: 'desc' }
-        });
+            orderBy: { requestedAt: "desc" },
+        }));
     }
     static async getBalanceSummary(affiliateId) {
         const balance = await this.getBalance(affiliateId);
@@ -219,20 +219,23 @@ class BalanceModel {
         }
         const transactions = await prisma.balanceTransaction.findMany({
             where: { affiliateId },
-            orderBy: { createdAt: 'desc' },
-            take: 10
+            orderBy: { createdAt: "desc" },
+            take: 10,
         });
         const payouts = await prisma.payoutRequest.findMany({
             where: { affiliateId },
-            orderBy: { requestedAt: 'desc' },
-            take: 5
+            orderBy: { requestedAt: "desc" },
+            take: 5,
         });
         return {
             balance,
             recentTransactions: transactions,
             recentPayouts: payouts,
             availableForPayout: balance.openBalance,
-            totalEarned: balance.openBalance + balance.settledBalance + balance.pendingBalance + balance.holdBalance
+            totalEarned: balance.openBalance +
+                balance.settledBalance +
+                balance.pendingBalance +
+                balance.holdBalance,
         };
     }
     static async getBalanceStats(startDate, endDate) {
@@ -240,7 +243,7 @@ class BalanceModel {
         if (startDate && endDate) {
             where.createdAt = {
                 gte: startDate,
-                lte: endDate
+                lte: endDate,
             };
         }
         const transactions = await prisma.balanceTransaction.findMany({
@@ -248,16 +251,16 @@ class BalanceModel {
             include: {
                 affiliate: {
                     include: {
-                        user: true
-                    }
-                }
-            }
+                        user: true,
+                    },
+                },
+            },
         });
         const payouts = await prisma.payoutRequest.findMany({
             where: {
                 ...where,
-                status: 'COMPLETED'
-            }
+                status: "COMPLETED",
+            },
         });
         const stats = {
             totalCommissions: 0,
@@ -266,44 +269,58 @@ class BalanceModel {
             totalReleases: 0,
             byType: {},
             byAffiliate: {},
-            byMonth: {}
+            byMonth: {},
         };
-        transactions.forEach(transaction => {
-            stats.byType[transaction.type] = (stats.byType[transaction.type] || 0) + transaction.amount;
-            if (transaction.type === 'COMMISSION')
+        transactions.forEach((transaction) => {
+            stats.byType[transaction.type] =
+                (stats.byType[transaction.type] || 0) + transaction.amount;
+            if (transaction.type === "COMMISSION")
                 stats.totalCommissions += transaction.amount;
-            else if (transaction.type === 'HOLD')
+            else if (transaction.type === "HOLD")
                 stats.totalHolds += Math.abs(transaction.amount);
-            else if (transaction.type === 'RELEASE')
+            else if (transaction.type === "RELEASE")
                 stats.totalReleases += transaction.amount;
             if (!stats.byAffiliate[transaction.affiliateId]) {
                 stats.byAffiliate[transaction.affiliateId] = {
                     total: 0,
                     commissions: 0,
-                    name: transaction.affiliate?.user ? `${transaction.affiliate.user.firstName} ${transaction.affiliate.user.lastName}` : 'Unknown'
+                    name: transaction.affiliate?.user
+                        ? `${transaction.affiliate.user.firstName} ${transaction.affiliate.user.lastName}`
+                        : "Unknown",
                 };
             }
             stats.byAffiliate[transaction.affiliateId].total += transaction.amount;
-            if (transaction.type === 'COMMISSION') {
-                stats.byAffiliate[transaction.affiliateId].commissions += transaction.amount;
+            if (transaction.type === "COMMISSION") {
+                stats.byAffiliate[transaction.affiliateId].commissions +=
+                    transaction.amount;
             }
             const month = transaction.createdAt.toISOString().substr(0, 7);
             if (!stats.byMonth[month]) {
-                stats.byMonth[month] = { commissions: 0, payouts: 0, holds: 0, releases: 0 };
+                stats.byMonth[month] = {
+                    commissions: 0,
+                    payouts: 0,
+                    holds: 0,
+                    releases: 0,
+                };
             }
-            if (transaction.type === 'COMMISSION')
+            if (transaction.type === "COMMISSION")
                 stats.byMonth[month].commissions += transaction.amount;
-            else if (transaction.type === 'HOLD')
+            else if (transaction.type === "HOLD")
                 stats.byMonth[month].holds += Math.abs(transaction.amount);
-            else if (transaction.type === 'RELEASE')
+            else if (transaction.type === "RELEASE")
                 stats.byMonth[month].releases += transaction.amount;
         });
-        payouts.forEach(payout => {
+        payouts.forEach((payout) => {
             stats.totalPayouts += payout.amount;
             const month = payout.completedAt?.toISOString().substr(0, 7);
             if (month) {
                 if (!stats.byMonth[month]) {
-                    stats.byMonth[month] = { commissions: 0, payouts: 0, holds: 0, releases: 0 };
+                    stats.byMonth[month] = {
+                        commissions: 0,
+                        payouts: 0,
+                        holds: 0,
+                        releases: 0,
+                    };
                 }
                 stats.byMonth[month].payouts += payout.amount;
             }

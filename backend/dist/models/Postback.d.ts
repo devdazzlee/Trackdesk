@@ -2,14 +2,14 @@ export interface Postback {
     id: string;
     name: string;
     url: string;
-    method: 'GET' | 'POST';
+    method: "GET" | "POST";
     events: string[];
     parameters: PostbackParameter[];
     headers: Record<string, string>;
     timeout: number;
     retryAttempts: number;
     retryDelay: number;
-    status: 'ACTIVE' | 'INACTIVE' | 'ERROR';
+    status: "ACTIVE" | "INACTIVE" | "ERROR";
     lastTriggered?: Date;
     successCount: number;
     failureCount: number;
@@ -21,7 +21,7 @@ export interface Postback {
 export interface PostbackParameter {
     name: string;
     value: string;
-    type: 'STATIC' | 'DYNAMIC' | 'CUSTOM';
+    type: "STATIC" | "DYNAMIC" | "CUSTOM";
     required: boolean;
 }
 export interface PostbackLog {
@@ -39,15 +39,15 @@ export interface PostbackLog {
     responseTime: number;
 }
 export declare class PostbackModel {
-    static create(data: Partial<Postback>): Promise<Postback>;
-    static findById(id: string): Promise<Postback | null>;
-    static update(id: string, data: Partial<Postback>): Promise<Postback>;
+    static create(data: any): Promise<any>;
+    static findById(id: string): Promise<any | null>;
+    static update(id: string, data: any): Promise<any>;
     static delete(id: string): Promise<void>;
-    static list(filters?: any, page?: number, limit?: number): Promise<Postback[]>;
-    static triggerPostback(postbackId: string, event: string, data: any): Promise<PostbackLog>;
+    static list(filters?: any, page?: number, limit?: number): Promise<any[]>;
+    static triggerPostback(postbackId: string, event: string, data: any): Promise<any>;
     private static getDynamicValue;
     private static getCustomValue;
-    static getLogs(postbackId: string, page?: number, limit?: number): Promise<PostbackLog[]>;
-    static testPostback(postbackId: string, testData: any): Promise<PostbackLog>;
+    static getLogs(postbackId: string, page?: number, limit?: number): Promise<any[]>;
+    static testPostback(postbackId: string, testData: any): Promise<any>;
 }
 //# sourceMappingURL=Postback.d.ts.map

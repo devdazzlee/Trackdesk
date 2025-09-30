@@ -2,7 +2,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.WebhooksController = void 0;
 const WebhooksService_1 = require("../services/WebhooksService");
-require("../types/express");
 class WebhooksController {
     static async createWebhook(req, res) {
         try {

@@ -5,12 +5,12 @@ const client_1 = require("@prisma/client");
 const prisma = new client_1.PrismaClient();
 class MenuCustomizationModel {
     static async createMenuItem(data) {
-        return await prisma.menuItem.create({
+        return (await prisma.menuItem.create({
             data: {
                 accountId: data.accountId,
                 name: data.name,
                 label: data.label,
-                type: data.type,
+                type: data.type || "LINK",
                 url: data.url,
                 icon: data.icon,
                 parentId: data.parentId,
@@ -18,56 +18,43 @@ class MenuCustomizationModel {
                 order: data.order || 0,
                 permissions: data.permissions || [],
                 roles: data.roles || [],
-                status: data.status || 'ACTIVE',
+                status: data.status || "ACTIVE",
                 isVisible: data.isVisible !== undefined ? data.isVisible : true,
                 isExternal: data.isExternal || false,
-                target: data.target,
-                customHtml: data.customHtml,
-                cssClass: data.cssClass
-            }
-        });
+            },
+        }));
     }
     static async findMenuItemById(id) {
-        return await prisma.menuItem.findUnique({
-            where: { id }
-        });
+        return (await prisma.menuItem.findUnique({
+            where: { id },
+        }));
     }
     static async updateMenuItem(id, data) {
-        return await prisma.menuItem.update({
+        return (await prisma.menuItem.update({
             where: { id },
             data: {
                 ...data,
-                updatedAt: new Date()
-            }
-        });
+                updatedAt: new Date(),
+            },
+        }));
     }
     static async deleteMenuItem(id) {
         const childItems = await prisma.menuItem.findMany({
-            where: { parentId: id }
+            where: { parentId: id },
         });
         for (const child of childItems) {
             await this.deleteMenuItem(child.id);
         }
         await prisma.menuItem.delete({
-            where: { id }
+            where: { id },
         });
     }
     static async listMenuItems(accountId, filters = {}) {
         const where = { accountId };
-        if (filters.status)
-            where.status = filters.status;
-        if (filters.type)
-            where.type = filters.type;
-        if (filters.parentId !== undefined)
-            where.parentId = filters.parentId;
-        if (filters.level)
-            where.level = filters.level;
-        if (filters.isVisible !== undefined)
-            where.isVisible = filters.isVisible;
-        return await prisma.menuItem.findMany({
+        return (await prisma.menuItem.findMany({
             where,
-            orderBy: [{ level: 'asc' }, { order: 'asc' }, { name: 'asc' }]
-        });
+            orderBy: [{ level: "asc" }, { order: "asc" }, { name: "asc" }],
+        }));
     }
     static async getMenuTree(accountId, parentId) {
         const items = await this.listMenuItems(accountId);
@@ -75,125 +62,102 @@ class MenuCustomizationModel {
     }
     static buildMenuTree(items, parentId) {
         return items
-            .filter(item => item.parentId === parentId)
-            .map(item => ({
+            .filter((item) => item.parentId === parentId)
+            .map((item) => ({
             ...item,
-            children: this.buildMenuTree(items, item.id)
+            children: this.buildMenuTree(items, item.id),
         }));
     }
     static async createMenuStructure(data) {
-        return await prisma.menuStructure.create({
+        return (await prisma.menuStructure.create({
             data: {
                 accountId: data.accountId,
                 name: data.name,
-                description: data.description || '',
-                type: data.type,
                 items: data.items || [],
-                settings: data.settings || {
-                    theme: 'DEFAULT',
-                    position: 'SIDE',
-                    style: 'VERTICAL',
-                    animation: 'FADE',
-                    responsive: true,
-                    mobileBreakpoint: 768
-                },
-                status: data.status || 'ACTIVE'
-            }
-        });
+                status: data.status || "ACTIVE",
+            },
+        }));
     }
     static async findMenuStructureById(id) {
-        return await prisma.menuStructure.findUnique({
-            where: { id }
-        });
+        return (await prisma.menuStructure.findUnique({
+            where: { id },
+        }));
     }
     static async findMenuStructureByType(accountId, type) {
-        return await prisma.menuStructure.findFirst({
+        return (await prisma.menuStructure.findFirst({
             where: {
                 accountId,
-                type: type,
-                status: 'ACTIVE'
-            }
-        });
+                status: "ACTIVE",
+            },
+        }));
     }
     static async updateMenuStructure(id, data) {
-        return await prisma.menuStructure.update({
+        return (await prisma.menuStructure.update({
             where: { id },
             data: {
                 ...data,
-                updatedAt: new Date()
-            }
-        });
+                updatedAt: new Date(),
+            },
+        }));
     }
     static async deleteMenuStructure(id) {
         await prisma.menuStructure.delete({
-            where: { id }
+            where: { id },
         });
     }
     static async listMenuStructures(accountId, filters = {}) {
         const where = { accountId };
         if (filters.status)
             where.status = filters.status;
-        if (filters.type)
-            where.type = filters.type;
-        return await prisma.menuStructure.findMany({
+        return (await prisma.menuStructure.findMany({
             where,
-            orderBy: { name: 'asc' }
-        });
+            orderBy: { name: "asc" },
+        }));
     }
     static async createMenuTemplate(data) {
-        return await prisma.menuTemplate.create({
+        return (await prisma.menuTemplate.create({
             data: {
-                accountId: data.accountId,
                 name: data.name,
-                description: data.description || '',
-                type: data.type,
-                template: data.template,
-                isPublic: data.isPublic || false,
+                description: data.description || "",
+                structure: data.structure,
                 isDefault: data.isDefault || false,
-                status: data.status || 'ACTIVE'
-            }
-        });
+            },
+        }));
     }
     static async findMenuTemplateById(id) {
-        return await prisma.menuTemplate.findUnique({
-            where: { id }
-        });
+        return (await prisma.menuTemplate.findUnique({
+            where: { id },
+        }));
     }
     static async updateMenuTemplate(id, data) {
-        return await prisma.menuTemplate.update({
+        return (await prisma.menuTemplate.update({
             where: { id },
             data: {
                 ...data,
-                updatedAt: new Date()
-            }
-        });
+                updatedAt: new Date(),
+            },
+        }));
     }
     static async deleteMenuTemplate(id) {
         await prisma.menuTemplate.delete({
-            where: { id }
+            where: { id },
         });
     }
     static async listMenuTemplates(accountId, filters = {}) {
-        const where = { accountId };
-        if (filters.status)
-            where.status = filters.status;
-        if (filters.type)
-            where.type = filters.type;
-        if (filters.isPublic !== undefined)
-            where.isPublic = filters.isPublic;
+        const where = {};
         if (filters.isDefault !== undefined)
             where.isDefault = filters.isDefault;
-        return await prisma.menuTemplate.findMany({
+        return (await prisma.menuTemplate.findMany({
             where,
-            orderBy: { name: 'asc' }
-        });
+            orderBy: { name: "asc" },
+        }));
     }
     static async applyMenuTemplate(templateId, accountId) {
         const template = await this.findMenuTemplateById(templateId);
         if (!template) {
-            throw new Error('Menu template not found');
+            throw new Error("Menu template not found");
         }
-        const menuStructure = template.template;
+        const menuStructure = template.structure;
         menuStructure.accountId = accountId;
         menuStructure.id = undefined;
         return await this.createMenuStructure(menuStructure);
@@ -203,55 +167,41 @@ class MenuCustomizationModel {
         if (!menuItem) {
             return false;
         }
-        if (menuItem.status !== 'ACTIVE' || !menuItem.isVisible) {
+        if (menuItem.status !== "ACTIVE" || !menuItem.isVisible) {
             return false;
         }
         if (menuItem.roles.length > 0 && !menuItem.roles.includes(userRole)) {
             return false;
         }
-        const userPermission = await prisma.menuPermission.findFirst({
-            where: {
-                menuItemId,
-                userId,
-                granted: true
-            }
-        });
-        if (userPermission) {
-            return true;
-        }
         const rolePermission = await prisma.menuPermission.findFirst({
             where: {
                 menuItemId,
                 role: userRole,
-                granted: true
-            }
+            },
         });
         return !!rolePermission;
     }
-    static async grantMenuPermission(menuItemId, userId, role, permission = 'VIEW') {
-        return await prisma.menuPermission.create({
+    static async grantMenuPermission(menuItemId, userId, role, permission = "VIEW") {
+        return (await prisma.menuPermission.create({
             data: {
                 menuItemId,
-                userId,
-                role,
-                permission: permission,
-                granted: true
-            }
-        });
+                role: role,
+                permissions: [permission],
+            },
+        }));
     }
     static async revokeMenuPermission(menuItemId, userId, role) {
         await prisma.menuPermission.deleteMany({
             where: {
                 menuItemId,
-                userId,
-                role
-            }
+                role,
+            },
         });
     }
     static async getMenuPermissions(menuItemId) {
-        return await prisma.menuPermission.findMany({
-            where: { menuItemId }
-        });
+        return (await prisma.menuPermission.findMany({
+            where: { menuItemId },
+        }));
     }
     static async getVisibleMenuItems(accountId, userId, userRole, menuType) {
         const menuStructure = await this.findMenuStructureByType(accountId, menuType);
@@ -272,14 +222,14 @@ class MenuCustomizationModel {
         for (const itemOrder of itemOrders) {
             await this.updateMenuItem(itemOrder.id, {
                 order: itemOrder.order,
-                parentId: itemOrder.parentId
+                parentId: itemOrder.parentId,
             });
         }
     }
     static async duplicateMenuItem(menuItemId, newParentId) {
         const originalItem = await this.findMenuItemById(menuItemId);
         if (!originalItem) {
-            throw new Error('Menu item not found');
+            throw new Error("Menu item not found");
         }
         const newItem = await this.createMenuItem({
             accountId: originalItem.accountId,
@@ -293,14 +243,13 @@ class MenuCustomizationModel {
             order: originalItem.order + 1,
             permissions: originalItem.permissions,
             roles: originalItem.roles,
-            status: 'INACTIVE',
+            status: "INACTIVE",
             isVisible: originalItem.isVisible,
             isExternal: originalItem.isExternal,
-            target: originalItem.target,
-            customHtml: originalItem.customHtml,
-            cssClass: originalItem.cssClass
         });
-        const childItems = await this.listMenuItems(originalItem.accountId, { parentId: menuItemId });
+        const childItems = await this.listMenuItems(originalItem.accountId, {
+            parentId: menuItemId,
+        });
         for (const child of childItems) {
             await this.duplicateMenuItem(child.id, newItem.id);
         }
@@ -312,18 +261,20 @@ class MenuCustomizationModel {
         const menuTemplates = await this.listMenuTemplates(accountId);
         const stats = {
             totalMenuItems: menuItems.length,
-            activeMenuItems: menuItems.filter(item => item.status === 'ACTIVE').length,
+            activeMenuItems: menuItems.filter((item) => item.status === "ACTIVE")
+                .length,
             totalMenuStructures: menuStructures.length,
-            activeMenuStructures: menuStructures.filter(structure => structure.status === 'ACTIVE').length,
+            activeMenuStructures: menuStructures.filter((structure) => structure.status === "ACTIVE").length,
             totalMenuTemplates: menuTemplates.length,
-            activeMenuTemplates: menuTemplates.filter(template => template.status === 'ACTIVE').length,
+            activeMenuTemplates: menuTemplates.filter((template) => template.isDefault).length,
             byType: {},
             byLevel: {},
-            byStatus: {}
+            byStatus: {},
         };
-        menuItems.forEach(item => {
+        menuItems.forEach((item) => {
             stats.byType[item.type] = (stats.byType[item.type] || 0) + 1;
-            stats.byLevel[item.level.toString()] = (stats.byLevel[item.level.toString()] || 0) + 1;
+            stats.byLevel[item.level.toString()] =
+                (stats.byLevel[item.level.toString()] || 0) + 1;
             stats.byStatus[item.status] = (stats.byStatus[item.status] || 0) + 1;
         });
         return stats;
@@ -331,206 +282,208 @@ class MenuCustomizationModel {
     static async createDefaultMenuStructures(accountId) {
         const adminMenuItems = [
             {
-                id: 'admin-dashboard',
+                id: "admin-dashboard",
                 accountId,
-                name: 'dashboard',
-                label: 'Dashboard',
-                type: 'LINK',
-                url: '/admin/dashboard',
-                icon: 'home',
+                name: "dashboard",
+                label: "Dashboard",
+                type: "LINK",
+                url: "/admin/dashboard",
+                icon: "home",
                 level: 0,
                 order: 1,
                 permissions: [],
-                roles: ['ADMIN', 'MANAGER'],
-                status: 'ACTIVE',
+                roles: ["ADMIN", "MANAGER"],
+                status: "ACTIVE",
                 isVisible: true,
-                isExternal: false
+                isExternal: false,
+                createdAt: new Date(),
+                updatedAt: new Date(),
             },
             {
-                id: 'admin-affiliates',
+                id: "admin-affiliates",
                 accountId,
-                name: 'affiliates',
-                label: 'Affiliates',
-                type: 'DROPDOWN',
-                icon: 'users',
+                name: "affiliates",
+                label: "Affiliates",
+                type: "DROPDOWN",
+                icon: "users",
                 level: 0,
                 order: 2,
                 permissions: [],
-                roles: ['ADMIN', 'MANAGER'],
-                status: 'ACTIVE',
+                roles: ["ADMIN", "MANAGER"],
+                status: "ACTIVE",
                 isVisible: true,
-                isExternal: false
+                isExternal: false,
+                createdAt: new Date(),
+                updatedAt: new Date(),
             },
             {
-                id: 'admin-offers',
+                id: "admin-offers",
                 accountId,
-                name: 'offers',
-                label: 'Offers',
-                type: 'DROPDOWN',
-                icon: 'target',
+                name: "offers",
+                label: "Offers",
+                type: "DROPDOWN",
+                icon: "target",
                 level: 0,
                 order: 3,
                 permissions: [],
-                roles: ['ADMIN', 'MANAGER'],
-                status: 'ACTIVE',
+                roles: ["ADMIN", "MANAGER"],
+                status: "ACTIVE",
                 isVisible: true,
-                isExternal: false
+                isExternal: false,
+                createdAt: new Date(),
+                updatedAt: new Date(),
             },
             {
-                id: 'admin-reports',
+                id: "admin-reports",
                 accountId,
-                name: 'reports',
-                label: 'Reports',
-                type: 'DROPDOWN',
-                icon: 'bar-chart',
+                name: "reports",
+                label: "Reports",
+                type: "DROPDOWN",
+                icon: "bar-chart",
                 level: 0,
                 order: 4,
                 permissions: [],
-                roles: ['ADMIN', 'MANAGER'],
-                status: 'ACTIVE',
+                roles: ["ADMIN", "MANAGER"],
+                status: "ACTIVE",
                 isVisible: true,
-                isExternal: false
+                isExternal: false,
+                createdAt: new Date(),
+                updatedAt: new Date(),
             },
             {
-                id: 'admin-settings',
+                id: "admin-settings",
                 accountId,
-                name: 'settings',
-                label: 'Settings',
-                type: 'DROPDOWN',
-                icon: 'settings',
+                name: "settings",
+                label: "Settings",
+                type: "DROPDOWN",
+                icon: "settings",
                 level: 0,
                 order: 5,
                 permissions: [],
-                roles: ['ADMIN'],
-                status: 'ACTIVE',
+                roles: ["ADMIN"],
+                status: "ACTIVE",
                 isVisible: true,
-                isExternal: false
-            }
+                isExternal: false,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+            },
         ];
         const affiliateMenuItems = [
             {
-                id: 'affiliate-dashboard',
+                id: "affiliate-dashboard",
                 accountId,
-                name: 'dashboard',
-                label: 'Dashboard',
-                type: 'LINK',
-                url: '/dashboard',
-                icon: 'home',
+                name: "dashboard",
+                label: "Dashboard",
+                type: "LINK",
+                url: "/dashboard",
+                icon: "home",
                 level: 0,
                 order: 1,
                 permissions: [],
-                roles: ['AFFILIATE'],
-                status: 'ACTIVE',
+                roles: ["AFFILIATE"],
+                status: "ACTIVE",
                 isVisible: true,
-                isExternal: false
+                isExternal: false,
+                createdAt: new Date(),
+                updatedAt: new Date(),
             },
             {
-                id: 'affiliate-statistics',
+                id: "affiliate-statistics",
                 accountId,
-                name: 'statistics',
-                label: 'Statistics',
-                type: 'DROPDOWN',
-                icon: 'trending-up',
+                name: "statistics",
+                label: "Statistics",
+                type: "DROPDOWN",
+                icon: "trending-up",
                 level: 0,
                 order: 2,
                 permissions: [],
-                roles: ['AFFILIATE'],
-                status: 'ACTIVE',
+                roles: ["AFFILIATE"],
+                status: "ACTIVE",
                 isVisible: true,
-                isExternal: false
+                isExternal: false,
+                createdAt: new Date(),
+                updatedAt: new Date(),
             },
             {
-                id: 'affiliate-links',
+                id: "affiliate-links",
                 accountId,
-                name: 'links',
-                label: 'My Links & Assets',
-                type: 'DROPDOWN',
-                icon: 'link',
+                name: "links",
+                label: "My Links & Assets",
+                type: "DROPDOWN",
+                icon: "link",
                 level: 0,
                 order: 3,
                 permissions: [],
-                roles: ['AFFILIATE'],
-                status: 'ACTIVE',
+                roles: ["AFFILIATE"],
+                status: "ACTIVE",
                 isVisible: true,
-                isExternal: false
+                isExternal: false,
+                createdAt: new Date(),
+                updatedAt: new Date(),
             },
             {
-                id: 'affiliate-commissions',
+                id: "affiliate-commissions",
                 accountId,
-                name: 'commissions',
-                label: 'Commissions & Payouts',
-                type: 'DROPDOWN',
-                icon: 'dollar-sign',
+                name: "commissions",
+                label: "Commissions & Payouts",
+                type: "DROPDOWN",
+                icon: "dollar-sign",
                 level: 0,
                 order: 4,
                 permissions: [],
-                roles: ['AFFILIATE'],
-                status: 'ACTIVE',
+                roles: ["AFFILIATE"],
+                status: "ACTIVE",
                 isVisible: true,
-                isExternal: false
+                isExternal: false,
+                createdAt: new Date(),
+                updatedAt: new Date(),
             },
             {
-                id: 'affiliate-resources',
+                id: "affiliate-resources",
                 accountId,
-                name: 'resources',
-                label: 'Resources & Support',
-                type: 'DROPDOWN',
-                icon: 'help-circle',
+                name: "resources",
+                label: "Resources & Support",
+                type: "DROPDOWN",
+                icon: "help-circle",
                 level: 0,
                 order: 5,
                 permissions: [],
-                roles: ['AFFILIATE'],
-                status: 'ACTIVE',
+                roles: ["AFFILIATE"],
+                status: "ACTIVE",
                 isVisible: true,
-                isExternal: false
+                isExternal: false,
+                createdAt: new Date(),
+                updatedAt: new Date(),
             },
             {
-                id: 'affiliate-account',
+                id: "affiliate-account",
                 accountId,
-                name: 'account',
-                label: 'Account Settings',
-                type: 'DROPDOWN',
-                icon: 'user',
+                name: "account",
+                label: "Account Settings",
+                type: "DROPDOWN",
+                icon: "user",
                 level: 0,
                 order: 6,
                 permissions: [],
-                roles: ['AFFILIATE'],
-                status: 'ACTIVE',
+                roles: ["AFFILIATE"],
+                status: "ACTIVE",
                 isVisible: true,
-                isExternal: false
-            }
+                isExternal: false,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+            },
         ];
         const createdStructures = [];
         const adminStructure = await this.createMenuStructure({
             accountId,
-            name: 'Admin Menu',
-            description: 'Default admin menu structure',
-            type: 'ADMIN',
+            name: "Admin Menu",
             items: adminMenuItems,
-            settings: {
-                theme: 'DEFAULT',
-                position: 'SIDE',
-                style: 'VERTICAL',
-                animation: 'FADE',
-                responsive: true,
-                mobileBreakpoint: 768
-            }
         });
         createdStructures.push(adminStructure);
         const affiliateStructure = await this.createMenuStructure({
             accountId,
-            name: 'Affiliate Menu',
-            description: 'Default affiliate menu structure',
-            type: 'AFFILIATE',
+            name: "Affiliate Menu",
             items: affiliateMenuItems,
-            settings: {
-                theme: 'DEFAULT',
-                position: 'SIDE',
-                style: 'VERTICAL',
-                animation: 'FADE',
-                responsive: true,
-                mobileBreakpoint: 768
-            }
         });
         createdStructures.push(affiliateStructure);
         return createdStructures;
@@ -544,7 +497,7 @@ class MenuCustomizationModel {
             menuItems,
             menuStructures,
             menuTemplates,
-            stats
+            stats,
         };
     }
 }

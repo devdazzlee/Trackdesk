@@ -47,12 +47,12 @@ export interface SecuritySettings {
 }
 export interface UserPreferences {
     dashboard: {
-        defaultView: 'OVERVIEW' | 'DETAILED' | 'CUSTOM';
+        defaultView: "OVERVIEW" | "DETAILED" | "CUSTOM";
         widgets: string[];
         refreshInterval: number;
     };
     reports: {
-        defaultFormat: 'PDF' | 'CSV' | 'EXCEL';
+        defaultFormat: "PDF" | "CSV" | "EXCEL";
         includeCharts: boolean;
         autoSchedule: boolean;
     };
@@ -63,20 +63,20 @@ export interface UserPreferences {
     };
 }
 export declare class ProfileModel {
-    static createProfile(userId: string, data: Partial<UserProfile>): Promise<UserProfile>;
-    static getProfile(userId: string): Promise<UserProfile | null>;
-    static updateProfile(userId: string, data: Partial<UserProfile>): Promise<UserProfile>;
+    static createProfile(userId: string, data: any): Promise<any>;
+    static getProfile(userId: string): Promise<any | null>;
+    static updateProfile(userId: string, data: any): Promise<any>;
     static updatePassword(userId: string, currentPassword: string, newPassword: string): Promise<boolean>;
-    static updateNotificationSettings(userId: string, settings: Partial<NotificationSettings>): Promise<UserProfile>;
-    static updateSecuritySettings(userId: string, settings: Partial<SecuritySettings>): Promise<UserProfile>;
-    static updatePreferences(userId: string, preferences: Partial<UserPreferences>): Promise<UserProfile>;
-    static uploadAvatar(userId: string, avatarUrl: string): Promise<UserProfile>;
-    static enableTwoFactor(userId: string, secret: string, backupCodes: string[]): Promise<UserProfile>;
-    static disableTwoFactor(userId: string): Promise<UserProfile>;
-    static addAllowedIP(userId: string, ipAddress: string): Promise<UserProfile>;
-    static removeAllowedIP(userId: string, ipAddress: string): Promise<UserProfile>;
+    static updateNotificationSettings(userId: string, settings: any): Promise<any>;
+    static updateSecuritySettings(userId: string, settings: any): Promise<any>;
+    static updatePreferences(userId: string, preferences: any): Promise<any>;
+    static uploadAvatar(userId: string, avatarUrl: string): Promise<any>;
+    static enableTwoFactor(userId: string, secret: string, backupCodes: string[]): Promise<any>;
+    static disableTwoFactor(userId: string): Promise<any>;
+    static addAllowedIP(userId: string, ipAddress: string): Promise<any>;
+    static removeAllowedIP(userId: string, ipAddress: string): Promise<any>;
     static getPublicProfile(userId: string): Promise<any>;
-    static searchProfiles(query: string, filters?: any, page?: number, limit?: number): Promise<UserProfile[]>;
+    static searchProfiles(query: string, filters?: any, page?: number, limit?: number): Promise<any[]>;
     static getProfileStats(userId: string): Promise<any>;
     static deleteProfile(userId: string): Promise<void>;
     static exportProfileData(userId: string): Promise<any>;

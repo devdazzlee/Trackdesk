@@ -1,22 +1,3 @@
-export interface TrackingLink {
-    id: string;
-    accountId: string;
-    affiliateId: string;
-    offerId: string;
-    name: string;
-    description: string;
-    originalUrl: string;
-    trackingUrl: string;
-    shortUrl?: string;
-    type: 'STANDARD' | 'SMART' | 'DYNAMIC' | 'CUSTOM';
-    status: 'ACTIVE' | 'INACTIVE' | 'PAUSED';
-    settings: TrackingSettings;
-    parameters: TrackingParameter[];
-    rules: TrackingRule[];
-    stats: TrackingStats;
-    createdAt: Date;
-    updatedAt: Date;
-}
 export interface TrackingSettings {
     clickTracking: boolean;
     conversionTracking: boolean;
@@ -28,7 +9,7 @@ export interface TrackingSettings {
     referrerFiltering: boolean;
     customFilters: CustomFilter[];
     redirectDelay: number;
-    redirectMethod: 'IMMEDIATE' | 'DELAYED' | 'CONDITIONAL';
+    redirectMethod: "IMMEDIATE" | "DELAYED" | "CONDITIONAL";
     landingPage: string;
     fallbackUrl?: string;
     trackingPixels: TrackingPixel[];
@@ -38,13 +19,13 @@ export interface TrackingParameter {
     id: string;
     name: string;
     value: string;
-    type: 'STATIC' | 'DYNAMIC' | 'AFFILIATE' | 'OFFER' | 'CUSTOM';
+    type: "STATIC" | "DYNAMIC" | "AFFILIATE" | "OFFER" | "CUSTOM";
     required: boolean;
     defaultValue?: string;
     validation?: ParameterValidation;
 }
 export interface ParameterValidation {
-    type: 'REGEX' | 'LENGTH' | 'FORMAT' | 'CUSTOM';
+    type: "REGEX" | "LENGTH" | "FORMAT" | "CUSTOM";
     pattern?: string;
     minLength?: number;
     maxLength?: number;
@@ -60,21 +41,21 @@ export interface TrackingRule {
 }
 export interface TrackingCondition {
     field: string;
-    operator: 'EQUALS' | 'NOT_EQUALS' | 'CONTAINS' | 'GREATER_THAN' | 'LESS_THAN' | 'IN' | 'NOT_IN' | 'REGEX';
+    operator: "EQUALS" | "NOT_EQUALS" | "CONTAINS" | "GREATER_THAN" | "LESS_THAN" | "IN" | "NOT_IN" | "REGEX";
     value: any;
-    logic: 'AND' | 'OR';
+    logic: "AND" | "OR";
 }
 export interface TrackingAction {
-    type: 'REDIRECT' | 'BLOCK' | 'MODIFY_URL' | 'ADD_PARAMETER' | 'REMOVE_PARAMETER' | 'CUSTOM';
+    type: "REDIRECT" | "BLOCK" | "MODIFY_URL" | "ADD_PARAMETER" | "REMOVE_PARAMETER" | "CUSTOM";
     parameters: Record<string, any>;
     enabled: boolean;
 }
 export interface CustomFilter {
     id: string;
     name: string;
-    type: 'GEO' | 'DEVICE' | 'TIME' | 'IP' | 'REFERRER' | 'CUSTOM';
+    type: "GEO" | "DEVICE" | "TIME" | "IP" | "REFERRER" | "CUSTOM";
     conditions: TrackingCondition[];
-    action: 'ALLOW' | 'BLOCK' | 'REDIRECT';
+    action: "ALLOW" | "BLOCK" | "REDIRECT";
     redirectUrl?: string;
     enabled: boolean;
 }
@@ -82,7 +63,7 @@ export interface TrackingPixel {
     id: string;
     name: string;
     url: string;
-    position: 'BEFORE_REDIRECT' | 'AFTER_REDIRECT' | 'ON_CONVERSION';
+    position: "BEFORE_REDIRECT" | "AFTER_REDIRECT" | "ON_CONVERSION";
     parameters: Record<string, string>;
     enabled: boolean;
 }
@@ -90,7 +71,7 @@ export interface PostbackUrl {
     id: string;
     name: string;
     url: string;
-    method: 'GET' | 'POST';
+    method: "GET" | "POST";
     parameters: Record<string, string>;
     headers: Record<string, string>;
     enabled: boolean;
@@ -138,12 +119,12 @@ export interface ConversionEvent {
     data: any;
 }
 export declare class TrackingLinksModel {
-    static create(data: Partial<TrackingLink>): Promise<TrackingLink>;
-    static findById(id: string): Promise<TrackingLink | null>;
-    static findByTrackingUrl(trackingUrl: string): Promise<TrackingLink | null>;
-    static update(id: string, data: Partial<TrackingLink>): Promise<TrackingLink>;
+    static create(data: any): Promise<any>;
+    static findById(id: string): Promise<any | null>;
+    static findByTrackingUrl(trackingUrl: string): Promise<any | null>;
+    static update(id: string, data: any): Promise<any>;
     static delete(id: string): Promise<void>;
-    static list(accountId: string, filters?: any): Promise<TrackingLink[]>;
+    static list(accountId: string, filters?: any): Promise<any[]>;
     static processClick(trackingUrl: string, clickData: any): Promise<{
         redirect: boolean;
         url?: string;
@@ -167,7 +148,7 @@ export declare class TrackingLinksModel {
     static recordConversion(trackingLinkId: string, conversionData: any): Promise<ConversionEvent>;
     private static updateStats;
     private static firePostbacks;
-    static generateTrackingUrl(accountId: string, affiliateId: string, offerId: string): string;
+    static generateTrackingUrl(accountId: string, affiliateId: string, offerId: string): Promise<string>;
     static generateShortUrl(trackingUrl: string): Promise<string>;
     static getTrackingStats(accountId: string, startDate?: Date, endDate?: Date): Promise<any>;
     static getTrackingLinksDashboard(accountId: string): Promise<any>;

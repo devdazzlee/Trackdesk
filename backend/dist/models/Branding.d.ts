@@ -19,7 +19,7 @@ export interface BrandingConfig {
     footerText: string;
     removeBranding: boolean;
     customDomain: string;
-    status: 'ACTIVE' | 'INACTIVE' | 'DRAFT';
+    status: "ACTIVE" | "INACTIVE" | "DRAFT";
     createdAt: Date;
     updatedAt: Date;
 }
@@ -27,7 +27,7 @@ export interface BrandingTemplate {
     id: string;
     name: string;
     description: string;
-    category: 'PROFESSIONAL' | 'CREATIVE' | 'MINIMAL' | 'CORPORATE' | 'MODERN';
+    category: "PROFESSIONAL" | "CREATIVE" | "MINIMAL" | "CORPORATE" | "MODERN";
     preview: string;
     config: Partial<BrandingConfig>;
     isDefault: boolean;
@@ -38,7 +38,7 @@ export interface BrandingTemplate {
 export interface BrandingAsset {
     id: string;
     brandingId: string;
-    type: 'LOGO' | 'FAVICON' | 'BACKGROUND' | 'ICON' | 'BANNER' | 'SOCIAL_MEDIA';
+    type: "LOGO" | "FAVICON" | "BACKGROUND" | "ICON" | "BANNER" | "SOCIAL_MEDIA";
     name: string;
     url: string;
     size: number;
@@ -48,7 +48,7 @@ export interface BrandingAsset {
         height: number;
     };
     alt: string;
-    status: 'ACTIVE' | 'INACTIVE';
+    status: "ACTIVE" | "INACTIVE";
     createdAt: Date;
     updatedAt: Date;
 }
@@ -58,9 +58,9 @@ export interface BrandingCustomization {
     component: string;
     property: string;
     value: string;
-    type: 'CSS' | 'JS' | 'HTML' | 'CONFIG';
+    type: "CSS" | "JS" | "HTML" | "CONFIG";
     order: number;
-    status: 'ACTIVE' | 'INACTIVE';
+    status: "ACTIVE" | "INACTIVE";
     createdAt: Date;
     updatedAt: Date;
 }

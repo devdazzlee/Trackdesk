@@ -5,44 +5,40 @@ const client_1 = require("@prisma/client");
 const prisma = new client_1.PrismaClient();
 class AuthorizationModel {
     static async createRole(data) {
-        return await prisma.role.create({
+        return (await prisma.role.create({
             data: {
                 accountId: data.accountId,
                 name: data.name,
-                description: data.description || '',
-                permissions: data.permissions || [],
-                isSystem: data.isSystem || false,
-                isDefault: data.isDefault || false,
-                status: data.status || 'ACTIVE'
-            }
-        });
+                description: data.description || "",
+                permissions: (data.permissions || []),
+            },
+        }));
     }
     static async findRoleById(id) {
-        return await prisma.role.findUnique({
-            where: { id }
-        });
+        return (await prisma.role.findUnique({
+            where: { id },
+        }));
     }
     static async findRoleByName(accountId, name) {
-        return await prisma.role.findFirst({
+        return (await prisma.role.findFirst({
             where: {
                 accountId,
                 name,
-                status: 'ACTIVE'
-            }
-        });
+            },
+        }));
     }
     static async updateRole(id, data) {
-        return await prisma.role.update({
+        return (await prisma.role.update({
             where: { id },
             data: {
                 ...data,
-                updatedAt: new Date()
-            }
-        });
+                updatedAt: new Date(),
+            },
+        }));
     }
     static async deleteRole(id) {
         await prisma.role.delete({
-            where: { id }
+            where: { id },
         });
     }
     static async listRoles(accountId, filters = {}) {
@@ -53,52 +49,43 @@ class AuthorizationModel {
             where.isSystem = filters.isSystem;
         if (filters.isDefault !== undefined)
             where.isDefault = filters.isDefault;
-        return await prisma.role.findMany({
+        return (await prisma.role.findMany({
             where,
-            orderBy: { name: 'asc' }
-        });
+            orderBy: { name: "asc" },
+        }));
     }
     static async assignRole(userId, roleId, accountId, grantedBy, expiresAt) {
-        return await prisma.userRole.create({
+        return (await prisma.userRoleAssignment.create({
             data: {
                 userId,
                 roleId,
                 accountId,
-                grantedBy,
-                grantedAt: new Date(),
-                expiresAt,
-                isActive: true
-            }
-        });
+                assignedAt: new Date(),
+            },
+        }));
     }
     static async revokeRole(userRoleId) {
-        await prisma.userRole.update({
+        await prisma.userRoleAssignment.update({
             where: { id: userRoleId },
-            data: { isActive: false }
+            data: {},
         });
     }
     static async getUserRoles(userId, accountId) {
-        return await prisma.userRole.findMany({
+        return (await prisma.userRoleAssignment.findMany({
             where: {
                 userId,
                 accountId,
-                isActive: true,
-                OR: [
-                    { expiresAt: null },
-                    { expiresAt: { gt: new Date() } }
-                ]
             },
-            include: {
-                role: true
-            }
-        });
+        }));
     }
     static async checkPermission(userId, accountId, resource, action, resourceId, context) {
         const userRoles = await this.getUserRoles(userId, accountId);
         for (const userRole of userRoles) {
-            const role = userRole.role;
+            const role = userRole.role || {};
             for (const permission of role.permissions) {
-                if (permission.resource === resource && permission.action === action && permission.granted) {
+                if (permission.resource === resource &&
+                    permission.action === action &&
+                    permission.granted) {
                     if (this.evaluatePermissionConditions(permission.conditions || [], context, resourceId)) {
                         return true;
                     }
@@ -129,10 +116,10 @@ class AuthorizationModel {
         if (conditions.length === 0)
             return true;
         let result = true;
-        let logic = 'AND';
+        let logic = "AND";
         for (const condition of conditions) {
             const conditionResult = this.evaluateCondition(condition, context, resourceId);
-            if (logic === 'AND') {
+            if (logic === "AND") {
                 result = result && conditionResult;
             }
             else {
@@ -145,31 +132,31 @@ class AuthorizationModel {
     static evaluateCondition(condition, context, resourceId) {
         let value;
         switch (condition.operator) {
-            case 'OWNER':
+            case "OWNER":
                 return context?.userId === context?.ownerId;
-            case 'SAME_ACCOUNT':
+            case "SAME_ACCOUNT":
                 return context?.accountId === context?.resourceAccountId;
             default:
                 value = this.getFieldValue(context, condition.field);
                 break;
         }
         switch (condition.operator) {
-            case 'EQUALS':
+            case "EQUALS":
                 return value === condition.value;
-            case 'NOT_EQUALS':
+            case "NOT_EQUALS":
                 return value !== condition.value;
-            case 'CONTAINS':
+            case "CONTAINS":
                 return String(value).includes(String(condition.value));
-            case 'IN':
-                return Array.isArray(condition.value) && condition.value.includes(value);
-            case 'NOT_IN':
-                return Array.isArray(condition.value) && !condition.value.includes(value);
+            case "IN":
+                return (Array.isArray(condition.value) && condition.value.includes(value));
+            case "NOT_IN":
+                return (Array.isArray(condition.value) && !condition.value.includes(value));
             default:
                 return false;
         }
     }
     static getFieldValue(data, field) {
-        const fields = field.split('.');
+        const fields = field.split(".");
         let value = data;
         for (const f of fields) {
             value = value?.[f];
@@ -177,42 +164,41 @@ class AuthorizationModel {
         return value;
     }
     static async createAccessControl(data) {
-        return await prisma.accessControl.create({
+        return (await prisma.accessControl.create({
             data: {
                 accountId: data.accountId,
                 resource: data.resource,
-                resourceId: data.resourceId,
                 userId: data.userId,
                 roleId: data.roleId,
                 permissions: data.permissions || [],
                 conditions: data.conditions || [],
-                status: data.status || 'ACTIVE'
-            }
-        });
+                status: data.status || "ACTIVE",
+            },
+        }));
     }
     static async getAccessControls(userId, accountId, resource, resourceId) {
         const where = {
             accountId,
             resource,
-            status: 'ACTIVE'
+            status: "ACTIVE",
         };
         if (resourceId) {
             where.resourceId = resourceId;
         }
         where.OR = [
             { userId },
-            { roleId: { in: await this.getUserRoleIds(userId, accountId) } }
+            { roleId: { in: await this.getUserRoleIds(userId, accountId) } },
         ];
-        return await prisma.accessControl.findMany({
-            where
-        });
+        return (await prisma.accessControl.findMany({
+            where,
+        }));
     }
     static async getUserRoleIds(userId, accountId) {
         const userRoles = await this.getUserRoles(userId, accountId);
-        return userRoles.map(ur => ur.roleId);
+        return userRoles.map((ur) => ur.roleId);
     }
     static async createAuditLog(data) {
-        return await prisma.auditLog.create({
+        return (await prisma.auditLog.create({
             data: {
                 accountId: data.accountId,
                 userId: data.userId,
@@ -222,9 +208,9 @@ class AuthorizationModel {
                 details: data.details || {},
                 ipAddress: data.ipAddress,
                 userAgent: data.userAgent,
-                timestamp: data.timestamp || new Date()
-            }
-        });
+                timestamp: data.timestamp || new Date(),
+            },
+        }));
     }
     static async getAuditLogs(accountId, filters = {}, page = 1, limit = 50) {
         const skip = (page - 1) * limit;
@@ -240,94 +226,86 @@ class AuthorizationModel {
         if (filters.startDate && filters.endDate) {
             where.timestamp = {
                 gte: filters.startDate,
-                lte: filters.endDate
+                lte: filters.endDate,
             };
         }
-        return await prisma.auditLog.findMany({
+        return (await prisma.auditLog.findMany({
             where,
             skip,
             take: limit,
-            orderBy: { timestamp: 'desc' }
-        });
+            orderBy: { timestamp: "desc" },
+        }));
     }
     static async createSession(data) {
-        return await prisma.session.create({
+        return (await prisma.session.create({
             data: {
                 userId: data.userId,
-                accountId: data.accountId,
                 token: data.token,
                 refreshToken: data.refreshToken,
                 expiresAt: data.expiresAt,
                 ipAddress: data.ipAddress,
                 userAgent: data.userAgent,
-                isActive: true,
-                lastActivity: new Date()
-            }
-        });
+            },
+        }));
     }
     static async findSessionByToken(token) {
-        return await prisma.session.findFirst({
+        return (await prisma.session.findFirst({
             where: {
                 token,
-                isActive: true,
-                expiresAt: { gt: new Date() }
-            }
-        });
+                expiresAt: { gt: new Date() },
+            },
+        }));
     }
     static async updateSessionActivity(sessionId) {
-        return await prisma.session.update({
+        return (await prisma.session.update({
             where: { id: sessionId },
-            data: { lastActivity: new Date() }
-        });
+            data: {},
+        }));
     }
     static async revokeSession(sessionId) {
         await prisma.session.update({
             where: { id: sessionId },
-            data: { isActive: false }
+            data: {},
         });
     }
     static async revokeAllUserSessions(userId, accountId) {
         await prisma.session.updateMany({
             where: {
                 userId,
-                accountId,
-                isActive: true
             },
-            data: { isActive: false }
+            data: {},
         });
     }
     static async createTwoFactorAuth(data) {
-        return await prisma.twoFactorAuth.create({
+        return (await prisma.twoFactorAuth.create({
             data: {
                 userId: data.userId,
-                accountId: data.accountId,
                 method: data.method,
                 secret: data.secret,
                 backupCodes: data.backupCodes || [],
-                isEnabled: data.isEnabled || false
-            }
-        });
+                isEnabled: data.isEnabled || false,
+            },
+        }));
     }
     static async findTwoFactorAuthByUser(userId, accountId) {
-        return await prisma.twoFactorAuth.findFirst({
+        return (await prisma.twoFactorAuth.findFirst({
             where: {
                 userId,
-                accountId
-            }
-        });
+            },
+        }));
     }
     static async updateTwoFactorAuth(id, data) {
-        return await prisma.twoFactorAuth.update({
+        return (await prisma.twoFactorAuth.update({
             where: { id },
             data: {
                 ...data,
-                updatedAt: new Date()
-            }
-        });
+                updatedAt: new Date(),
+            },
+        }));
     }
     static async deleteTwoFactorAuth(id) {
         await prisma.twoFactorAuth.delete({
-            where: { id }
+            where: { id },
         });
     }
     static async generateBackupCodes() {
@@ -343,18 +321,18 @@ class AuthorizationModel {
             return false;
         }
         if (twoFactor.backupCodes.includes(code)) {
-            const updatedCodes = twoFactor.backupCodes.filter(c => c !== code);
+            const updatedCodes = twoFactor.backupCodes.filter((c) => c !== code);
             await this.updateTwoFactorAuth(twoFactor.id, {
                 backupCodes: updatedCodes,
-                lastUsed: new Date()
+                lastUsed: new Date(),
             });
             return true;
         }
-        if (twoFactor.method === 'TOTP' && twoFactor.secret) {
+        if (twoFactor.method === "TOTP" && twoFactor.secret) {
             const isValid = this.verifyTOTPCode(twoFactor.secret, code);
             if (isValid) {
                 await this.updateTwoFactorAuth(twoFactor.id, {
-                    lastUsed: new Date()
+                    lastUsed: new Date(),
                 });
             }
             return isValid;
@@ -362,20 +340,20 @@ class AuthorizationModel {
         return false;
     }
     static verifyTOTPCode(secret, code) {
-        const crypto = require('crypto');
+        const crypto = require("crypto");
         const time = Math.floor(Date.now() / 1000 / 30);
-        const key = Buffer.from(secret, 'base64');
+        const key = Buffer.from(secret, "base64");
         for (let i = -1; i <= 1; i++) {
             const timeStep = time + i;
-            const hmac = crypto.createHmac('sha1', key);
-            hmac.update(Buffer.from(timeStep.toString(16).padStart(16, '0'), 'hex'));
+            const hmac = crypto.createHmac("sha1", key);
+            hmac.update(Buffer.from(timeStep.toString(16).padStart(16, "0"), "hex"));
             const hash = hmac.digest();
             const offset = hash[hash.length - 1] & 0xf;
             const binary = ((hash[offset] & 0x7f) << 24) |
                 ((hash[offset + 1] & 0xff) << 16) |
                 ((hash[offset + 2] & 0xff) << 8) |
                 (hash[offset + 3] & 0xff);
-            const totp = (binary % 1000000).toString().padStart(6, '0');
+            const totp = (binary % 1000000).toString().padStart(6, "0");
             if (totp === code) {
                 return true;
             }
@@ -384,27 +362,27 @@ class AuthorizationModel {
     }
     static async getAuthorizationStats(accountId) {
         const roles = await this.listRoles(accountId);
-        const userRoles = await prisma.userRole.count({
-            where: { accountId, isActive: true }
+        const userRoles = await prisma.userRoleAssignment.count({
+            where: { accountId },
         });
         const sessions = await prisma.session.count({
-            where: { accountId, isActive: true }
+            where: {},
         });
         const twoFactorUsers = await prisma.twoFactorAuth.count({
-            where: { accountId, isEnabled: true }
+            where: { isEnabled: true },
         });
         const stats = {
             totalRoles: roles.length,
-            activeRoles: roles.filter(r => r.status === 'ACTIVE').length,
+            activeRoles: roles.filter((r) => r.status === "ACTIVE").length,
             totalUserRoles: userRoles,
             activeSessions: sessions,
             twoFactorUsers,
             byRole: {},
-            byPermission: {}
+            byPermission: {},
         };
         for (const role of roles) {
-            const count = await prisma.userRole.count({
-                where: { roleId: role.id, isActive: true }
+            const count = await prisma.userRoleAssignment.count({
+                where: { roleId: role.id },
             });
             stats.byRole[role.name] = count;
         }
@@ -419,55 +397,111 @@ class AuthorizationModel {
     static async createDefaultRoles(accountId) {
         const defaultRoles = [
             {
-                name: 'Super Admin',
-                description: 'Full system access',
-                permissions: [
-                    { id: 'all', resource: '*', action: '*', granted: true }
-                ],
+                name: "Super Admin",
+                description: "Full system access",
+                permissions: [{ id: "all", resource: "*", action: "*", granted: true }],
                 isSystem: true,
-                isDefault: true
+                isDefault: true,
             },
             {
-                name: 'Admin',
-                description: 'Account administration',
+                name: "Admin",
+                description: "Account administration",
                 permissions: [
-                    { id: 'affiliates_manage', resource: 'affiliates', action: 'manage', granted: true },
-                    { id: 'offers_manage', resource: 'offers', action: 'manage', granted: true },
-                    { id: 'reports_view', resource: 'reports', action: 'view', granted: true },
-                    { id: 'settings_manage', resource: 'settings', action: 'manage', granted: true }
+                    {
+                        id: "affiliates_manage",
+                        resource: "affiliates",
+                        action: "manage",
+                        granted: true,
+                    },
+                    {
+                        id: "offers_manage",
+                        resource: "offers",
+                        action: "manage",
+                        granted: true,
+                    },
+                    {
+                        id: "reports_view",
+                        resource: "reports",
+                        action: "view",
+                        granted: true,
+                    },
+                    {
+                        id: "settings_manage",
+                        resource: "settings",
+                        action: "manage",
+                        granted: true,
+                    },
                 ],
                 isSystem: false,
-                isDefault: true
+                isDefault: true,
             },
             {
-                name: 'Affiliate Manager',
-                description: 'Affiliate management',
+                name: "Affiliate Manager",
+                description: "Affiliate management",
                 permissions: [
-                    { id: 'affiliates_view', resource: 'affiliates', action: 'view', granted: true },
-                    { id: 'affiliates_edit', resource: 'affiliates', action: 'edit', granted: true },
-                    { id: 'offers_view', resource: 'offers', action: 'view', granted: true },
-                    { id: 'reports_view', resource: 'reports', action: 'view', granted: true }
+                    {
+                        id: "affiliates_view",
+                        resource: "affiliates",
+                        action: "view",
+                        granted: true,
+                    },
+                    {
+                        id: "affiliates_edit",
+                        resource: "affiliates",
+                        action: "edit",
+                        granted: true,
+                    },
+                    {
+                        id: "offers_view",
+                        resource: "offers",
+                        action: "view",
+                        granted: true,
+                    },
+                    {
+                        id: "reports_view",
+                        resource: "reports",
+                        action: "view",
+                        granted: true,
+                    },
                 ],
                 isSystem: false,
-                isDefault: true
+                isDefault: true,
             },
             {
-                name: 'Affiliate',
-                description: 'Affiliate partner',
+                name: "Affiliate",
+                description: "Affiliate partner",
                 permissions: [
-                    { id: 'dashboard_view', resource: 'dashboard', action: 'view', granted: true },
-                    { id: 'links_manage', resource: 'links', action: 'manage', granted: true },
-                    { id: 'reports_view_own', resource: 'reports', action: 'view', conditions: [{ field: 'affiliateId', operator: 'OWNER', value: null }], granted: true }
+                    {
+                        id: "dashboard_view",
+                        resource: "dashboard",
+                        action: "view",
+                        granted: true,
+                    },
+                    {
+                        id: "links_manage",
+                        resource: "links",
+                        action: "manage",
+                        granted: true,
+                    },
+                    {
+                        id: "reports_view_own",
+                        resource: "reports",
+                        action: "view",
+                        conditions: [
+                            { field: "affiliateId", operator: "OWNER", value: null },
+                        ],
+                        granted: true,
+                    },
                 ],
                 isSystem: false,
-                isDefault: true
-            }
+                isDefault: true,
+            },
         ];
         const createdRoles = [];
         for (const roleData of defaultRoles) {
             const role = await this.createRole({
                 accountId,
-                ...roleData
+                ...roleData,
             });
             createdRoles.push(role);
         }
@@ -478,7 +512,7 @@ class AuthorizationModel {
         const stats = await this.getAuthorizationStats(accountId);
         return {
             roles,
-            stats
+            stats,
         };
     }
 }

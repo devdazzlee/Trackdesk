@@ -9,88 +9,91 @@ const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const prisma = new client_1.PrismaClient();
 class RegistrationModel {
     static async createForm(data) {
-        return await prisma.registrationForm.create({
+        return (await prisma.registrationForm.create({
             data: {
                 accountId: data.accountId,
                 name: data.name,
-                description: data.description || '',
-                fields: data.fields || [],
-                settings: data.settings || {
+                description: data.description || "",
+                fields: (data.fields || []),
+                settings: (data.settings || {
                     allowRegistration: true,
                     requireApproval: true,
                     requireEmailVerification: true,
                     autoAssignTier: false,
-                    welcomeEmail: true
-                },
-                status: data.status || 'DRAFT'
-            }
-        });
+                    welcomeEmail: true,
+                }),
+                status: data.status || "DRAFT",
+            },
+        }));
     }
     static async findFormById(id) {
-        return await prisma.registrationForm.findUnique({
-            where: { id }
-        });
+        return (await prisma.registrationForm.findUnique({
+            where: { id },
+        }));
     }
     static async findActiveForm(accountId) {
-        return await prisma.registrationForm.findFirst({
+        return (await prisma.registrationForm.findFirst({
             where: {
                 accountId,
-                status: 'ACTIVE'
-            }
-        });
+                status: "ACTIVE",
+            },
+        }));
     }
     static async updateForm(id, data) {
-        return await prisma.registrationForm.update({
+        return (await prisma.registrationForm.update({
             where: { id },
             data: {
                 ...data,
-                updatedAt: new Date()
-            }
-        });
+                fields: data.fields,
+                settings: data.settings,
+                updatedAt: new Date(),
+            },
+        }));
     }
     static async deleteForm(id) {
         await prisma.registrationForm.delete({
-            where: { id }
+            where: { id },
         });
     }
     static async listForms(accountId, filters = {}) {
         const where = { accountId };
         if (filters.status)
             where.status = filters.status;
-        return await prisma.registrationForm.findMany({
+        return (await prisma.registrationForm.findMany({
             where,
-            orderBy: { createdAt: 'desc' }
-        });
+            orderBy: { createdAt: "desc" },
+        }));
     }
     static async submitRegistration(formId, data, ipAddress, userAgent) {
         const form = await this.findFormById(formId);
         if (!form) {
-            throw new Error('Registration form not found');
+            throw new Error("Registration form not found");
         }
-        if (form.status !== 'ACTIVE') {
-            throw new Error('Registration form is not active');
+        if (form.status !== "ACTIVE") {
+            throw new Error("Registration form is not active");
         }
         const validation = await this.validateSubmission(form, data);
         if (!validation.valid) {
-            throw new Error(`Validation failed: ${validation.errors.join(', ')}`);
+            throw new Error(`Validation failed: ${validation.errors.join(", ")}`);
         }
-        const submission = await prisma.registrationSubmission.create({
+        const submission = (await prisma.registrationSubmission.create({
             data: {
                 formId,
-                data,
-                status: 'PENDING',
+                data: data,
+                status: "PENDING",
                 submittedAt: new Date(),
                 ipAddress,
-                userAgent
-            }
-        });
+                userAgent,
+            },
+        }));
         await this.processSubmission(submission, form);
         return submission;
     }
     static async validateSubmission(form, data) {
         const errors = [];
         for (const field of form.fields) {
-            if (field.required && (!data[field.name] || data[field.name].toString().trim() === '')) {
+            if (field.required &&
+                (!data[field.name] || data[field.name].toString().trim() === "")) {
                 errors.push(`${field.label} is required`);
                 continue;
             }
@@ -110,7 +113,7 @@ class RegistrationModel {
         }
         return {
             valid: errors.length === 0,
-            errors
+            errors,
         };
     }
     static async processSubmission(submission, form) {
@@ -118,41 +121,41 @@ class RegistrationModel {
         if (settings.requireApproval) {
             return;
         }
-        await this.approveSubmission(submission.id, 'system', 'Auto-approved');
+        await this.approveSubmission(submission.id, "system", "Auto-approved");
     }
     static async approveSubmission(submissionId, reviewedBy, notes) {
         const submission = await prisma.registrationSubmission.findUnique({
-            where: { id: submissionId }
+            where: { id: submissionId },
         });
         if (!submission) {
-            throw new Error('Submission not found');
+            throw new Error("Submission not found");
         }
         const form = await this.findFormById(submission.formId);
         if (!form) {
-            throw new Error('Form not found');
+            throw new Error("Form not found");
         }
-        const updatedSubmission = await prisma.registrationSubmission.update({
+        const updatedSubmission = (await prisma.registrationSubmission.update({
             where: { id: submissionId },
             data: {
-                status: 'APPROVED',
+                status: "APPROVED",
                 reviewedAt: new Date(),
                 reviewedBy,
-                notes
-            }
-        });
+                notes,
+            },
+        }));
         await this.createUserFromSubmission(submission, form);
         return updatedSubmission;
     }
     static async rejectSubmission(submissionId, reviewedBy, notes) {
-        return await prisma.registrationSubmission.update({
+        return (await prisma.registrationSubmission.update({
             where: { id: submissionId },
             data: {
-                status: 'REJECTED',
+                status: "REJECTED",
                 reviewedAt: new Date(),
                 reviewedBy,
-                notes
-            }
-        });
+                notes,
+            },
+        }));
     }
     static async createUserFromSubmission(submission, form) {
         const data = submission.data;
@@ -163,25 +166,26 @@ class RegistrationModel {
                 password: hashedPassword,
                 firstName: data.firstName,
                 lastName: data.lastName,
-                role: 'AFFILIATE',
-                status: 'ACTIVE'
-            }
+                role: "AFFILIATE",
+                status: "ACTIVE",
+            },
         });
         const affiliate = await prisma.affiliateProfile.create({
             data: {
                 userId: user.id,
-                companyName: data.companyName || '',
-                website: data.website || '',
-                phone: data.phone || '',
-                address: data.address || '',
-                taxId: data.taxId || '',
-                bankAccount: data.bankAccount || '',
-                status: 'ACTIVE',
-                tier: form.settings.defaultTierId || null
-            }
+                companyName: data.companyName || "",
+                website: data.website || "",
+                phone: data.phone || "",
+                address: (data.address || {}),
+                taxId: data.taxId || "",
+                bankAccount: data.bankAccount || "",
+                paymentMethod: "BANK_TRANSFER",
+                status: "ACTIVE",
+                tier: form.settings.defaultTierId || "BRONZE",
+            },
         });
         if (form.settings.welcomeEmail) {
-            console.log('Sending welcome email to:', user.email);
+            console.log("Sending welcome email to:", user.email);
         }
     }
     static async getSubmissions(formId, filters = {}, page = 1, limit = 20) {
@@ -192,59 +196,63 @@ class RegistrationModel {
         if (filters.startDate && filters.endDate) {
             where.submittedAt = {
                 gte: filters.startDate,
-                lte: filters.endDate
+                lte: filters.endDate,
             };
         }
-        return await prisma.registrationSubmission.findMany({
+        return (await prisma.registrationSubmission.findMany({
             where,
             skip,
             take: limit,
-            orderBy: { submittedAt: 'desc' }
-        });
+            orderBy: { submittedAt: "desc" },
+        }));
     }
     static async createWorkflow(data) {
-        return await prisma.registrationWorkflow.create({
+        return (await prisma.registrationWorkflow.create({
             data: {
                 accountId: data.accountId,
                 name: data.name,
-                description: data.description || '',
-                steps: data.steps || [],
-                status: data.status || 'ACTIVE'
-            }
-        });
+                description: data.description || "",
+                steps: (data.steps || []),
+                status: data.status || "ACTIVE",
+                form: {
+                    connect: { id: data.formId },
+                },
+            },
+        }));
     }
     static async findWorkflowById(id) {
-        return await prisma.registrationWorkflow.findUnique({
-            where: { id }
-        });
+        return (await prisma.registrationWorkflow.findUnique({
+            where: { id },
+        }));
     }
     static async updateWorkflow(id, data) {
-        return await prisma.registrationWorkflow.update({
+        return (await prisma.registrationWorkflow.update({
             where: { id },
             data: {
                 ...data,
-                updatedAt: new Date()
-            }
-        });
+                steps: data.steps,
+                updatedAt: new Date(),
+            },
+        }));
     }
     static async deleteWorkflow(id) {
         await prisma.registrationWorkflow.delete({
-            where: { id }
+            where: { id },
         });
     }
     static async listWorkflows(accountId) {
-        return await prisma.registrationWorkflow.findMany({
+        return (await prisma.registrationWorkflow.findMany({
             where: { accountId },
-            orderBy: { createdAt: 'desc' }
-        });
+            orderBy: { createdAt: "desc" },
+        }));
     }
     static async executeWorkflow(workflowId, submissionData) {
         const workflow = await this.findWorkflowById(workflowId);
         if (!workflow) {
-            throw new Error('Workflow not found');
+            throw new Error("Workflow not found");
         }
-        if (workflow.status !== 'ACTIVE') {
-            throw new Error('Workflow is not active');
+        if (workflow.status !== "ACTIVE") {
+            throw new Error("Workflow is not active");
         }
         for (const step of workflow.steps) {
             await this.executeWorkflowStep(step, submissionData);
@@ -252,18 +260,18 @@ class RegistrationModel {
     }
     static async executeWorkflowStep(step, data) {
         if (step.conditions) {
-            const conditionsMet = step.conditions.every(condition => {
+            const conditionsMet = step.conditions.every((condition) => {
                 const value = data[condition.field];
                 switch (condition.operator) {
-                    case 'EQUALS':
+                    case "EQUALS":
                         return value === condition.value;
-                    case 'NOT_EQUALS':
+                    case "NOT_EQUALS":
                         return value !== condition.value;
-                    case 'CONTAINS':
+                    case "CONTAINS":
                         return String(value).includes(String(condition.value));
-                    case 'GREATER_THAN':
+                    case "GREATER_THAN":
                         return Number(value) > Number(condition.value);
-                    case 'LESS_THAN':
+                    case "LESS_THAN":
                         return Number(value) < Number(condition.value);
                     default:
                         return false;
@@ -274,51 +282,57 @@ class RegistrationModel {
             }
         }
         switch (step.type) {
-            case 'FORM':
+            case "FORM":
                 break;
-            case 'APPROVAL':
+            case "APPROVAL":
                 break;
-            case 'EMAIL':
+            case "EMAIL":
                 break;
-            case 'WEBHOOK':
+            case "WEBHOOK":
                 break;
-            case 'CONDITION':
+            case "CONDITION":
                 break;
         }
     }
     static async getRegistrationStats(accountId, startDate, endDate) {
         const where = {
-            form: { accountId }
+            form: { accountId },
         };
         if (startDate && endDate) {
             where.submittedAt = {
                 gte: startDate,
-                lte: endDate
+                lte: endDate,
             };
         }
         const submissions = await prisma.registrationSubmission.findMany({
             where,
             include: {
-                form: true
-            }
+                form: true,
+            },
         });
         const stats = {
             totalSubmissions: submissions.length,
-            pendingSubmissions: submissions.filter(s => s.status === 'PENDING').length,
-            approvedSubmissions: submissions.filter(s => s.status === 'APPROVED').length,
-            rejectedSubmissions: submissions.filter(s => s.status === 'REJECTED').length,
+            pendingSubmissions: submissions.filter((s) => s.status === "PENDING")
+                .length,
+            approvedSubmissions: submissions.filter((s) => s.status === "APPROVED")
+                .length,
+            rejectedSubmissions: submissions.filter((s) => s.status === "REJECTED")
+                .length,
             approvalRate: 0,
             byStatus: {},
             byForm: {},
-            byDay: {}
+            byDay: {},
         };
         if (submissions.length > 0) {
-            stats.approvalRate = (stats.approvedSubmissions / submissions.length) * 100;
+            stats.approvalRate =
+                (stats.approvedSubmissions / submissions.length) * 100;
         }
-        submissions.forEach(submission => {
-            stats.byStatus[submission.status] = (stats.byStatus[submission.status] || 0) + 1;
-            stats.byForm[submission.formId] = (stats.byForm[submission.formId] || 0) + 1;
-            const day = submission.submittedAt.toISOString().split('T')[0];
+        submissions.forEach((submission) => {
+            stats.byStatus[submission.status] =
+                (stats.byStatus[submission.status] || 0) + 1;
+            stats.byForm[submission.formId] =
+                (stats.byForm[submission.formId] || 0) + 1;
+            const day = submission.submittedAt.toISOString().split("T")[0];
             stats.byDay[day] = (stats.byDay[day] || 0) + 1;
         });
         return stats;
@@ -326,98 +340,98 @@ class RegistrationModel {
     static async createDefaultForm(accountId) {
         const defaultFields = [
             {
-                id: 'firstName',
-                name: 'firstName',
-                label: 'First Name',
-                type: 'TEXT',
+                id: "firstName",
+                name: "firstName",
+                label: "First Name",
+                type: "TEXT",
                 required: true,
-                placeholder: 'Enter your first name',
+                placeholder: "Enter your first name",
                 validation: {
                     minLength: 2,
-                    maxLength: 50
+                    maxLength: 50,
                 },
-                order: 1
+                order: 1,
             },
             {
-                id: 'lastName',
-                name: 'lastName',
-                label: 'Last Name',
-                type: 'TEXT',
+                id: "lastName",
+                name: "lastName",
+                label: "Last Name",
+                type: "TEXT",
                 required: true,
-                placeholder: 'Enter your last name',
+                placeholder: "Enter your last name",
                 validation: {
                     minLength: 2,
-                    maxLength: 50
+                    maxLength: 50,
                 },
-                order: 2
+                order: 2,
             },
             {
-                id: 'email',
-                name: 'email',
-                label: 'Email Address',
-                type: 'EMAIL',
+                id: "email",
+                name: "email",
+                label: "Email Address",
+                type: "EMAIL",
                 required: true,
-                placeholder: 'Enter your email address',
+                placeholder: "Enter your email address",
                 validation: {
-                    pattern: '^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$',
-                    customMessage: 'Please enter a valid email address'
+                    pattern: "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$",
+                    customMessage: "Please enter a valid email address",
                 },
-                order: 3
+                order: 3,
             },
             {
-                id: 'password',
-                name: 'password',
-                label: 'Password',
-                type: 'PASSWORD',
+                id: "password",
+                name: "password",
+                label: "Password",
+                type: "PASSWORD",
                 required: true,
-                placeholder: 'Enter your password',
+                placeholder: "Enter your password",
                 validation: {
                     minLength: 8,
-                    maxLength: 128
+                    maxLength: 128,
                 },
-                order: 4
+                order: 4,
             },
             {
-                id: 'companyName',
-                name: 'companyName',
-                label: 'Company Name',
-                type: 'TEXT',
+                id: "companyName",
+                name: "companyName",
+                label: "Company Name",
+                type: "TEXT",
                 required: false,
-                placeholder: 'Enter your company name',
-                order: 5
+                placeholder: "Enter your company name",
+                order: 5,
             },
             {
-                id: 'website',
-                name: 'website',
-                label: 'Website',
-                type: 'TEXT',
+                id: "website",
+                name: "website",
+                label: "Website",
+                type: "TEXT",
                 required: false,
-                placeholder: 'Enter your website URL',
-                order: 6
+                placeholder: "Enter your website URL",
+                order: 6,
             },
             {
-                id: 'phone',
-                name: 'phone',
-                label: 'Phone Number',
-                type: 'PHONE',
+                id: "phone",
+                name: "phone",
+                label: "Phone Number",
+                type: "PHONE",
                 required: false,
-                placeholder: 'Enter your phone number',
-                order: 7
-            }
+                placeholder: "Enter your phone number",
+                order: 7,
+            },
         ];
         return await this.createForm({
             accountId,
-            name: 'Default Affiliate Registration',
-            description: 'Standard registration form for new affiliates',
+            name: "Default Affiliate Registration",
+            description: "Standard registration form for new affiliates",
             fields: defaultFields,
             settings: {
                 allowRegistration: true,
                 requireApproval: true,
                 requireEmailVerification: true,
                 autoAssignTier: true,
-                welcomeEmail: true
+                welcomeEmail: true,
             },
-            status: 'ACTIVE'
+            status: "ACTIVE",
         });
     }
     static async exportFormData(formId) {
@@ -429,7 +443,7 @@ class RegistrationModel {
         return {
             form,
             submissions,
-            exportedAt: new Date().toISOString()
+            exportedAt: new Date().toISOString(),
         };
     }
     static async importFormData(accountId, formData) {
@@ -439,7 +453,7 @@ class RegistrationModel {
             description: formData.description,
             fields: formData.fields,
             settings: formData.settings,
-            status: 'DRAFT'
+            status: "DRAFT",
         });
     }
 }

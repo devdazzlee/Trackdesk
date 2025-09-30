@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -23,7 +23,7 @@ export interface BrandingConfig {
   footerText: string;
   removeBranding: boolean;
   customDomain: string;
-  status: 'ACTIVE' | 'INACTIVE' | 'DRAFT';
+  status: "ACTIVE" | "INACTIVE" | "DRAFT";
   createdAt: Date;
   updatedAt: Date;
 }
@@ -32,7 +32,7 @@ export interface BrandingTemplate {
   id: string;
   name: string;
   description: string;
-  category: 'PROFESSIONAL' | 'CREATIVE' | 'MINIMAL' | 'CORPORATE' | 'MODERN';
+  category: "PROFESSIONAL" | "CREATIVE" | "MINIMAL" | "CORPORATE" | "MODERN";
   preview: string;
   config: Partial<BrandingConfig>;
   isDefault: boolean;
@@ -44,7 +44,7 @@ export interface BrandingTemplate {
 export interface BrandingAsset {
   id: string;
   brandingId: string;
-  type: 'LOGO' | 'FAVICON' | 'BACKGROUND' | 'ICON' | 'BANNER' | 'SOCIAL_MEDIA';
+  type: "LOGO" | "FAVICON" | "BACKGROUND" | "ICON" | "BANNER" | "SOCIAL_MEDIA";
   name: string;
   url: string;
   size: number;
@@ -54,7 +54,7 @@ export interface BrandingAsset {
     height: number;
   };
   alt: string;
-  status: 'ACTIVE' | 'INACTIVE';
+  status: "ACTIVE" | "INACTIVE";
   createdAt: Date;
   updatedAt: Date;
 }
@@ -65,133 +65,154 @@ export interface BrandingCustomization {
   component: string;
   property: string;
   value: string;
-  type: 'CSS' | 'JS' | 'HTML' | 'CONFIG';
+  type: "CSS" | "JS" | "HTML" | "CONFIG";
   order: number;
-  status: 'ACTIVE' | 'INACTIVE';
+  status: "ACTIVE" | "INACTIVE";
   createdAt: Date;
   updatedAt: Date;
 }
 
 export class BrandingModel {
-  static async createConfig(data: Partial<BrandingConfig>): Promise<BrandingConfig> {
-    return await prisma.brandingConfig.create({
+  static async createConfig(
+    data: Partial<BrandingConfig>
+  ): Promise<BrandingConfig> {
+    return (await (prisma as any).brandingConfig.create({
       data: {
         accountId: data.accountId!,
         name: data.name!,
-        logo: data.logo || '',
-        favicon: data.favicon || '',
-        primaryColor: data.primaryColor || '#3b82f6',
-        secondaryColor: data.secondaryColor || '#10b981',
-        accentColor: data.accentColor || '#f59e0b',
-        backgroundColor: data.backgroundColor || '#ffffff',
-        textColor: data.textColor || '#1f2937',
-        linkColor: data.linkColor || '#3b82f6',
-        buttonColor: data.buttonColor || '#3b82f6',
-        buttonTextColor: data.buttonTextColor || '#ffffff',
-        fontFamily: data.fontFamily || 'Inter, sans-serif',
-        fontSize: data.fontSize || '16px',
-        customCss: data.customCss || '',
-        customJs: data.customJs || '',
-        footerText: data.footerText || '',
+        logo: data.logo || "",
+        favicon: data.favicon || "",
+        primaryColor: data.primaryColor || "#3b82f6",
+        secondaryColor: data.secondaryColor || "#10b981",
+        accentColor: data.accentColor || "#f59e0b",
+        backgroundColor: data.backgroundColor || "#ffffff",
+        textColor: data.textColor || "#1f2937",
+        linkColor: data.linkColor || "#3b82f6",
+        buttonColor: data.buttonColor || "#3b82f6",
+        buttonTextColor: data.buttonTextColor || "#ffffff",
+        fontFamily: data.fontFamily || "Inter, sans-serif",
+        fontSize: data.fontSize || "16px",
+        customCss: data.customCss || "",
+        customJs: data.customJs || "",
+        footerText: data.footerText || "",
         removeBranding: data.removeBranding || false,
-        customDomain: data.customDomain || '',
-        status: data.status || 'ACTIVE'
-      }
-    }) as BrandingConfig;
+        customDomain: data.customDomain || "",
+        status: data.status || "ACTIVE",
+      },
+    })) as BrandingConfig;
   }
 
   static async findById(id: string): Promise<BrandingConfig | null> {
-    return await prisma.brandingConfig.findUnique({
-      where: { id }
-    }) as BrandingConfig | null;
+    return (await (prisma as any).brandingConfig.findUnique({
+      where: { id },
+    })) as BrandingConfig | null;
   }
 
-  static async findByAccountId(accountId: string): Promise<BrandingConfig | null> {
-    return await prisma.brandingConfig.findFirst({
-      where: { 
+  static async findByAccountId(
+    accountId: string
+  ): Promise<BrandingConfig | null> {
+    return (await (prisma as any).brandingConfig.findFirst({
+      where: {
         accountId,
-        status: 'ACTIVE'
-      }
-    }) as BrandingConfig | null;
+        status: "ACTIVE",
+      },
+    })) as BrandingConfig | null;
   }
 
-  static async update(id: string, data: Partial<BrandingConfig>): Promise<BrandingConfig> {
-    return await prisma.brandingConfig.update({
+  static async update(
+    id: string,
+    data: Partial<BrandingConfig>
+  ): Promise<BrandingConfig> {
+    return (await (prisma as any).brandingConfig.update({
       where: { id },
       data: {
         ...data,
-        updatedAt: new Date()
-      }
-    }) as BrandingConfig;
+        updatedAt: new Date(),
+      },
+    })) as BrandingConfig;
   }
 
   static async delete(id: string): Promise<void> {
-    await prisma.brandingConfig.delete({
-      where: { id }
+    await (prisma as any).brandingConfig.delete({
+      where: { id },
     });
   }
 
   static async list(filters: any = {}): Promise<BrandingConfig[]> {
     const where: any = {};
-    
+
     if (filters.accountId) where.accountId = filters.accountId;
     if (filters.status) where.status = filters.status;
 
-    return await prisma.brandingConfig.findMany({
+    return (await (prisma as any).brandingConfig.findMany({
       where,
-      orderBy: { createdAt: 'desc' }
-    }) as BrandingConfig[];
+      orderBy: { createdAt: "desc" },
+    })) as BrandingConfig[];
   }
 
-  static async createTemplate(data: Partial<BrandingTemplate>): Promise<BrandingTemplate> {
-    return await prisma.brandingTemplate.create({
+  static async createTemplate(
+    data: Partial<BrandingTemplate>
+  ): Promise<BrandingTemplate> {
+    return (await (prisma as any).brandingTemplate.create({
       data: {
         name: data.name!,
-        description: data.description || '',
+        description: data.description || "",
         category: data.category!,
-        preview: data.preview || '',
+        preview: data.preview || "",
         config: data.config || {},
         isDefault: data.isDefault || false,
-        isPublic: data.isPublic || false
-      }
-    }) as BrandingTemplate;
+        isPublic: data.isPublic || false,
+      },
+    })) as BrandingTemplate;
   }
 
   static async findTemplateById(id: string): Promise<BrandingTemplate | null> {
-    return await prisma.brandingTemplate.findUnique({
-      where: { id }
-    }) as BrandingTemplate | null;
+    return (await (prisma as any).brandingTemplate.findUnique({
+      where: { id },
+    })) as BrandingTemplate | null;
   }
 
   static async listTemplates(filters: any = {}): Promise<BrandingTemplate[]> {
     const where: any = {};
-    
+
     if (filters.category) where.category = filters.category;
     if (filters.isPublic !== undefined) where.isPublic = filters.isPublic;
     if (filters.isDefault !== undefined) where.isDefault = filters.isDefault;
 
-    return await prisma.brandingTemplate.findMany({
+    return (await (prisma as any).brandingTemplate.findMany({
       where,
-      orderBy: { createdAt: 'desc' }
-    }) as BrandingTemplate[];
+      orderBy: { createdAt: "desc" },
+    })) as BrandingTemplate[];
   }
 
-  static async applyTemplate(brandingId: string, templateId: string): Promise<BrandingConfig> {
+  static async applyTemplate(
+    brandingId: string,
+    templateId: string
+  ): Promise<BrandingConfig> {
     const template = await this.findTemplateById(templateId);
     if (!template) {
-      throw new Error('Template not found');
+      throw new Error("Template not found");
     }
 
     const branding = await this.findById(brandingId);
     if (!branding) {
-      throw new Error('Branding config not found');
+      throw new Error("Branding config not found");
     }
 
     return await this.update(brandingId, template.config);
   }
 
-  static async uploadAsset(brandingId: string, type: string, name: string, url: string, size: number, mimeType: string, dimensions: any, alt: string): Promise<BrandingAsset> {
-    return await prisma.brandingAsset.create({
+  static async uploadAsset(
+    brandingId: string,
+    type: string,
+    name: string,
+    url: string,
+    size: number,
+    mimeType: string,
+    dimensions: any,
+    alt: string
+  ): Promise<BrandingAsset> {
+    return (await (prisma as any).brandingAsset.create({
       data: {
         brandingId,
         type: type as any,
@@ -201,47 +222,60 @@ export class BrandingModel {
         mimeType,
         dimensions,
         alt,
-        status: 'ACTIVE'
-      }
-    }) as BrandingAsset;
+        status: "ACTIVE",
+      },
+    })) as BrandingAsset;
   }
 
   static async findAssetById(id: string): Promise<BrandingAsset | null> {
-    return await prisma.brandingAsset.findUnique({
-      where: { id }
-    }) as BrandingAsset | null;
+    return (await (prisma as any).brandingAsset.findUnique({
+      where: { id },
+    })) as BrandingAsset | null;
   }
 
-  static async listAssets(brandingId: string, filters: any = {}): Promise<BrandingAsset[]> {
+  static async listAssets(
+    brandingId: string,
+    filters: any = {}
+  ): Promise<BrandingAsset[]> {
     const where: any = { brandingId };
-    
+
     if (filters.type) where.type = filters.type;
     if (filters.status) where.status = filters.status;
 
-    return await prisma.brandingAsset.findMany({
+    return (await (prisma as any).brandingAsset.findMany({
       where,
-      orderBy: { createdAt: 'desc' }
-    }) as BrandingAsset[];
+      orderBy: { createdAt: "desc" },
+    })) as BrandingAsset[];
   }
 
-  static async updateAsset(id: string, data: Partial<BrandingAsset>): Promise<BrandingAsset> {
-    return await prisma.brandingAsset.update({
+  static async updateAsset(
+    id: string,
+    data: Partial<BrandingAsset>
+  ): Promise<BrandingAsset> {
+    return (await (prisma as any).brandingAsset.update({
       where: { id },
       data: {
         ...data,
-        updatedAt: new Date()
-      }
-    }) as BrandingAsset;
+        updatedAt: new Date(),
+      },
+    })) as BrandingAsset;
   }
 
   static async deleteAsset(id: string): Promise<void> {
-    await prisma.brandingAsset.delete({
-      where: { id }
+    await (prisma as any).brandingAsset.delete({
+      where: { id },
     });
   }
 
-  static async addCustomization(brandingId: string, component: string, property: string, value: string, type: string, order: number = 0): Promise<BrandingCustomization> {
-    return await prisma.brandingCustomization.create({
+  static async addCustomization(
+    brandingId: string,
+    component: string,
+    property: string,
+    value: string,
+    type: string,
+    order: number = 0
+  ): Promise<BrandingCustomization> {
+    return (await (prisma as any).brandingCustomization.create({
       data: {
         brandingId,
         component,
@@ -249,48 +283,56 @@ export class BrandingModel {
         value,
         type: type as any,
         order,
-        status: 'ACTIVE'
-      }
-    }) as BrandingCustomization;
+        status: "ACTIVE",
+      },
+    })) as BrandingCustomization;
   }
 
-  static async listCustomizations(brandingId: string, filters: any = {}): Promise<BrandingCustomization[]> {
+  static async listCustomizations(
+    brandingId: string,
+    filters: any = {}
+  ): Promise<BrandingCustomization[]> {
     const where: any = { brandingId };
-    
+
     if (filters.component) where.component = filters.component;
     if (filters.type) where.type = filters.type;
     if (filters.status) where.status = filters.status;
 
-    return await prisma.brandingCustomization.findMany({
+    return (await (prisma as any).brandingCustomization.findMany({
       where,
-      orderBy: [{ order: 'asc' }, { createdAt: 'asc' }]
-    }) as BrandingCustomization[];
+      orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+    })) as BrandingCustomization[];
   }
 
-  static async updateCustomization(id: string, data: Partial<BrandingCustomization>): Promise<BrandingCustomization> {
-    return await prisma.brandingCustomization.update({
+  static async updateCustomization(
+    id: string,
+    data: Partial<BrandingCustomization>
+  ): Promise<BrandingCustomization> {
+    return (await (prisma as any).brandingCustomization.update({
       where: { id },
       data: {
         ...data,
-        updatedAt: new Date()
-      }
-    }) as BrandingCustomization;
+        updatedAt: new Date(),
+      },
+    })) as BrandingCustomization;
   }
 
   static async deleteCustomization(id: string): Promise<void> {
-    await prisma.brandingCustomization.delete({
-      where: { id }
+    await (prisma as any).brandingCustomization.delete({
+      where: { id },
     });
   }
 
   static async generateBrandingCSS(brandingId: string): Promise<string> {
     const branding = await this.findById(brandingId);
     if (!branding) {
-      return '';
+      return "";
     }
 
-    const customizations = await this.listCustomizations(brandingId, { type: 'CSS' });
-    
+    const customizations = await this.listCustomizations(brandingId, {
+      type: "CSS",
+    });
+
     let css = `
       :root {
         --primary-color: ${branding.primaryColor};
@@ -357,7 +399,7 @@ export class BrandingModel {
     }
 
     // Add customizations
-    customizations.forEach(customization => {
+    customizations.forEach((customization) => {
       css += `\n/* ${customization.component} - ${customization.property} */\n${customization.value}`;
     });
 
@@ -367,11 +409,13 @@ export class BrandingModel {
   static async generateBrandingJS(brandingId: string): Promise<string> {
     const branding = await this.findById(brandingId);
     if (!branding) {
-      return '';
+      return "";
     }
 
-    const customizations = await this.listCustomizations(brandingId, { type: 'JS' });
-    
+    const customizations = await this.listCustomizations(brandingId, {
+      type: "JS",
+    });
+
     let js = `
       // Branding JavaScript
       document.addEventListener('DOMContentLoaded', function() {
@@ -393,7 +437,7 @@ export class BrandingModel {
     }
 
     // Add customizations
-    customizations.forEach(customization => {
+    customizations.forEach((customization) => {
       js += `\n/* ${customization.component} - ${customization.property} */\n${customization.value}`;
     });
 
@@ -403,57 +447,57 @@ export class BrandingModel {
   static async createDefaultTemplates(): Promise<BrandingTemplate[]> {
     const defaultTemplates = [
       {
-        name: 'Professional Blue',
-        description: 'Clean and professional blue theme',
-        category: 'PROFESSIONAL' as const,
+        name: "Professional Blue",
+        description: "Clean and professional blue theme",
+        category: "PROFESSIONAL" as const,
         config: {
-          primaryColor: '#3b82f6',
-          secondaryColor: '#10b981',
-          accentColor: '#f59e0b',
-          backgroundColor: '#ffffff',
-          textColor: '#1f2937',
-          fontFamily: 'Inter, sans-serif'
-        }
+          primaryColor: "#3b82f6",
+          secondaryColor: "#10b981",
+          accentColor: "#f59e0b",
+          backgroundColor: "#ffffff",
+          textColor: "#1f2937",
+          fontFamily: "Inter, sans-serif",
+        },
       },
       {
-        name: 'Creative Purple',
-        description: 'Creative and modern purple theme',
-        category: 'CREATIVE' as const,
+        name: "Creative Purple",
+        description: "Creative and modern purple theme",
+        category: "CREATIVE" as const,
         config: {
-          primaryColor: '#8b5cf6',
-          secondaryColor: '#06b6d4',
-          accentColor: '#f97316',
-          backgroundColor: '#fafafa',
-          textColor: '#374151',
-          fontFamily: 'Poppins, sans-serif'
-        }
+          primaryColor: "#8b5cf6",
+          secondaryColor: "#06b6d4",
+          accentColor: "#f97316",
+          backgroundColor: "#fafafa",
+          textColor: "#374151",
+          fontFamily: "Poppins, sans-serif",
+        },
       },
       {
-        name: 'Minimal Gray',
-        description: 'Minimal and clean gray theme',
-        category: 'MINIMAL' as const,
+        name: "Minimal Gray",
+        description: "Minimal and clean gray theme",
+        category: "MINIMAL" as const,
         config: {
-          primaryColor: '#6b7280',
-          secondaryColor: '#9ca3af',
-          accentColor: '#ef4444',
-          backgroundColor: '#ffffff',
-          textColor: '#111827',
-          fontFamily: 'System UI, sans-serif'
-        }
+          primaryColor: "#6b7280",
+          secondaryColor: "#9ca3af",
+          accentColor: "#ef4444",
+          backgroundColor: "#ffffff",
+          textColor: "#111827",
+          fontFamily: "System UI, sans-serif",
+        },
       },
       {
-        name: 'Corporate Green',
-        description: 'Corporate and trustworthy green theme',
-        category: 'CORPORATE' as const,
+        name: "Corporate Green",
+        description: "Corporate and trustworthy green theme",
+        category: "CORPORATE" as const,
         config: {
-          primaryColor: '#059669',
-          secondaryColor: '#0d9488',
-          accentColor: '#dc2626',
-          backgroundColor: '#f9fafb',
-          textColor: '#1f2937',
-          fontFamily: 'Roboto, sans-serif'
-        }
-      }
+          primaryColor: "#059669",
+          secondaryColor: "#0d9488",
+          accentColor: "#dc2626",
+          backgroundColor: "#f9fafb",
+          textColor: "#1f2937",
+          fontFamily: "Roboto, sans-serif",
+        },
+      },
     ];
 
     const createdTemplates: BrandingTemplate[] = [];
@@ -479,7 +523,7 @@ export class BrandingModel {
       assets,
       customizations,
       css: await this.generateBrandingCSS(brandingId),
-      js: await this.generateBrandingJS(brandingId)
+      js: await this.generateBrandingJS(brandingId),
     };
   }
 
@@ -498,14 +542,17 @@ export class BrandingModel {
       customizations,
       css: await this.generateBrandingCSS(brandingId),
       js: await this.generateBrandingJS(brandingId),
-      exportedAt: new Date().toISOString()
+      exportedAt: new Date().toISOString(),
     };
   }
 
-  static async importBranding(accountId: string, brandingData: any): Promise<BrandingConfig> {
+  static async importBranding(
+    accountId: string,
+    brandingData: any
+  ): Promise<BrandingConfig> {
     const branding = await this.createConfig({
       accountId,
-      ...brandingData.branding
+      ...brandingData.branding,
     });
 
     // Import assets
@@ -541,5 +588,3 @@ export class BrandingModel {
     return branding;
   }
 }
-
-

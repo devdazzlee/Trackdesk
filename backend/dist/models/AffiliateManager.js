@@ -5,81 +5,37 @@ const client_1 = require("@prisma/client");
 const prisma = new client_1.PrismaClient();
 class AffiliateManagerModel {
     static async create(data) {
-        return await prisma.affiliateManager.create({
+        return (await prisma.affiliateManager.create({
             data: {
-                userId: data.userId,
-                firstName: data.firstName,
-                lastName: data.lastName,
-                email: data.email,
-                phone: data.phone,
-                department: data.department,
-                role: data.role,
-                permissions: data.permissions || {
-                    affiliates: {
-                        view: true,
-                        create: false,
-                        edit: false,
-                        delete: false,
-                        approve: false,
-                        suspend: false
-                    },
-                    offers: {
-                        view: true,
-                        create: false,
-                        edit: false,
-                        delete: false,
-                        approve: false
-                    },
-                    payouts: {
-                        view: true,
-                        approve: false,
-                        process: false,
-                        reject: false
-                    },
-                    reports: {
-                        view: true,
-                        export: false,
-                        schedule: false
-                    },
-                    settings: {
-                        view: false,
-                        edit: false
-                    },
-                    communications: {
-                        send: false,
-                        view: true,
-                        manage: false
-                    }
-                },
-                assignedAffiliates: data.assignedAffiliates || [],
-                assignedOffers: data.assignedOffers || [],
-                assignedRegions: data.assignedRegions || [],
-                status: data.status || 'ACTIVE'
-            }
-        });
+                affiliateId: data.userId,
+                managerId: data.userId,
+                accountId: "default",
+                status: data.status || "ACTIVE",
+            },
+        }));
     }
     static async findById(id) {
-        return await prisma.affiliateManager.findUnique({
-            where: { id }
-        });
+        return (await prisma.affiliateManager.findUnique({
+            where: { id },
+        }));
     }
     static async findByUserId(userId) {
-        return await prisma.affiliateManager.findUnique({
-            where: { userId }
-        });
+        return (await prisma.affiliateManager.findUnique({
+            where: { affiliateId: userId },
+        }));
     }
     static async update(id, data) {
-        return await prisma.affiliateManager.update({
+        return (await prisma.affiliateManager.update({
             where: { id },
             data: {
                 ...data,
-                updatedAt: new Date()
-            }
-        });
+                updatedAt: new Date(),
+            },
+        }));
     }
     static async delete(id) {
         await prisma.affiliateManager.delete({
-            where: { id }
+            where: { id },
         });
     }
     static async list(filters = {}, page = 1, limit = 20) {
@@ -95,20 +51,20 @@ class AffiliateManagerModel {
             where.OR = [
                 { firstName: { contains: filters.search } },
                 { lastName: { contains: filters.search } },
-                { email: { contains: filters.search } }
+                { email: { contains: filters.search } },
             ];
         }
-        return await prisma.affiliateManager.findMany({
+        return (await prisma.affiliateManager.findMany({
             where,
             skip,
             take: limit,
-            orderBy: { createdAt: 'desc' }
-        });
+            orderBy: { createdAt: "desc" },
+        }));
     }
     static async assignAffiliate(managerId, affiliateId) {
         const manager = await this.findById(managerId);
         if (!manager) {
-            throw new Error('Manager not found');
+            throw new Error("Manager not found");
         }
         const assignedAffiliates = [...manager.assignedAffiliates, affiliateId];
         return await this.update(managerId, { assignedAffiliates });
@@ -116,15 +72,15 @@ class AffiliateManagerModel {
     static async unassignAffiliate(managerId, affiliateId) {
         const manager = await this.findById(managerId);
         if (!manager) {
-            throw new Error('Manager not found');
+            throw new Error("Manager not found");
         }
-        const assignedAffiliates = manager.assignedAffiliates.filter(id => id !== affiliateId);
+        const assignedAffiliates = manager.assignedAffiliates.filter((id) => id !== affiliateId);
         return await this.update(managerId, { assignedAffiliates });
     }
     static async assignOffer(managerId, offerId) {
         const manager = await this.findById(managerId);
         if (!manager) {
-            throw new Error('Manager not found');
+            throw new Error("Manager not found");
         }
         const assignedOffers = [...manager.assignedOffers, offerId];
         return await this.update(managerId, { assignedOffers });
@@ -132,44 +88,41 @@ class AffiliateManagerModel {
     static async unassignOffer(managerId, offerId) {
         const manager = await this.findById(managerId);
         if (!manager) {
-            throw new Error('Manager not found');
+            throw new Error("Manager not found");
         }
-        const assignedOffers = manager.assignedOffers.filter(id => id !== offerId);
+        const assignedOffers = manager.assignedOffers.filter((id) => id !== offerId);
         return await this.update(managerId, { assignedOffers });
     }
     static async updatePermissions(managerId, permissions) {
         const manager = await this.findById(managerId);
         if (!manager) {
-            throw new Error('Manager not found');
+            throw new Error("Manager not found");
         }
         const updatedPermissions = {
             ...manager.permissions,
-            ...permissions
+            ...permissions,
         };
         return await this.update(managerId, { permissions: updatedPermissions });
     }
     static async recordActivity(managerId, action, resource, resourceId, details, ipAddress, userAgent) {
-        return await prisma.managerActivity.create({
+        return (await prisma.managerActivity.create({
             data: {
                 managerId,
-                action,
-                resource,
-                resourceId,
-                details,
-                ipAddress,
-                userAgent,
-                timestamp: new Date()
-            }
-        });
+                affiliateId: resourceId,
+                type: action,
+                description: resource,
+                data: details,
+            },
+        }));
     }
     static async getActivities(managerId, page = 1, limit = 50) {
         const skip = (page - 1) * limit;
-        return await prisma.managerActivity.findMany({
+        return (await prisma.managerActivity.findMany({
             where: { managerId },
             skip,
             take: limit,
-            orderBy: { timestamp: 'desc' }
-        });
+            orderBy: { timestamp: "desc" },
+        }));
     }
     static async getAssignedAffiliates(managerId, page = 1, limit = 20) {
         const manager = await this.findById(managerId);
@@ -179,14 +132,14 @@ class AffiliateManagerModel {
         const skip = (page - 1) * limit;
         return await prisma.affiliateProfile.findMany({
             where: {
-                id: { in: manager.assignedAffiliates }
+                id: { in: manager.assignedAffiliates },
             },
             include: {
-                user: true
+                user: true,
             },
             skip,
             take: limit,
-            orderBy: { createdAt: 'desc' }
+            orderBy: { createdAt: "desc" },
         });
     }
     static async getAssignedOffers(managerId, page = 1, limit = 20) {
@@ -197,11 +150,11 @@ class AffiliateManagerModel {
         const skip = (page - 1) * limit;
         return await prisma.offer.findMany({
             where: {
-                id: { in: manager.assignedOffers }
+                id: { in: manager.assignedOffers },
             },
             skip,
             take: limit,
-            orderBy: { createdAt: 'desc' }
+            orderBy: { createdAt: "desc" },
         });
     }
     static async getManagerStats(managerId, startDate, endDate) {
@@ -213,36 +166,39 @@ class AffiliateManagerModel {
         if (startDate && endDate) {
             where.createdAt = {
                 gte: startDate,
-                lte: endDate
+                lte: endDate,
             };
         }
         const affiliates = await prisma.affiliateProfile.findMany({
-            where
+            where,
         });
         const conversions = await prisma.conversion.findMany({
             where: {
-                affiliateId: { in: manager.assignedAffiliates }
-            }
+                affiliateId: { in: manager.assignedAffiliates },
+            },
         });
         const payouts = await prisma.payout.findMany({
             where: {
-                affiliateId: { in: manager.assignedAffiliates }
-            }
+                affiliateId: { in: manager.assignedAffiliates },
+            },
         });
         const stats = {
             totalAffiliates: affiliates.length,
-            activeAffiliates: affiliates.filter(a => a.status === 'ACTIVE').length,
+            activeAffiliates: affiliates.filter((a) => a.status === "ACTIVE").length,
             totalCommissions: conversions.reduce((sum, c) => sum + c.commissionAmount, 0),
             totalPayouts: payouts.reduce((sum, p) => sum + p.amount, 0),
-            averageAffiliateEarnings: affiliates.length > 0 ? affiliates.reduce((sum, a) => sum + a.totalEarnings, 0) / affiliates.length : 0,
+            averageAffiliateEarnings: affiliates.length > 0
+                ? affiliates.reduce((sum, a) => sum + a.totalEarnings, 0) /
+                    affiliates.length
+                : 0,
             conversionRate: 0,
-            retentionRate: 0
+            retentionRate: 0,
         };
         const totalClicks = affiliates.reduce((sum, a) => sum + a.totalClicks, 0);
         if (totalClicks > 0) {
             stats.conversionRate = (conversions.length / totalClicks) * 100;
         }
-        const activeAffiliates = affiliates.filter(a => a.status === 'ACTIVE').length;
+        const activeAffiliates = affiliates.filter((a) => a.status === "ACTIVE").length;
         if (affiliates.length > 0) {
             stats.retentionRate = (activeAffiliates / affiliates.length) * 100;
         }
@@ -251,10 +207,10 @@ class AffiliateManagerModel {
     static async getPerformanceReport(managerId, period) {
         const manager = await this.findById(managerId);
         if (!manager) {
-            throw new Error('Manager not found');
+            throw new Error("Manager not found");
         }
         const stats = await this.getManagerStats(managerId);
-        return await prisma.managerPerformance.create({
+        return (await prisma.managerPerformance.create({
             data: {
                 managerId,
                 period,
@@ -266,10 +222,10 @@ class AffiliateManagerModel {
                     totalPayouts: stats.totalPayouts,
                     averageAffiliateEarnings: stats.averageAffiliateEarnings,
                     conversionRate: stats.conversionRate,
-                    retentionRate: stats.retentionRate
-                }
-            }
-        });
+                    retentionRate: stats.retentionRate,
+                },
+            },
+        }));
     }
     static async getManagerDashboard(managerId) {
         const manager = await this.findById(managerId);
@@ -286,7 +242,7 @@ class AffiliateManagerModel {
             recentActivities,
             assignedAffiliates,
             assignedOffers,
-            permissions: manager.permissions
+            permissions: manager.permissions,
         };
     }
     static async checkPermission(managerId, resource, action) {
@@ -300,26 +256,28 @@ class AffiliateManagerModel {
     static async bulkAssignAffiliates(managerId, affiliateIds) {
         const manager = await this.findById(managerId);
         if (!manager) {
-            throw new Error('Manager not found');
+            throw new Error("Manager not found");
         }
-        const assignedAffiliates = [...new Set([...manager.assignedAffiliates, ...affiliateIds])];
+        const assignedAffiliates = [
+            ...new Set([...manager.assignedAffiliates, ...affiliateIds]),
+        ];
         return await this.update(managerId, { assignedAffiliates });
     }
     static async bulkUnassignAffiliates(managerId, affiliateIds) {
         const manager = await this.findById(managerId);
         if (!manager) {
-            throw new Error('Manager not found');
+            throw new Error("Manager not found");
         }
-        const assignedAffiliates = manager.assignedAffiliates.filter(id => !affiliateIds.includes(id));
+        const assignedAffiliates = manager.assignedAffiliates.filter((id) => !affiliateIds.includes(id));
         return await this.update(managerId, { assignedAffiliates });
     }
     static async getManagerHierarchy() {
         const managers = await prisma.affiliateManager.findMany({
-            where: { status: 'ACTIVE' },
-            orderBy: { role: 'asc' }
+            where: { status: "ACTIVE" },
+            orderBy: { status: "asc" },
         });
         const hierarchy = {};
-        managers.forEach(manager => {
+        managers.forEach((manager) => {
             if (!hierarchy[manager.role]) {
                 hierarchy[manager.role] = [];
             }
@@ -336,24 +294,24 @@ class AffiliateManagerModel {
         if (startDate && endDate) {
             where.createdAt = {
                 gte: startDate,
-                lte: endDate
+                lte: endDate,
             };
         }
         const affiliates = await prisma.affiliateProfile.findMany({
             where,
             include: {
-                user: true
-            }
+                user: true,
+            },
         });
         const conversions = await prisma.conversion.findMany({
             where: {
-                affiliateId: { in: manager.assignedAffiliates }
-            }
+                affiliateId: { in: manager.assignedAffiliates },
+            },
         });
         const payouts = await prisma.payout.findMany({
             where: {
-                affiliateId: { in: manager.assignedAffiliates }
-            }
+                affiliateId: { in: manager.assignedAffiliates },
+            },
         });
         return {
             manager,
@@ -365,8 +323,8 @@ class AffiliateManagerModel {
                 totalConversions: conversions.length,
                 totalPayouts: payouts.length,
                 totalCommission: conversions.reduce((sum, c) => sum + c.commissionAmount, 0),
-                totalPayoutAmount: payouts.reduce((sum, p) => sum + p.amount, 0)
-            }
+                totalPayoutAmount: payouts.reduce((sum, p) => sum + p.amount, 0),
+            },
         };
     }
 }

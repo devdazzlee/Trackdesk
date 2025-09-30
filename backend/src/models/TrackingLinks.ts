@@ -1,26 +1,6 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
-
-export interface TrackingLink {
-  id: string;
-  accountId: string;
-  affiliateId: string;
-  offerId: string;
-  name: string;
-  description: string;
-  originalUrl: string;
-  trackingUrl: string;
-  shortUrl?: string;
-  type: 'STANDARD' | 'SMART' | 'DYNAMIC' | 'CUSTOM';
-  status: 'ACTIVE' | 'INACTIVE' | 'PAUSED';
-  settings: TrackingSettings;
-  parameters: TrackingParameter[];
-  rules: TrackingRule[];
-  stats: TrackingStats;
-  createdAt: Date;
-  updatedAt: Date;
-}
 
 export interface TrackingSettings {
   clickTracking: boolean;
@@ -33,7 +13,7 @@ export interface TrackingSettings {
   referrerFiltering: boolean;
   customFilters: CustomFilter[];
   redirectDelay: number; // milliseconds
-  redirectMethod: 'IMMEDIATE' | 'DELAYED' | 'CONDITIONAL';
+  redirectMethod: "IMMEDIATE" | "DELAYED" | "CONDITIONAL";
   landingPage: string;
   fallbackUrl?: string;
   trackingPixels: TrackingPixel[];
@@ -44,14 +24,14 @@ export interface TrackingParameter {
   id: string;
   name: string;
   value: string;
-  type: 'STATIC' | 'DYNAMIC' | 'AFFILIATE' | 'OFFER' | 'CUSTOM';
+  type: "STATIC" | "DYNAMIC" | "AFFILIATE" | "OFFER" | "CUSTOM";
   required: boolean;
   defaultValue?: string;
   validation?: ParameterValidation;
 }
 
 export interface ParameterValidation {
-  type: 'REGEX' | 'LENGTH' | 'FORMAT' | 'CUSTOM';
+  type: "REGEX" | "LENGTH" | "FORMAT" | "CUSTOM";
   pattern?: string;
   minLength?: number;
   maxLength?: number;
@@ -69,13 +49,27 @@ export interface TrackingRule {
 
 export interface TrackingCondition {
   field: string;
-  operator: 'EQUALS' | 'NOT_EQUALS' | 'CONTAINS' | 'GREATER_THAN' | 'LESS_THAN' | 'IN' | 'NOT_IN' | 'REGEX';
+  operator:
+    | "EQUALS"
+    | "NOT_EQUALS"
+    | "CONTAINS"
+    | "GREATER_THAN"
+    | "LESS_THAN"
+    | "IN"
+    | "NOT_IN"
+    | "REGEX";
   value: any;
-  logic: 'AND' | 'OR';
+  logic: "AND" | "OR";
 }
 
 export interface TrackingAction {
-  type: 'REDIRECT' | 'BLOCK' | 'MODIFY_URL' | 'ADD_PARAMETER' | 'REMOVE_PARAMETER' | 'CUSTOM';
+  type:
+    | "REDIRECT"
+    | "BLOCK"
+    | "MODIFY_URL"
+    | "ADD_PARAMETER"
+    | "REMOVE_PARAMETER"
+    | "CUSTOM";
   parameters: Record<string, any>;
   enabled: boolean;
 }
@@ -83,9 +77,9 @@ export interface TrackingAction {
 export interface CustomFilter {
   id: string;
   name: string;
-  type: 'GEO' | 'DEVICE' | 'TIME' | 'IP' | 'REFERRER' | 'CUSTOM';
+  type: "GEO" | "DEVICE" | "TIME" | "IP" | "REFERRER" | "CUSTOM";
   conditions: TrackingCondition[];
-  action: 'ALLOW' | 'BLOCK' | 'REDIRECT';
+  action: "ALLOW" | "BLOCK" | "REDIRECT";
   redirectUrl?: string;
   enabled: boolean;
 }
@@ -94,7 +88,7 @@ export interface TrackingPixel {
   id: string;
   name: string;
   url: string;
-  position: 'BEFORE_REDIRECT' | 'AFTER_REDIRECT' | 'ON_CONVERSION';
+  position: "BEFORE_REDIRECT" | "AFTER_REDIRECT" | "ON_CONVERSION";
   parameters: Record<string, string>;
   enabled: boolean;
 }
@@ -103,7 +97,7 @@ export interface PostbackUrl {
   id: string;
   name: string;
   url: string;
-  method: 'GET' | 'POST';
+  method: "GET" | "POST";
   parameters: Record<string, string>;
   headers: Record<string, string>;
   enabled: boolean;
@@ -155,22 +149,26 @@ export interface ConversionEvent {
 }
 
 export class TrackingLinksModel {
-  static async create(data: Partial<TrackingLink>): Promise<TrackingLink> {
-    const trackingUrl = this.generateTrackingUrl(data.accountId!, data.affiliateId!, data.offerId!);
-    
-    return await prisma.trackingLink.create({
+  static async create(data: any): Promise<any> {
+    const trackingUrl = await this.generateTrackingUrl(
+      data.accountId!,
+      data.affiliateId!,
+      data.offerId!
+    );
+
+    const result = await prisma.trackingLink.create({
       data: {
         accountId: data.accountId!,
         affiliateId: data.affiliateId!,
         offerId: data.offerId!,
         name: data.name!,
-        description: data.description || '',
+        description: data.description || "",
         originalUrl: data.originalUrl!,
         trackingUrl,
-        shortUrl: data.shortUrl,
-        type: data.type || 'STANDARD',
-        status: data.status || 'ACTIVE',
-        settings: data.settings || {
+        shortCode: data.shortCode || Math.random().toString(36).substring(2, 8),
+        type: data.type || "STANDARD",
+        status: data.status || "ACTIVE",
+        settings: (data.settings || {
           clickTracking: true,
           conversionTracking: true,
           fraudDetection: false,
@@ -181,13 +179,13 @@ export class TrackingLinksModel {
           referrerFiltering: false,
           customFilters: [],
           redirectDelay: 0,
-          redirectMethod: 'IMMEDIATE',
+          redirectMethod: "IMMEDIATE",
           landingPage: data.originalUrl!,
           trackingPixels: [],
-          postbackUrls: []
-        },
-        parameters: data.parameters || [],
-        rules: data.rules || [],
+          postbackUrls: [],
+        }) as any,
+        parameters: (data.parameters || []) as any,
+        rules: (data.rules || []) as any,
         stats: {
           totalClicks: 0,
           uniqueClicks: 0,
@@ -199,46 +197,51 @@ export class TrackingLinksModel {
           byDevice: {},
           bySource: {},
           byHour: {},
-          byDay: {}
-        }
-      }
-    }) as TrackingLink;
+          byDay: {},
+        } as any,
+      },
+    });
+    return result;
   }
 
-  static async findById(id: string): Promise<TrackingLink | null> {
+  static async findById(id: string): Promise<any | null> {
     return await prisma.trackingLink.findUnique({
-      where: { id }
-    }) as TrackingLink | null;
+      where: { id },
+    });
   }
 
-  static async findByTrackingUrl(trackingUrl: string): Promise<TrackingLink | null> {
+  static async findByTrackingUrl(trackingUrl: string): Promise<any | null> {
     return await prisma.trackingLink.findFirst({
       where: {
         trackingUrl,
-        status: 'ACTIVE'
-      }
-    }) as TrackingLink | null;
+        status: "ACTIVE",
+      },
+    });
   }
 
-  static async update(id: string, data: Partial<TrackingLink>): Promise<TrackingLink> {
+  static async update(id: string, data: any): Promise<any> {
     return await prisma.trackingLink.update({
       where: { id },
       data: {
         ...data,
-        updatedAt: new Date()
-      }
-    }) as TrackingLink;
+        settings: data.settings as any,
+        parameters: data.parameters as any,
+        rules: data.rules as any,
+        stats: data.stats as any,
+        updatedAt: new Date(),
+      },
+    });
   }
 
   static async delete(id: string): Promise<void> {
     await prisma.trackingLink.delete({
-      where: { id }
+      where: { id },
     });
   }
 
-  static async list(accountId: string, filters: any = {}): Promise<TrackingLink[]> {
+  static async list(accountId: string, filters: any = {}): Promise<any[]> {
     const where: any = { accountId };
-    
+
     if (filters.status) where.status = filters.status;
     if (filters.type) where.type = filters.type;
     if (filters.affiliateId) where.affiliateId = filters.affiliateId;
@@ -246,19 +249,22 @@ export class TrackingLinksModel {
 
     return await prisma.trackingLink.findMany({
       where,
-      orderBy: { createdAt: 'desc' }
-    }) as TrackingLink[];
+      orderBy: { createdAt: "desc" },
+    });
   }
 
-  static async processClick(trackingUrl: string, clickData: any): Promise<{ redirect: boolean; url?: string; reason?: string }> {
+  static async processClick(
+    trackingUrl: string,
+    clickData: any
+  ): Promise<{ redirect: boolean; url?: string; reason?: string }> {
     const trackingLink = await this.findByTrackingUrl(trackingUrl);
     if (!trackingLink) {
-      return { redirect: false, reason: 'Tracking link not found' };
+      return { redirect: false, reason: "Tracking link not found" };
     }
 
     // Check if link is active
-    if (trackingLink.status !== 'ACTIVE') {
-      return { redirect: false, reason: 'Tracking link is not active' };
+    if (trackingLink.status !== "ACTIVE") {
+      return { redirect: false, reason: "Tracking link is not active" };
     }
 
     // Apply filters
@@ -269,80 +275,100 @@ export class TrackingLinksModel {
 
     // Apply rules
     const ruleResult = await this.applyRules(trackingLink, clickData);
-    
+
     // Record click
-    if (trackingLink.settings.clickTracking) {
+    if ((trackingLink.settings as any).clickTracking) {
       await this.recordClick(trackingLink.id, clickData);
     }
 
     // Fire tracking pixels
-    if (trackingLink.settings.trackingPixels) {
-      await this.fireTrackingPixels(trackingLink.settings.trackingPixels, clickData);
+    if ((trackingLink.settings as any).trackingPixels) {
+      await this.fireTrackingPixels(
+        (trackingLink.settings as any).trackingPixels,
+        clickData
+      );
     }
 
     // Determine redirect URL
-    let redirectUrl = ruleResult.redirectUrl || trackingLink.settings.landingPage;
-    
+    let redirectUrl =
+      ruleResult.redirectUrl || (trackingLink.settings as any).landingPage;
+
     // Add tracking parameters
-    redirectUrl = this.addTrackingParameters(redirectUrl, trackingLink, clickData);
+    redirectUrl = this.addTrackingParameters(
+      redirectUrl,
+      trackingLink,
+      clickData
+    );
 
     return { redirect: true, url: redirectUrl };
   }
 
-  private static async applyFilters(trackingLink: TrackingLink, clickData: any): Promise<{ allowed: boolean; reason?: string }> {
+  private static async applyFilters(
+    trackingLink: any,
+    clickData: any
+  ): Promise<{ allowed: boolean; reason?: string }> {
     const settings = trackingLink.settings;
 
     // Geo blocking
-    if (settings.geoBlocking) {
+    if ((settings as any).geoBlocking) {
       const country = clickData.country;
       if (country && this.isCountryBlocked(country)) {
-        return { allowed: false, reason: 'Country blocked' };
+        return { allowed: false, reason: "Country blocked" };
       }
     }
 
     // Device filtering
-    if (settings.deviceFiltering) {
+    if ((settings as any).deviceFiltering) {
       const device = clickData.device;
       if (device && this.isDeviceBlocked(device)) {
-        return { allowed: false, reason: 'Device blocked' };
+        return { allowed: false, reason: "Device blocked" };
       }
     }
 
     // Time filtering
-    if (settings.timeFiltering) {
+    if ((settings as any).timeFiltering) {
       const hour = new Date().getHours();
       if (this.isTimeBlocked(hour)) {
-        return { allowed: false, reason: 'Time blocked' };
+        return { allowed: false, reason: "Time blocked" };
       }
     }
 
     // IP filtering
-    if (settings.ipFiltering) {
+    if ((settings as any).ipFiltering) {
       const ipAddress = clickData.ipAddress;
       if (ipAddress && this.isIPBlocked(ipAddress)) {
-        return { allowed: false, reason: 'IP blocked' };
+        return { allowed: false, reason: "IP blocked" };
       }
     }
 
     // Referrer filtering
-    if (settings.referrerFiltering) {
+    if ((settings as any).referrerFiltering) {
       const referrer = clickData.referrer;
       if (referrer && this.isReferrerBlocked(referrer)) {
-        return { allowed: false, reason: 'Referrer blocked' };
+        return { allowed: false, reason: "Referrer blocked" };
       }
     }
 
     // Custom filters
-    for (const filter of settings.customFilters) {
+    for (const filter of (settings as any).customFilters) {
       if (!filter.enabled) continue;
 
-      const conditionResult = this.evaluateConditions(filter.conditions, clickData);
+      const conditionResult = this.evaluateConditions(
+        filter.conditions,
+        clickData
+      );
       if (conditionResult) {
         switch (filter.action) {
-          case 'BLOCK':
-            return { allowed: false, reason: `Blocked by filter: ${filter.name}` };
-          case 'REDIRECT':
-            return { allowed: true, reason: `Redirected by filter: ${filter.name}` };
+          case "BLOCK":
+            return {
+              allowed: false,
+              reason: `Blocked by filter: ${filter.name}`,
+            };
+          case "REDIRECT":
+            return {
+              allowed: true,
+              reason: `Redirected by filter: ${filter.name}`,
+            };
         }
       }
     }
@@ -350,29 +376,37 @@ export class TrackingLinksModel {
     return { allowed: true };
   }
 
-  private static async applyRules(trackingLink: TrackingLink, clickData: any): Promise<{ redirectUrl?: string }> {
-    const rules = trackingLink.rules.sort((a, b) => b.priority - a.priority);
-    
+  private static async applyRules(
+    trackingLink: any,
+    clickData: any
+  ): Promise<{ redirectUrl?: string }> {
+    const rules = (trackingLink.rules as any).sort(
+      (a, b) => b.priority - a.priority
+    );
+
     for (const rule of rules) {
       if (!rule.enabled) continue;
 
-      const conditionResult = this.evaluateConditions(rule.conditions, clickData);
+      const conditionResult = this.evaluateConditions(
+        rule.conditions,
+        clickData
+      );
       if (conditionResult) {
         for (const action of rule.actions) {
           if (!action.enabled) continue;
 
           switch (action.type) {
-            case 'REDIRECT':
+            case "REDIRECT":
               return { redirectUrl: action.parameters.url };
-            case 'BLOCK':
+            case "BLOCK":
               return { redirectUrl: undefined };
-            case 'MODIFY_URL':
+            case "MODIFY_URL":
               // Implement URL modification
               break;
-            case 'ADD_PARAMETER':
+            case "ADD_PARAMETER":
               // Implement parameter addition
               break;
-            case 'REMOVE_PARAMETER':
+            case "REMOVE_PARAMETER":
               // Implement parameter removal
               break;
           }
@@ -383,46 +417,56 @@ export class TrackingLinksModel {
     return {};
   }
 
-  private static evaluateConditions(conditions: TrackingCondition[], data: any): boolean {
+  private static evaluateConditions(
+    conditions: TrackingCondition[],
+    data: any
+  ): boolean {
     if (conditions.length === 0) return true;
 
     let result = true;
-    let logic = 'AND';
+    let logic = "AND";
 
     for (const condition of conditions) {
       const conditionResult = this.evaluateCondition(condition, data);
-      
-      if (logic === 'AND') {
+
+      if (logic === "AND") {
         result = result && conditionResult;
       } else {
         result = result || conditionResult;
       }
-      
+
       logic = condition.logic;
     }
 
     return result;
   }
 
-  private static evaluateCondition(condition: TrackingCondition, data: any): boolean {
+  private static evaluateCondition(
+    condition: TrackingCondition,
+    data: any
+  ): boolean {
     const value = this.getFieldValue(data, condition.field);
-    
+
     switch (condition.operator) {
-      case 'EQUALS':
+      case "EQUALS":
         return value === condition.value;
-      case 'NOT_EQUALS':
+      case "NOT_EQUALS":
         return value !== condition.value;
-      case 'CONTAINS':
+      case "CONTAINS":
         return String(value).includes(String(condition.value));
-      case 'GREATER_THAN':
+      case "GREATER_THAN":
         return Number(value) > Number(condition.value);
-      case 'LESS_THAN':
+      case "LESS_THAN":
         return Number(value) < Number(condition.value);
-      case 'IN':
-        return Array.isArray(condition.value) && condition.value.includes(value);
-      case 'NOT_IN':
-        return Array.isArray(condition.value) && !condition.value.includes(value);
-      case 'REGEX':
+      case "IN":
+        return (
+          Array.isArray(condition.value) && condition.value.includes(value)
+        );
+      case "NOT_IN":
+        return (
+          Array.isArray(condition.value) && !condition.value.includes(value)
+        );
+      case "REGEX":
         try {
           const regex = new RegExp(condition.value);
           return regex.test(String(value));
@@ -435,25 +479,25 @@ export class TrackingLinksModel {
   }
 
   private static getFieldValue(data: any, field: string): any {
-    const fields = field.split('.');
+    const fields = field.split(".");
     let value = data;
-    
+
     for (const f of fields) {
       value = value?.[f];
     }
-    
+
     return value;
   }
 
   private static isCountryBlocked(country: string): boolean {
     // Implement country blocking logic
-    const blockedCountries = ['XX', 'YY']; // Example blocked countries
+    const blockedCountries = ["XX", "YY"]; // Example blocked countries
     return blockedCountries.includes(country);
   }
 
   private static isDeviceBlocked(device: string): boolean {
     // Implement device blocking logic
-    const blockedDevices = ['bot', 'crawler']; // Example blocked devices
+    const blockedDevices = ["bot", "crawler"]; // Example blocked devices
     return blockedDevices.includes(device.toLowerCase());
   }
 
@@ -470,12 +514,15 @@ export class TrackingLinksModel {
 
   private static isReferrerBlocked(referrer: string): boolean {
     // Implement referrer blocking logic
-    const blockedReferrers = ['spam.com', 'malicious.com'];
-    return blockedReferrers.some(blocked => referrer.includes(blocked));
+    const blockedReferrers = ["spam.com", "malicious.com"];
+    return blockedReferrers.some((blocked) => referrer.includes(blocked));
   }
 
-  private static async recordClick(trackingLinkId: string, clickData: any): Promise<ClickEvent> {
-    return await prisma.clickEvent.create({
+  private static async recordClick(
+    trackingLinkId: string,
+    clickData: any
+  ): Promise<ClickEvent> {
+    return (await prisma.clickEvent.create({
       data: {
         trackingLinkId,
         affiliateId: clickData.affiliateId,
@@ -489,62 +536,78 @@ export class TrackingLinksModel {
         browser: clickData.browser,
         os: clickData.os,
         timestamp: new Date(),
-        data: clickData
-      }
-    }) as ClickEvent;
+        data: clickData as any,
+      },
+    })) as unknown as ClickEvent;
   }
 
-  private static async fireTrackingPixels(pixels: TrackingPixel[], clickData: any): Promise<void> {
+  private static async fireTrackingPixels(
+    pixels: TrackingPixel[],
+    clickData: any
+  ): Promise<void> {
     for (const pixel of pixels) {
       if (!pixel.enabled) continue;
 
-      if (pixel.position === 'BEFORE_REDIRECT') {
+      if (pixel.position === "BEFORE_REDIRECT") {
         // Fire pixel before redirect
         await this.firePixel(pixel, clickData);
       }
     }
   }
 
-  private static async firePixel(pixel: TrackingPixel, data: any): Promise<void> {
+  private static async firePixel(
+    pixel: TrackingPixel,
+    data: any
+  ): Promise<void> {
     // Implement pixel firing logic
     // Replace parameters in pixel URL
     let url = pixel.url;
     for (const [key, value] of Object.entries(pixel.parameters)) {
       const placeholder = `{{${key}}}`;
-      url = url.replace(new RegExp(placeholder, 'g'), String(data[key] || value));
+      url = url.replace(
+        new RegExp(placeholder, "g"),
+        String(data[key] || value)
+      );
     }
 
     // Fire pixel (implement actual HTTP request)
     console.log(`Firing pixel: ${url}`);
   }
 
-  private static addTrackingParameters(url: string, trackingLink: TrackingLink, clickData: any): string {
+  private static addTrackingParameters(
+    url: string,
+    trackingLink: any,
+    clickData: any
+  ): string {
     const urlObj = new URL(url);
-    
+
     // Add tracking parameters
-    for (const param of trackingLink.parameters) {
+    for (const param of trackingLink.parameters as any) {
       let value = param.value;
-      
+
       switch (param.type) {
-        case 'DYNAMIC':
-          value = this.getFieldValue(clickData, param.name) || param.defaultValue || '';
+        case "DYNAMIC":
+          value =
+            this.getFieldValue(clickData, param.name) ||
+            param.defaultValue ||
+            "";
           break;
-        case 'AFFILIATE':
-          value = clickData.affiliateId || '';
+        case "AFFILIATE":
+          value = clickData.affiliateId || "";
           break;
-        case 'OFFER':
-          value = clickData.offerId || '';
+        case "OFFER":
+          value = clickData.offerId || "";
           break;
-        case 'CUSTOM':
+        case "CUSTOM":
           value = this.evaluateCustomParameter(param.value, clickData);
           break;
       }
-      
+
       if (value) {
         urlObj.searchParams.set(param.name, value);
       }
     }
-    
+
     return urlObj.toString();
   }
 
@@ -553,15 +616,18 @@ export class TrackingLinksModel {
     let result = formula;
     for (const [key, value] of Object.entries(data)) {
       const placeholder = `{{${key}}}`;
-      result = result.replace(new RegExp(placeholder, 'g'), String(value));
+      result = result.replace(new RegExp(placeholder, "g"), String(value));
     }
     return result;
   }
 
-  static async recordConversion(trackingLinkId: string, conversionData: any): Promise<ConversionEvent> {
+  static async recordConversion(
+    trackingLinkId: string,
+    conversionData: any
+  ): Promise<ConversionEvent> {
     const trackingLink = await this.findById(trackingLinkId);
     if (!trackingLink) {
-      throw new Error('Tracking link not found');
+      throw new Error("Tracking link not found");
     }
 
     // Find the corresponding click event
@@ -569,17 +635,17 @@ export class TrackingLinksModel {
       where: {
         trackingLinkId,
         affiliateId: conversionData.affiliateId,
-        offerId: conversionData.offerId
+        offerId: conversionData.offerId,
       },
-      orderBy: { timestamp: 'desc' }
+      orderBy: { timestamp: "desc" },
     });
 
     if (!clickEvent) {
-      throw new Error('Click event not found');
+      throw new Error("Click event not found");
     }
 
     // Create conversion event
-    const conversionEvent = await prisma.conversionEvent.create({
+    const conversionEvent = (await prisma.conversionEvent.create({
       data: {
         trackingLinkId,
         clickEventId: clickEvent.id,
@@ -588,16 +654,19 @@ export class TrackingLinksModel {
         value: conversionData.value || 0,
         commission: conversionData.commission || 0,
         timestamp: new Date(),
-        data: conversionData
-      }
-    }) as ConversionEvent;
+        data: conversionData as any,
+      },
+    })) as unknown as ConversionEvent;
 
     // Update tracking link stats
     await this.updateStats(trackingLinkId);
 
     // Fire postback URLs
-    if (trackingLink.settings.postbackUrls) {
-      await this.firePostbacks(trackingLink.settings.postbackUrls, conversionData);
+    if ((trackingLink.settings as any).postbackUrls) {
+      await this.firePostbacks(
+        (trackingLink.settings as any).postbackUrls,
+        conversionData
+      );
     }
 
     return conversionEvent;
@@ -609,43 +678,48 @@ export class TrackingLinksModel {
 
     // Get click and conversion counts
     const totalClicks = await prisma.clickEvent.count({
-      where: { trackingLinkId }
+      where: { trackingLinkId },
     });
 
-    const uniqueClicks = await prisma.clickEvent.groupBy({
-      by: ['ipAddress'],
-      where: { trackingLinkId }
-    }).then(result => result.length);
+    const uniqueClicks = await prisma.clickEvent
+      .groupBy({
+        by: ["ipAddress"],
+        where: { trackingLinkId },
+      })
+      .then((result) => result.length);
 
     const conversions = await prisma.conversionEvent.count({
-      where: { trackingLinkId }
+      where: { trackingLinkId },
     });
 
     const revenue = await prisma.conversionEvent.aggregate({
       where: { trackingLinkId },
-      _sum: { value: true }
+      _sum: { value: true },
     });
 
     const commission = await prisma.conversionEvent.aggregate({
       where: { trackingLinkId },
-      _sum: { commission: true }
+      _sum: { commission: true },
     });
 
     // Update stats
     const stats: TrackingStats = {
-      ...trackingLink.stats,
+      ...(trackingLink.stats as any),
       totalClicks,
       uniqueClicks,
       conversions,
       revenue: revenue._sum.value || 0,
       commission: commission._sum.commission || 0,
-      conversionRate: totalClicks > 0 ? (conversions / totalClicks) * 100 : 0
+      conversionRate: totalClicks > 0 ? (conversions / totalClicks) * 100 : 0,
     };
 
-    await this.update(trackingLinkId, { stats });
+    await this.update(trackingLinkId, { stats: stats as any });
   }
 
-  private static async firePostbacks(postbacks: PostbackUrl[], data: any): Promise<void> {
+  private static async firePostbacks(
+    postbacks: PostbackUrl[],
+    data: any
+  ): Promise<void> {
     for (const postback of postbacks) {
       if (!postback.enabled) continue;
 
@@ -653,7 +727,10 @@ export class TrackingLinksModel {
       let url = postback.url;
       for (const [key, value] of Object.entries(postback.parameters)) {
         const placeholder = `{{${key}}}`;
-        url = url.replace(new RegExp(placeholder, 'g'), String(data[key] || value));
+        url = url.replace(
+          new RegExp(placeholder, "g"),
+          String(data[key] || value)
+        );
       }
 
       // Fire postback (implement actual HTTP request)
@@ -661,12 +738,17 @@ export class TrackingLinksModel {
     }
   }
 
-  static async generateTrackingUrl(accountId: string, affiliateId: string, offerId: string): string {
-    const baseUrl = process.env.TRACKING_BASE_URL || 'https://track.example.com';
+  static async generateTrackingUrl(
+    accountId: string,
+    affiliateId: string,
+    offerId: string
+  ): Promise<string> {
+    const baseUrl =
+      process.env.TRACKING_BASE_URL || "https://track.example.com";
     const path = `/${accountId}/${affiliateId}/${offerId}`;
     const timestamp = Date.now();
     const random = Math.random().toString(36).substring(2, 8);
-    
+
     return `${baseUrl}${path}/${timestamp}-${random}`;
   }
 
@@ -674,62 +756,90 @@ export class TrackingLinksModel {
     // Implement short URL generation
     // This is a simplified implementation
     const shortCode = Math.random().toString(36).substring(2, 8);
-    const baseUrl = process.env.SHORT_URL_BASE || 'https://short.example.com';
-    
+    const baseUrl = process.env.SHORT_URL_BASE || "https://short.example.com";
+
     return `${baseUrl}/${shortCode}`;
   }
 
-  static async getTrackingStats(accountId: string, startDate?: Date, endDate?: Date): Promise<any> {
+  static async getTrackingStats(
+    accountId: string,
+    startDate?: Date,
+    endDate?: Date
+  ): Promise<any> {
     const where: any = { accountId };
-    
+
     if (startDate && endDate) {
       where.createdAt = {
         gte: startDate,
-        lte: endDate
+        lte: endDate,
       };
     }
 
     const trackingLinks = await this.list(accountId);
     const totalClicks = await prisma.clickEvent.count({
-      where: { trackingLink: { accountId } }
+      where: { trackingLink: { accountId } },
     });
     const totalConversions = await prisma.conversionEvent.count({
-      where: { trackingLink: { accountId } }
+      where: { trackingLink: { accountId } },
     });
 
     const stats = {
       totalLinks: trackingLinks.length,
-      activeLinks: trackingLinks.filter(l => l.status === 'ACTIVE').length,
+      activeLinks: trackingLinks.filter((l) => l.status === "ACTIVE").length,
       totalClicks,
       totalConversions,
-      totalRevenue: trackingLinks.reduce((sum, l) => sum + l.stats.revenue, 0),
-      totalCommission: trackingLinks.reduce((sum, l) => sum + l.stats.commission, 0),
+      totalRevenue: trackingLinks.reduce(
+        (sum, l) => sum + (l.stats as any).revenue,
+        0
+      ),
+      totalCommission: trackingLinks.reduce(
+        (sum, l) => sum + (l.stats as any).commission,
+        0
+      ),
       byType: {} as Record<string, number>,
       byStatus: {} as Record<string, number>,
       byAffiliate: {} as Record<string, any>,
-      byOffer: {} as Record<string, any>
+      byOffer: {} as Record<string, any>,
     };
 
     // Aggregate by type, status, affiliate, and offer
-    trackingLinks.forEach(link => {
+    trackingLinks.forEach((link) => {
       stats.byType[link.type] = (stats.byType[link.type] || 0) + 1;
       stats.byStatus[link.status] = (stats.byStatus[link.status] || 0) + 1;
-      
+
       if (!stats.byAffiliate[link.affiliateId]) {
-        stats.byAffiliate[link.affiliateId] = { links: 0, clicks: 0, conversions: 0, revenue: 0 };
+        stats.byAffiliate[link.affiliateId] = {
+          links: 0,
+          clicks: 0,
+          conversions: 0,
+          revenue: 0,
+        };
       }
       stats.byAffiliate[link.affiliateId].links++;
-      stats.byAffiliate[link.affiliateId].clicks += link.stats.totalClicks;
-      stats.byAffiliate[link.affiliateId].conversions += link.stats.conversions;
-      stats.byAffiliate[link.affiliateId].revenue += link.stats.revenue;
-      
+      stats.byAffiliate[link.affiliateId].clicks += (
+        link.stats as any
+      ).totalClicks;
+      stats.byAffiliate[link.affiliateId].conversions += (
+        link.stats as any
+      ).conversions;
+      stats.byAffiliate[link.affiliateId].revenue += (
+        link.stats as any
+      ).revenue;
+
       if (!stats.byOffer[link.offerId]) {
-        stats.byOffer[link.offerId] = { links: 0, clicks: 0, conversions: 0, revenue: 0 };
+        stats.byOffer[link.offerId] = {
+          links: 0,
+          clicks: 0,
+          conversions: 0,
+          revenue: 0,
+        };
       }
       stats.byOffer[link.offerId].links++;
-      stats.byOffer[link.offerId].clicks += link.stats.totalClicks;
-      stats.byOffer[link.offerId].conversions += link.stats.conversions;
-      stats.byOffer[link.offerId].revenue += link.stats.revenue;
+      stats.byOffer[link.offerId].clicks += (link.stats as any).totalClicks;
+      stats.byOffer[link.offerId].conversions += (
+        link.stats as any
+      ).conversions;
+      stats.byOffer[link.offerId].revenue += (link.stats as any).revenue;
     });
 
     return stats;
@@ -741,9 +851,7 @@ export class TrackingLinksModel {
 
     return {
       links,
-      stats
+      stats,
     };
   }
 }
-
-

@@ -2,9 +2,9 @@ export interface ContactSettings {
     id: string;
     accountId: string;
     name: string;
-    type: 'AFFILIATE_CONTACT' | 'SUPPORT_CONTACT' | 'SALES_CONTACT' | 'TECHNICAL_CONTACT' | 'CUSTOM';
+    type: "AFFILIATE_CONTACT" | "SUPPORT_CONTACT" | "SALES_CONTACT" | "TECHNICAL_CONTACT" | "CUSTOM";
     settings: ContactConfiguration;
-    status: 'ACTIVE' | 'INACTIVE';
+    status: "ACTIVE" | "INACTIVE";
     createdAt: Date;
     updatedAt: Date;
 }
@@ -27,7 +27,7 @@ export interface BusinessHours {
     outOfHoursMessage: string;
 }
 export interface DaySchedule {
-    day: 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY';
+    day: "MONDAY" | "TUESDAY" | "WEDNESDAY" | "THURSDAY" | "FRIDAY" | "SATURDAY" | "SUNDAY";
     isWorkingDay: boolean;
     startTime: string;
     endTime: string;
@@ -45,7 +45,7 @@ export interface HolidaySchedule {
     message?: string;
 }
 export interface ContactMethod {
-    type: 'EMAIL' | 'PHONE' | 'CHAT' | 'TICKET' | 'FORM' | 'CUSTOM';
+    type: "EMAIL" | "PHONE" | "CHAT" | "TICKET" | "FORM" | "CUSTOM";
     enabled: boolean;
     settings: Record<string, any>;
     priority: number;
@@ -60,12 +60,12 @@ export interface EscalationRule {
 }
 export interface EscalationCondition {
     field: string;
-    operator: 'EQUALS' | 'NOT_EQUALS' | 'GREATER_THAN' | 'LESS_THAN' | 'CONTAINS' | 'NOT_CONTAINS';
+    operator: "EQUALS" | "NOT_EQUALS" | "GREATER_THAN" | "LESS_THAN" | "CONTAINS" | "NOT_CONTAINS";
     value: any;
-    logic: 'AND' | 'OR';
+    logic: "AND" | "OR";
 }
 export interface EscalationAction {
-    type: 'ASSIGN_TO' | 'NOTIFY' | 'CHANGE_PRIORITY' | 'AUTO_RESPOND' | 'CREATE_TASK';
+    type: "ASSIGN_TO" | "NOTIFY" | "CHANGE_PRIORITY" | "AUTO_RESPOND" | "CREATE_TASK";
     parameters: Record<string, any>;
     enabled: boolean;
 }
@@ -94,7 +94,7 @@ export interface CustomField {
     id: string;
     name: string;
     label: string;
-    type: 'TEXT' | 'EMAIL' | 'PHONE' | 'SELECT' | 'CHECKBOX' | 'RADIO' | 'TEXTAREA' | 'FILE';
+    type: "TEXT" | "EMAIL" | "PHONE" | "SELECT" | "CHECKBOX" | "RADIO" | "TEXTAREA" | "FILE";
     required: boolean;
     options?: string[];
     validation?: FieldValidation;
@@ -113,9 +113,9 @@ export interface ContactMessage {
     toUserId?: string;
     subject: string;
     message: string;
-    type: 'INQUIRY' | 'SUPPORT' | 'SALES' | 'TECHNICAL' | 'GENERAL';
-    priority: 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
-    status: 'NEW' | 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED';
+    type: "INQUIRY" | "SUPPORT" | "SALES" | "TECHNICAL" | "GENERAL";
+    priority: "LOW" | "NORMAL" | "HIGH" | "URGENT";
+    status: "NEW" | "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
     assignedTo?: string;
     tags: string[];
     customFields: Record<string, any>;

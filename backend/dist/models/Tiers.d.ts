@@ -1,15 +1,4 @@
-export interface Tier {
-    id: string;
-    accountId: string;
-    name: string;
-    description: string;
-    level: number;
-    requirements: TierRequirements;
-    benefits: TierBenefits;
-    status: 'ACTIVE' | 'INACTIVE';
-    createdAt: Date;
-    updatedAt: Date;
-}
+import { Tier, TierAssignment, TierProgress } from "@prisma/client";
 export interface TierRequirements {
     minimumClicks: number;
     minimumConversions: number;
@@ -28,30 +17,8 @@ export interface TierBenefits {
     marketingMaterials: boolean;
     dedicatedManager: boolean;
 }
-export interface TierAssignment {
-    id: string;
-    affiliateId: string;
-    tierId: string;
-    assignedAt: Date;
-    assignedBy: string;
-    reason: string;
-    status: 'ACTIVE' | 'INACTIVE' | 'PENDING';
-    expiresAt?: Date;
-}
-export interface TierProgress {
-    id: string;
-    affiliateId: string;
-    tierId: string;
-    currentClicks: number;
-    currentConversions: number;
-    currentEarnings: number;
-    currentReferrals: number;
-    progressPercentage: number;
-    nextTierId?: string;
-    lastUpdated: Date;
-}
 export declare class TiersModel {
-    static create(data: Partial<Tier>): Promise<Tier>;
+    static create(data: any): Promise<Tier>;
     static findById(id: string): Promise<Tier | null>;
     static update(id: string, data: Partial<Tier>): Promise<Tier>;
     static delete(id: string): Promise<void>;

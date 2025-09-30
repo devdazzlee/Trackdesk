@@ -6,7 +6,7 @@ export interface Role {
     permissions: Permission[];
     isSystem: boolean;
     isDefault: boolean;
-    status: 'ACTIVE' | 'INACTIVE';
+    status: "ACTIVE" | "INACTIVE";
     createdAt: Date;
     updatedAt: Date;
 }
@@ -19,7 +19,7 @@ export interface Permission {
 }
 export interface PermissionCondition {
     field: string;
-    operator: 'EQUALS' | 'NOT_EQUALS' | 'CONTAINS' | 'IN' | 'NOT_IN' | 'OWNER' | 'SAME_ACCOUNT';
+    operator: "EQUALS" | "NOT_EQUALS" | "CONTAINS" | "IN" | "NOT_IN" | "OWNER" | "SAME_ACCOUNT";
     value: any;
 }
 export interface UserRole {
@@ -41,15 +41,15 @@ export interface AccessControl {
     roleId?: string;
     permissions: string[];
     conditions: AccessCondition[];
-    status: 'ACTIVE' | 'INACTIVE';
+    status: "ACTIVE" | "INACTIVE";
     createdAt: Date;
     updatedAt: Date;
 }
 export interface AccessCondition {
     field: string;
-    operator: 'EQUALS' | 'NOT_EQUALS' | 'CONTAINS' | 'IN' | 'NOT_IN' | 'OWNER' | 'SAME_ACCOUNT';
+    operator: "EQUALS" | "NOT_EQUALS" | "CONTAINS" | "IN" | "NOT_IN" | "OWNER" | "SAME_ACCOUNT";
     value: any;
-    logic: 'AND' | 'OR';
+    logic: "AND" | "OR";
 }
 export interface AuditLog {
     id: string;
@@ -80,7 +80,7 @@ export interface TwoFactorAuth {
     id: string;
     userId: string;
     accountId: string;
-    method: 'TOTP' | 'SMS' | 'EMAIL' | 'HARDWARE';
+    method: "TOTP" | "SMS" | "EMAIL" | "HARDWARE";
     secret?: string;
     backupCodes: string[];
     isEnabled: boolean;

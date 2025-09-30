@@ -20,13 +20,13 @@ export interface AnuraSettings {
 export interface AnuraCustomRule {
     name: string;
     condition: string;
-    action: 'ALLOW' | 'BLOCK' | 'FLAG' | 'REVIEW';
+    action: "ALLOW" | "BLOCK" | "FLAG" | "REVIEW";
     weight: number;
 }
 export interface AnuraCheck {
     id: string;
     requestId: string;
-    type: 'FRAUD' | 'QUALITY' | 'BOTH';
+    type: "FRAUD" | "QUALITY" | "BOTH";
     data: any;
     result: AnuraResult;
     ipAddress: string;
@@ -39,7 +39,7 @@ export interface AnuraCheck {
 export interface AnuraResult {
     fraudScore: number;
     qualityScore: number;
-    riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+    riskLevel: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
     recommendations: string[];
     blocked: boolean;
     reason?: string;

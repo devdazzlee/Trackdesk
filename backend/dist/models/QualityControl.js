@@ -5,67 +5,64 @@ const client_1 = require("@prisma/client");
 const prisma = new client_1.PrismaClient();
 class QualityControlModel {
     static async createRule(data) {
-        return await prisma.qualityRule.create({
+        return (await prisma.qualityRule.create({
             data: {
+                accountId: data.accountId,
                 name: data.name,
-                description: data.description || '',
-                type: data.type,
-                conditions: data.conditions || [],
-                actions: data.actions || [],
-                status: data.status || 'ACTIVE',
-            }
-        });
+                description: data.description || "",
+                conditions: (data.conditions || []),
+                actions: (data.actions || []),
+                status: data.status || "ACTIVE",
+            },
+        }));
     }
     static async findRuleById(id) {
-        return await prisma.qualityRule.findUnique({
-            where: { id }
-        });
+        return (await prisma.qualityRule.findUnique({
+            where: { id },
+        }));
     }
     static async updateRule(id, data) {
-        return await prisma.qualityRule.update({
+        return (await prisma.qualityRule.update({
             where: { id },
-            data
-        });
+            data: {
+                ...data,
+                conditions: data.conditions,
+                actions: data.actions,
+                updatedAt: new Date(),
+            },
+        }));
     }
     static async deleteRule(id) {
         await prisma.qualityRule.delete({
-            where: { id }
+            where: { id },
         });
     }
     static async listRules(filters = {}) {
         const where = {};
         if (filters.status)
             where.status = filters.status;
-        if (filters.type)
-            where.type = filters.type;
-        return await prisma.qualityRule.findMany({
+        if (filters.accountId)
+            where.accountId = filters.accountId;
+        return (await prisma.qualityRule.findMany({
             where,
-            orderBy: { createdAt: 'desc' }
-        });
+            orderBy: { createdAt: "desc" },
+        }));
     }
     static async performQualityCheck(data, type, affiliateId, clickId, conversionId, offerId) {
-        const activeRules = await this.listRules({ status: 'ACTIVE' });
+        const activeRules = await this.listRules({ status: "ACTIVE" });
         const qualityChecks = [];
         for (const rule of activeRules) {
-            if (rule.type !== type)
-                continue;
             const score = this.calculateQualityScore(rule, data);
             const status = this.determineQualityStatus(score, rule);
             const action = this.executeQualityActions(rule.actions, data);
-            const qualityCheck = await prisma.qualityCheck.create({
+            const qualityCheck = (await prisma.qualityCheck.create({
                 data: {
                     ruleId: rule.id,
-                    type: rule.type,
-                    data,
-                    score,
-                    status,
-                    action,
-                    affiliateId,
-                    clickId,
-                    conversionId,
-                    offerId
-                }
-            });
+                    affiliateId: affiliateId || "",
+                    result: status,
+                    data: data,
+                },
+            }));
             qualityChecks.push(qualityCheck);
         }
         return qualityChecks;
@@ -83,27 +80,35 @@ class QualityControlModel {
     static evaluateCondition(condition, data) {
         const fieldValue = this.getFieldValue(data, condition.field);
         switch (condition.operator) {
-            case 'EQUALS':
+            case "EQUALS":
                 return fieldValue === condition.value ? 1 : 0;
-            case 'NOT_EQUALS':
+            case "NOT_EQUALS":
                 return fieldValue !== condition.value ? 1 : 0;
-            case 'GREATER_THAN':
+            case "GREATER_THAN":
                 return Number(fieldValue) > Number(condition.value) ? 1 : 0;
-            case 'LESS_THAN':
+            case "LESS_THAN":
                 return Number(fieldValue) < Number(condition.value) ? 1 : 0;
-            case 'BETWEEN':
-                const [min, max] = Array.isArray(condition.value) ? condition.value : [0, 0];
+            case "BETWEEN":
+                const [min, max] = Array.isArray(condition.value)
+                    ? condition.value
+                    : [0, 0];
                 return Number(fieldValue) >= min && Number(fieldValue) <= max ? 1 : 0;
-            case 'IN':
-                return Array.isArray(condition.value) && condition.value.includes(fieldValue) ? 1 : 0;
-            case 'NOT_IN':
-                return Array.isArray(condition.value) && !condition.value.includes(fieldValue) ? 1 : 0;
+            case "IN":
+                return Array.isArray(condition.value) &&
+                    condition.value.includes(fieldValue)
+                    ? 1
+                    : 0;
+            case "NOT_IN":
+                return Array.isArray(condition.value) &&
+                    !condition.value.includes(fieldValue)
+                    ? 1
+                    : 0;
             default:
                 return 0;
         }
     }
     static getFieldValue(data, field) {
-        const fields = field.split('.');
+        const fields = field.split(".");
         let value = data;
         for (const f of fields) {
             value = value?.[f];
@@ -112,89 +117,76 @@ class QualityControlModel {
     }
     static determineQualityStatus(score, rule) {
         if (score >= 0.8)
-            return 'PASSED';
+            return "PASSED";
         if (score >= 0.5)
-            return 'REVIEW_REQUIRED';
-        return 'FAILED';
+            return "REVIEW_REQUIRED";
+        return "FAILED";
     }
     static executeQualityActions(actions, data) {
         const executedActions = [];
         for (const action of actions) {
             switch (action.type) {
-                case 'APPROVE':
-                    executedActions.push('APPROVED');
+                case "APPROVE":
+                    executedActions.push("APPROVED");
                     break;
-                case 'REJECT':
-                    executedActions.push('REJECTED');
+                case "REJECT":
+                    executedActions.push("REJECTED");
                     break;
-                case 'FLAG':
-                    executedActions.push('FLAGGED');
+                case "FLAG":
+                    executedActions.push("FLAGGED");
                     break;
-                case 'REQUIRE_REVIEW':
-                    executedActions.push('REVIEW_REQUIRED');
+                case "REQUIRE_REVIEW":
+                    executedActions.push("REVIEW_REQUIRED");
                     break;
-                case 'PAUSE_AFFILIATE':
-                    executedActions.push('AFFILIATE_PAUSED');
+                case "PAUSE_AFFILIATE":
+                    executedActions.push("AFFILIATE_PAUSED");
                     break;
-                case 'SEND_NOTIFICATION':
-                    executedActions.push('NOTIFICATION_SENT');
+                case "SEND_NOTIFICATION":
+                    executedActions.push("NOTIFICATION_SENT");
                     break;
             }
         }
-        return executedActions.join(', ');
+        return executedActions.join(", ");
     }
     static async getQualityChecks(filters = {}, page = 1, limit = 50) {
         const skip = (page - 1) * limit;
         const where = {};
-        if (filters.status)
-            where.status = filters.status;
-        if (filters.type)
-            where.type = filters.type;
+        if (filters.result)
+            where.result = filters.result;
         if (filters.affiliateId)
             where.affiliateId = filters.affiliateId;
-        if (filters.offerId)
-            where.offerId = filters.offerId;
         if (filters.startDate && filters.endDate) {
             where.createdAt = {
                 gte: filters.startDate,
-                lte: filters.endDate
+                lte: filters.endDate,
             };
         }
-        return await prisma.qualityCheck.findMany({
+        return (await prisma.qualityCheck.findMany({
             where,
             skip,
             take: limit,
-            orderBy: { createdAt: 'desc' }
-        });
+            orderBy: { createdAt: "desc" },
+        }));
     }
     static async updateQualityCheckStatus(id, status, reviewedBy) {
-        return await prisma.qualityCheck.update({
+        return (await prisma.qualityCheck.update({
             where: { id },
             data: {
-                status,
-                reviewedAt: new Date(),
-                reviewedBy
-            }
-        });
+                result: status,
+                updatedAt: new Date(),
+            },
+        }));
     }
     static async getQualityMetrics(startDate, endDate) {
         const where = {};
         if (startDate && endDate) {
             where.createdAt = {
                 gte: startDate,
-                lte: endDate
+                lte: endDate,
             };
         }
         const checks = await prisma.qualityCheck.findMany({
             where,
-            include: {
-                affiliate: {
-                    include: {
-                        user: true
-                    }
-                },
-                offer: true
-            }
         });
         const metrics = {
             totalChecks: checks.length,
@@ -204,30 +196,20 @@ class QualityControlModel {
             passRate: 0,
             byType: {},
             byAffiliate: {},
-            byOffer: {}
+            byOffer: {},
         };
-        checks.forEach(check => {
-            switch (check.status) {
-                case 'PASSED':
+        checks.forEach((check) => {
+            switch (check.result) {
+                case "PASSED":
                     metrics.passedChecks++;
                     break;
-                case 'FAILED':
+                case "FAILED":
                     metrics.failedChecks++;
                     break;
-                case 'REVIEW_REQUIRED':
+                case "REVIEW_REQUIRED":
                     metrics.reviewRequired++;
                     break;
             }
-            if (!metrics.byType[check.type]) {
-                metrics.byType[check.type] = { total: 0, passed: 0, failed: 0, review: 0 };
-            }
-            metrics.byType[check.type].total++;
-            if (check.status === 'PASSED')
-                metrics.byType[check.type].passed++;
-            else if (check.status === 'FAILED')
-                metrics.byType[check.type].failed++;
-            else if (check.status === 'REVIEW_REQUIRED')
-                metrics.byType[check.type].review++;
             if (check.affiliateId) {
                 if (!metrics.byAffiliate[check.affiliateId]) {
                     metrics.byAffiliate[check.affiliateId] = {
@@ -235,74 +217,104 @@ class QualityControlModel {
                         passed: 0,
                         failed: 0,
                         review: 0,
-                        name: check.affiliate?.user ? `${check.affiliate.user.firstName} ${check.affiliate.user.lastName}` : 'Unknown'
+                        name: "Unknown",
                     };
                 }
                 metrics.byAffiliate[check.affiliateId].total++;
-                if (check.status === 'PASSED')
+                if (check.result === "PASSED")
                     metrics.byAffiliate[check.affiliateId].passed++;
-                else if (check.status === 'FAILED')
+                else if (check.result === "FAILED")
                     metrics.byAffiliate[check.affiliateId].failed++;
-                else if (check.status === 'REVIEW_REQUIRED')
+                else if (check.result === "REVIEW_REQUIRED")
                     metrics.byAffiliate[check.affiliateId].review++;
             }
-            if (check.offerId) {
-                if (!metrics.byOffer[check.offerId]) {
-                    metrics.byOffer[check.offerId] = {
-                        total: 0,
-                        passed: 0,
-                        failed: 0,
-                        review: 0,
-                        name: check.offer?.name || 'Unknown'
-                    };
-                }
-                metrics.byOffer[check.offerId].total++;
-                if (check.status === 'PASSED')
-                    metrics.byOffer[check.offerId].passed++;
-                else if (check.status === 'FAILED')
-                    metrics.byOffer[check.offerId].failed++;
-                else if (check.status === 'REVIEW_REQUIRED')
-                    metrics.byOffer[check.offerId].review++;
-            }
         });
-        metrics.passRate = metrics.totalChecks > 0 ? (metrics.passedChecks / metrics.totalChecks) * 100 : 0;
+        metrics.passRate =
+            metrics.totalChecks > 0
+                ? (metrics.passedChecks / metrics.totalChecks) * 100
+                : 0;
         return metrics;
     }
-    static async createDefaultRules() {
+    static async createDefaultRules(accountId) {
         const defaultRules = [
             {
-                name: 'Traffic Quality Check',
-                description: 'Checks for high-quality traffic indicators',
-                type: 'TRAFFIC_QUALITY',
+                accountId,
+                name: "Traffic Quality Check",
+                description: "Checks for high-quality traffic indicators",
                 conditions: [
-                    { field: 'bounce_rate', operator: 'LESS_THAN', value: 0.7, weight: 1 },
-                    { field: 'session_duration', operator: 'GREATER_THAN', value: 30, weight: 1 },
-                    { field: 'pages_per_session', operator: 'GREATER_THAN', value: 2, weight: 1 }
+                    {
+                        field: "bounce_rate",
+                        operator: "LESS_THAN",
+                        value: 0.7,
+                        weight: 1,
+                    },
+                    {
+                        field: "session_duration",
+                        operator: "GREATER_THAN",
+                        value: 30,
+                        weight: 1,
+                    },
+                    {
+                        field: "pages_per_session",
+                        operator: "GREATER_THAN",
+                        value: 2,
+                        weight: 1,
+                    },
                 ],
-                actions: [{ type: 'APPROVE', parameters: {} }]
+                actions: [{ type: "APPROVE", parameters: {} }],
             },
             {
-                name: 'Conversion Quality Check',
-                description: 'Validates conversion quality and legitimacy',
-                type: 'CONVERSION_QUALITY',
+                accountId,
+                name: "Conversion Quality Check",
+                description: "Validates conversion quality and legitimacy",
                 conditions: [
-                    { field: 'conversion_time', operator: 'GREATER_THAN', value: 60, weight: 1 },
-                    { field: 'conversion_value', operator: 'GREATER_THAN', value: 0, weight: 1 },
-                    { field: 'customer_info_complete', operator: 'EQUALS', value: true, weight: 1 }
+                    {
+                        field: "conversion_time",
+                        operator: "GREATER_THAN",
+                        value: 60,
+                        weight: 1,
+                    },
+                    {
+                        field: "conversion_value",
+                        operator: "GREATER_THAN",
+                        value: 0,
+                        weight: 1,
+                    },
+                    {
+                        field: "customer_info_complete",
+                        operator: "EQUALS",
+                        value: true,
+                        weight: 1,
+                    },
                 ],
-                actions: [{ type: 'APPROVE', parameters: {} }]
+                actions: [{ type: "APPROVE", parameters: {} }],
             },
             {
-                name: 'Affiliate Quality Check',
-                description: 'Monitors affiliate performance and compliance',
-                type: 'AFFILIATE_QUALITY',
+                accountId,
+                name: "Affiliate Quality Check",
+                description: "Monitors affiliate performance and compliance",
                 conditions: [
-                    { field: 'conversion_rate', operator: 'GREATER_THAN', value: 0.01, weight: 1 },
-                    { field: 'complaint_count', operator: 'LESS_THAN', value: 5, weight: 1 },
-                    { field: 'compliance_score', operator: 'GREATER_THAN', value: 0.8, weight: 1 }
+                    {
+                        field: "conversion_rate",
+                        operator: "GREATER_THAN",
+                        value: 0.01,
+                        weight: 1,
+                    },
+                    {
+                        field: "complaint_count",
+                        operator: "LESS_THAN",
+                        value: 5,
+                        weight: 1,
+                    },
+                    {
+                        field: "compliance_score",
+                        operator: "GREATER_THAN",
+                        value: 0.8,
+                        weight: 1,
+                    },
                 ],
-                actions: [{ type: 'APPROVE', parameters: {} }]
-            }
+                actions: [{ type: "APPROVE", parameters: {} }],
+            },
         ];
         const createdRules = [];
         for (const ruleData of defaultRules) {

@@ -3,7 +3,7 @@ export interface RegisterData {
     password: string;
     firstName: string;
     lastName: string;
-    role?: 'ADMIN' | 'AFFILIATE' | 'MANAGER';
+    role?: "ADMIN" | "AFFILIATE" | "MANAGER";
 }
 export interface LoginData {
     email: string;
@@ -37,6 +37,8 @@ export declare class AuthService {
             role: import(".prisma/client").$Enums.UserRole;
             affiliateProfile: {
                 id: string;
+                status: string;
+                phone: string | null;
                 createdAt: Date;
                 updatedAt: Date;
                 userId: string;
@@ -47,6 +49,8 @@ export declare class AuthService {
                 paymentEmail: string | null;
                 taxId: string | null;
                 address: import("@prisma/client/runtime/library").JsonValue | null;
+                bankAccount: string | null;
+                kycVerified: boolean;
                 tier: import(".prisma/client").$Enums.AffiliateTier;
                 commissionRate: number;
                 totalEarnings: number;
@@ -82,6 +86,8 @@ export declare class AuthService {
         lastLoginAt: Date;
         affiliateProfile: {
             id: string;
+            status: string;
+            phone: string | null;
             createdAt: Date;
             updatedAt: Date;
             userId: string;
@@ -92,6 +98,8 @@ export declare class AuthService {
             paymentEmail: string | null;
             taxId: string | null;
             address: import("@prisma/client/runtime/library").JsonValue | null;
+            bankAccount: string | null;
+            kycVerified: boolean;
             tier: import(".prisma/client").$Enums.AffiliateTier;
             commissionRate: number;
             totalEarnings: number;
@@ -112,6 +120,8 @@ export declare class AuthService {
     updateProfile(userId: string, data: UpdateProfileData): Promise<{
         affiliateProfile: {
             id: string;
+            status: string;
+            phone: string | null;
             createdAt: Date;
             updatedAt: Date;
             userId: string;
@@ -122,6 +132,8 @@ export declare class AuthService {
             paymentEmail: string | null;
             taxId: string | null;
             address: import("@prisma/client/runtime/library").JsonValue | null;
+            bankAccount: string | null;
+            kycVerified: boolean;
             tier: import(".prisma/client").$Enums.AffiliateTier;
             commissionRate: number;
             totalEarnings: number;

@@ -6,16 +6,16 @@ const prisma = new client_1.PrismaClient();
 class SmartLinksModel {
     static async create(data) {
         const shortCode = await this.generateShortCode(data.accountId);
-        return await prisma.smartLink.create({
+        return (await prisma.smartLink.create({
             data: {
                 accountId: data.accountId,
                 name: data.name,
-                description: data.description || '',
+                description: data.description || "",
                 baseUrl: data.baseUrl,
                 shortCode,
-                type: data.type || 'DYNAMIC',
-                status: data.status || 'ACTIVE',
-                settings: data.settings || {
+                type: data.type || "DYNAMIC",
+                status: data.status || "ACTIVE",
+                settings: (data.settings || {
                     clickTracking: true,
                     conversionTracking: true,
                     fraudDetection: false,
@@ -26,7 +26,7 @@ class SmartLinksModel {
                     referrerFiltering: false,
                     customFilters: [],
                     redirectDelay: 0,
-                    redirectMethod: 'IMMEDIATE',
+                    redirectMethod: "IMMEDIATE",
                     trackingPixels: [],
                     postbackUrls: [],
                     analytics: {
@@ -36,16 +36,16 @@ class SmartLinksModel {
                         trackBounceRate: true,
                         trackTimeOnPage: true,
                         customEvents: [],
-                        goals: []
+                        goals: [],
                     },
                     seo: {
                         preserveTitle: true,
                         preserveDescription: true,
-                        preserveKeywords: true
-                    }
-                },
-                targets: data.targets || [],
-                rules: data.rules || [],
+                        preserveKeywords: true,
+                    },
+                }),
+                targets: (data.targets || []),
+                rules: (data.rules || []),
                 stats: {
                     totalClicks: 0,
                     uniqueClicks: 0,
@@ -58,36 +58,40 @@ class SmartLinksModel {
                     byDevice: {},
                     bySource: {},
                     byHour: {},
-                    byDay: {}
-                }
-            }
-        });
+                    byDay: {},
+                },
+            },
+        }));
     }
     static async findById(id) {
-        return await prisma.smartLink.findUnique({
-            where: { id }
-        });
+        return (await prisma.smartLink.findUnique({
+            where: { id },
+        }));
     }
     static async findByShortCode(shortCode) {
-        return await prisma.smartLink.findFirst({
+        return (await prisma.smartLink.findFirst({
             where: {
                 shortCode,
-                status: 'ACTIVE'
-            }
-        });
+                status: "ACTIVE",
+            },
+        }));
     }
     static async update(id, data) {
-        return await prisma.smartLink.update({
+        return (await prisma.smartLink.update({
             where: { id },
             data: {
                 ...data,
-                updatedAt: new Date()
-            }
-        });
+                settings: data.settings,
+                targets: data.targets,
+                rules: data.rules,
+                stats: data.stats,
+                updatedAt: new Date(),
+            },
+        }));
     }
     static async delete(id) {
         await prisma.smartLink.delete({
-            where: { id }
+            where: { id },
         });
     }
     static async list(accountId, filters = {}) {
@@ -96,18 +100,18 @@ class SmartLinksModel {
             where.status = filters.status;
         if (filters.type)
             where.type = filters.type;
-        return await prisma.smartLink.findMany({
+        return (await prisma.smartLink.findMany({
             where,
-            orderBy: { createdAt: 'desc' }
-        });
+            orderBy: { createdAt: "desc" },
+        }));
     }
     static async processSmartLink(shortCode, requestData) {
         const smartLink = await this.findByShortCode(shortCode);
         if (!smartLink) {
-            return { redirect: false, reason: 'Smart link not found' };
+            return { redirect: false, reason: "Smart link not found" };
         }
-        if (smartLink.status !== 'ACTIVE') {
-            return { redirect: false, reason: 'Smart link is not active' };
+        if (smartLink.status !== "ACTIVE") {
+            return { redirect: false, reason: "Smart link is not active" };
         }
         const filterResult = await this.applyFilters(smartLink, requestData);
         if (!filterResult.allowed) {
@@ -119,7 +123,7 @@ class SmartLinksModel {
         }
         const target = await this.selectTarget(smartLink, requestData);
         if (!target) {
-            return { redirect: false, reason: 'No suitable target found' };
+            return { redirect: false, reason: "No suitable target found" };
         }
         if (smartLink.settings.clickTracking) {
             await this.recordClick(smartLink.id, target.id, requestData);
@@ -136,31 +140,31 @@ class SmartLinksModel {
         if (settings.geoBlocking) {
             const country = requestData.country;
             if (country && this.isCountryBlocked(country)) {
-                return { allowed: false, reason: 'Country blocked' };
+                return { allowed: false, reason: "Country blocked" };
             }
         }
         if (settings.deviceFiltering) {
             const device = requestData.device;
             if (device && this.isDeviceBlocked(device)) {
-                return { allowed: false, reason: 'Device blocked' };
+                return { allowed: false, reason: "Device blocked" };
             }
         }
         if (settings.timeFiltering) {
             const hour = new Date().getHours();
             if (this.isTimeBlocked(hour)) {
-                return { allowed: false, reason: 'Time blocked' };
+                return { allowed: false, reason: "Time blocked" };
             }
         }
         if (settings.ipFiltering) {
             const ipAddress = requestData.ipAddress;
             if (ipAddress && this.isIPBlocked(ipAddress)) {
-                return { allowed: false, reason: 'IP blocked' };
+                return { allowed: false, reason: "IP blocked" };
             }
         }
         if (settings.referrerFiltering) {
             const referrer = requestData.referrer;
             if (referrer && this.isReferrerBlocked(referrer)) {
-                return { allowed: false, reason: 'Referrer blocked' };
+                return { allowed: false, reason: "Referrer blocked" };
             }
         }
         for (const filter of settings.customFilters) {
@@ -169,10 +173,16 @@ class SmartLinksModel {
             const conditionResult = this.evaluateConditions(filter.conditions, requestData);
             if (conditionResult) {
                 switch (filter.action) {
-                    case 'BLOCK':
-                        return { allowed: false, reason: `Blocked by filter: ${filter.name}` };
-                    case 'REDIRECT':
-                        return { allowed: true, reason: `Redirected by filter: ${filter.name}` };
+                    case "BLOCK":
+                        return {
+                            allowed: false,
+                            reason: `Blocked by filter: ${filter.name}`,
+                        };
+                    case "REDIRECT":
+                        return {
+                            allowed: true,
+                            reason: `Redirected by filter: ${filter.name}`,
+                        };
                 }
             }
         }
@@ -189,15 +199,18 @@ class SmartLinksModel {
                     if (!action.enabled)
                         continue;
                     switch (action.type) {
-                        case 'BLOCK':
+                        case "BLOCK":
                             return { blocked: true, reason: `Blocked by rule: ${rule.name}` };
-                        case 'REDIRECT':
-                            return { blocked: false, reason: `Redirected by rule: ${rule.name}` };
-                        case 'MODIFY_URL':
+                        case "REDIRECT":
+                            return {
+                                blocked: false,
+                                reason: `Redirected by rule: ${rule.name}`,
+                            };
+                        case "MODIFY_URL":
                             break;
-                        case 'ADD_PARAMETER':
+                        case "ADD_PARAMETER":
                             break;
-                        case 'REMOVE_PARAMETER':
+                        case "REMOVE_PARAMETER":
                             break;
                     }
                 }
@@ -206,26 +219,26 @@ class SmartLinksModel {
         return { blocked: false };
     }
     static async selectTarget(smartLink, requestData) {
-        const activeTargets = smartLink.targets.filter(t => t.isActive);
+        const activeTargets = smartLink.targets.filter((t) => t.isActive);
         if (activeTargets.length === 0) {
             return null;
         }
-        const matchingTargets = activeTargets.filter(target => {
+        const matchingTargets = activeTargets.filter((target) => {
             if (target.conditions.length === 0)
                 return true;
             return this.evaluateConditions(target.conditions, requestData);
         });
         if (matchingTargets.length === 0) {
-            return activeTargets.find(t => t.isDefault) || null;
+            return activeTargets.find((t) => t.isDefault) || null;
         }
         switch (smartLink.type) {
-            case 'A_B_TEST':
+            case "A_B_TEST":
                 return this.selectABTestTarget(matchingTargets, requestData);
-            case 'GEO_TARGETED':
+            case "GEO_TARGETED":
                 return this.selectGeoTargetedTarget(matchingTargets, requestData);
-            case 'DEVICE_TARGETED':
+            case "DEVICE_TARGETED":
                 return this.selectDeviceTargetedTarget(matchingTargets, requestData);
-            case 'TIME_TARGETED':
+            case "TIME_TARGETED":
                 return this.selectTimeTargetedTarget(matchingTargets, requestData);
             default:
                 return matchingTargets[0];
@@ -246,43 +259,49 @@ class SmartLinksModel {
         const country = requestData.country;
         for (const target of targets) {
             for (const condition of target.conditions) {
-                if (condition.field === 'country' && condition.operator === 'EQUALS' && condition.value === country) {
+                if (condition.field === "country" &&
+                    condition.operator === "EQUALS" &&
+                    condition.value === country) {
                     return target;
                 }
             }
         }
-        return targets.find(t => t.isDefault) || targets[0];
+        return targets.find((t) => t.isDefault) || targets[0];
     }
     static selectDeviceTargetedTarget(targets, requestData) {
         const device = requestData.device;
         for (const target of targets) {
             for (const condition of target.conditions) {
-                if (condition.field === 'device' && condition.operator === 'EQUALS' && condition.value === device) {
+                if (condition.field === "device" &&
+                    condition.operator === "EQUALS" &&
+                    condition.value === device) {
                     return target;
                 }
             }
         }
-        return targets.find(t => t.isDefault) || targets[0];
+        return targets.find((t) => t.isDefault) || targets[0];
     }
     static selectTimeTargetedTarget(targets, requestData) {
         const hour = new Date().getHours();
         for (const target of targets) {
             for (const condition of target.conditions) {
-                if (condition.field === 'hour' && condition.operator === 'EQUALS' && condition.value === hour) {
+                if (condition.field === "hour" &&
+                    condition.operator === "EQUALS" &&
+                    condition.value === hour) {
                     return target;
                 }
             }
         }
-        return targets.find(t => t.isDefault) || targets[0];
+        return targets.find((t) => t.isDefault) || targets[0];
     }
     static evaluateConditions(conditions, requestData) {
         if (conditions.length === 0)
             return true;
         let result = true;
-        let logic = 'AND';
+        let logic = "AND";
         for (const condition of conditions) {
             const conditionResult = this.evaluateCondition(condition, requestData);
-            if (logic === 'AND') {
+            if (logic === "AND") {
                 result = result && conditionResult;
             }
             else {
@@ -302,23 +321,23 @@ class SmartLinksModel {
             compareConditionValue = String(conditionValue).toLowerCase();
         }
         switch (condition.operator) {
-            case 'EQUALS':
+            case "EQUALS":
                 return compareValue === compareConditionValue;
-            case 'NOT_EQUALS':
+            case "NOT_EQUALS":
                 return compareValue !== compareConditionValue;
-            case 'CONTAINS':
+            case "CONTAINS":
                 return String(compareValue).includes(String(compareConditionValue));
-            case 'GREATER_THAN':
+            case "GREATER_THAN":
                 return Number(compareValue) > Number(compareConditionValue);
-            case 'LESS_THAN':
+            case "LESS_THAN":
                 return Number(compareValue) < Number(compareConditionValue);
-            case 'IN':
+            case "IN":
                 return Array.isArray(conditionValue) && conditionValue.includes(value);
-            case 'NOT_IN':
+            case "NOT_IN":
                 return Array.isArray(conditionValue) && !conditionValue.includes(value);
-            case 'REGEX':
+            case "REGEX":
                 try {
-                    const regex = new RegExp(conditionValue, condition.caseSensitive ? '' : 'i');
+                    const regex = new RegExp(conditionValue, condition.caseSensitive ? "" : "i");
                     return regex.test(String(value));
                 }
                 catch {
@@ -329,7 +348,7 @@ class SmartLinksModel {
         }
     }
     static getFieldValue(data, field) {
-        const fields = field.split('.');
+        const fields = field.split(".");
         let value = data;
         for (const f of fields) {
             value = value?.[f];
@@ -337,11 +356,11 @@ class SmartLinksModel {
         return value;
     }
     static isCountryBlocked(country) {
-        const blockedCountries = ['XX', 'YY'];
+        const blockedCountries = ["XX", "YY"];
         return blockedCountries.includes(country);
     }
     static isDeviceBlocked(device) {
-        const blockedDevices = ['bot', 'crawler'];
+        const blockedDevices = ["bot", "crawler"];
         return blockedDevices.includes(device.toLowerCase());
     }
     static isTimeBlocked(hour) {
@@ -351,13 +370,14 @@ class SmartLinksModel {
         return false;
     }
     static isReferrerBlocked(referrer) {
-        const blockedReferrers = ['spam.com', 'malicious.com'];
-        return blockedReferrers.some(blocked => referrer.includes(blocked));
+        const blockedReferrers = ["spam.com", "malicious.com"];
+        return blockedReferrers.some((blocked) => referrer.includes(blocked));
     }
     static async recordClick(smartLinkId, targetId, requestData) {
-        return await prisma.smartLinkEvent.create({
+        return (await prisma.smartLinkEvent.create({
             data: {
                 smartLinkId,
+                clickId: Math.random().toString(36).substring(2, 15),
                 targetId,
                 ipAddress: requestData.ipAddress,
                 userAgent: requestData.userAgent,
@@ -368,15 +388,15 @@ class SmartLinksModel {
                 browser: requestData.browser,
                 os: requestData.os,
                 timestamp: new Date(),
-                data: requestData
-            }
-        });
+                data: requestData,
+            },
+        }));
     }
     static async fireTrackingPixels(pixels, requestData) {
         for (const pixel of pixels) {
             if (!pixel.enabled)
                 continue;
-            if (pixel.position === 'BEFORE_REDIRECT') {
+            if (pixel.position === "BEFORE_REDIRECT") {
                 await this.firePixel(pixel, requestData);
             }
         }
@@ -385,51 +405,51 @@ class SmartLinksModel {
         let url = pixel.url;
         for (const [key, value] of Object.entries(pixel.parameters)) {
             const placeholder = `{{${key}}}`;
-            url = url.replace(new RegExp(placeholder, 'g'), String(data[key] || value));
+            url = url.replace(new RegExp(placeholder, "g"), String(data[key] || value));
         }
         console.log(`Firing pixel: ${url}`);
     }
     static addTrackingParameters(targetUrl, smartLink, target, requestData) {
         const urlObj = new URL(targetUrl);
-        urlObj.searchParams.set('sl_id', smartLink.id);
-        urlObj.searchParams.set('sl_target', target.id);
-        urlObj.searchParams.set('sl_timestamp', Date.now().toString());
+        urlObj.searchParams.set("sl_id", smartLink.id);
+        urlObj.searchParams.set("sl_target", target.id);
+        urlObj.searchParams.set("sl_timestamp", Date.now().toString());
         if (requestData.ipAddress)
-            urlObj.searchParams.set('sl_ip', requestData.ipAddress);
+            urlObj.searchParams.set("sl_ip", requestData.ipAddress);
         if (requestData.country)
-            urlObj.searchParams.set('sl_country', requestData.country);
+            urlObj.searchParams.set("sl_country", requestData.country);
         if (requestData.device)
-            urlObj.searchParams.set('sl_device', requestData.device);
+            urlObj.searchParams.set("sl_device", requestData.device);
         if (requestData.referrer)
-            urlObj.searchParams.set('sl_referrer', requestData.referrer);
+            urlObj.searchParams.set("sl_referrer", requestData.referrer);
         return urlObj.toString();
     }
     static async recordConversion(smartLinkId, targetId, conversionData) {
         const smartLink = await this.findById(smartLinkId);
         if (!smartLink) {
-            throw new Error('Smart link not found');
+            throw new Error("Smart link not found");
         }
         const clickEvent = await prisma.smartLinkEvent.findFirst({
             where: {
                 smartLinkId,
-                targetId
+                targetId,
             },
-            orderBy: { timestamp: 'desc' }
+            orderBy: { timestamp: "desc" },
         });
         if (!clickEvent) {
-            throw new Error('Click event not found');
+            throw new Error("Click event not found");
         }
-        const conversionEvent = await prisma.smartLinkConversion.create({
+        const conversionEvent = (await prisma.smartLinkConversion.create({
             data: {
                 smartLinkId,
                 smartLinkEventId: clickEvent.id,
-                targetId,
+                eventId: Math.random().toString(36).substring(2, 15),
                 value: conversionData.value || 0,
                 commission: conversionData.commission || 0,
                 timestamp: new Date(),
-                data: conversionData
-            }
-        });
+                data: conversionData,
+            },
+        }));
         await this.updateStats(smartLinkId);
         if (smartLink.settings.postbackUrls) {
             await this.firePostbacks(smartLink.settings.postbackUrls, conversionData);
@@ -441,22 +461,24 @@ class SmartLinksModel {
         if (!smartLink)
             return;
         const totalClicks = await prisma.smartLinkEvent.count({
-            where: { smartLinkId }
+            where: { smartLinkId },
         });
-        const uniqueClicks = await prisma.smartLinkEvent.groupBy({
-            by: ['ipAddress'],
-            where: { smartLinkId }
-        }).then(result => result.length);
+        const uniqueClicks = await prisma.smartLinkEvent
+            .groupBy({
+            by: ["ipAddress"],
+            where: { smartLinkId },
+        })
+            .then((result) => result.length);
         const conversions = await prisma.smartLinkConversion.count({
-            where: { smartLinkId }
+            where: { smartLinkId },
         });
         const revenue = await prisma.smartLinkConversion.aggregate({
             where: { smartLinkId },
-            _sum: { value: true }
+            _sum: { value: true },
         });
         const commission = await prisma.smartLinkConversion.aggregate({
             where: { smartLinkId },
-            _sum: { commission: true }
+            _sum: { commission: true },
         });
         const stats = {
             ...smartLink.stats,
@@ -465,7 +487,7 @@ class SmartLinksModel {
             conversions,
             revenue: revenue._sum.value || 0,
             commission: commission._sum.commission || 0,
-            conversionRate: totalClicks > 0 ? (conversions / totalClicks) * 100 : 0
+            conversionRate: totalClicks > 0 ? (conversions / totalClicks) * 100 : 0,
         };
         await this.update(smartLinkId, { stats });
     }
@@ -476,7 +498,7 @@ class SmartLinksModel {
             let url = postback.url;
             for (const [key, value] of Object.entries(postback.parameters)) {
                 const placeholder = `{{${key}}}`;
-                url = url.replace(new RegExp(placeholder, 'g'), String(data[key] || value));
+                url = url.replace(new RegExp(placeholder, "g"), String(data[key] || value));
             }
             console.log(`Firing postback: ${url}`);
         }
@@ -487,7 +509,7 @@ class SmartLinksModel {
         while (exists) {
             shortCode = Math.random().toString(36).substring(2, 8);
             const existing = await prisma.smartLink.findFirst({
-                where: { shortCode }
+                where: { shortCode },
             });
             exists = !!existing;
         }
@@ -498,37 +520,43 @@ class SmartLinksModel {
         if (startDate && endDate) {
             where.createdAt = {
                 gte: startDate,
-                lte: endDate
+                lte: endDate,
             };
         }
         const smartLinks = await this.list(accountId);
         const totalClicks = await prisma.smartLinkEvent.count({
-            where: { smartLink: { accountId } }
+            where: { smartLink: { accountId } },
         });
         const totalConversions = await prisma.smartLinkConversion.count({
-            where: { smartLink: { accountId } }
+            where: { smartLink: { accountId } },
         });
         const stats = {
             totalLinks: smartLinks.length,
-            activeLinks: smartLinks.filter(l => l.status === 'ACTIVE').length,
+            activeLinks: smartLinks.filter((l) => l.status === "ACTIVE").length,
             totalClicks,
             totalConversions,
             totalRevenue: smartLinks.reduce((sum, l) => sum + l.stats.revenue, 0),
             totalCommission: smartLinks.reduce((sum, l) => sum + l.stats.commission, 0),
             byType: {},
             byStatus: {},
-            byTarget: {}
+            byTarget: {},
         };
-        smartLinks.forEach(link => {
+        smartLinks.forEach((link) => {
             stats.byType[link.type] = (stats.byType[link.type] || 0) + 1;
             stats.byStatus[link.status] = (stats.byStatus[link.status] || 0) + 1;
         });
         for (const link of smartLinks) {
             for (const target of link.targets) {
                 if (!stats.byTarget[target.id]) {
-                    stats.byTarget[target.id] = { name: target.name, clicks: 0, conversions: 0, revenue: 0 };
+                    stats.byTarget[target.id] = {
+                        name: target.name,
+                        clicks: 0,
+                        conversions: 0,
+                        revenue: 0,
+                    };
                 }
-                stats.byTarget[target.id].clicks += link.stats.byTarget[target.id] || 0;
+                stats.byTarget[target.id].clicks +=
+                    link.stats.byTarget[target.id] || 0;
             }
         }
         return stats;
@@ -538,102 +566,102 @@ class SmartLinksModel {
         const stats = await this.getSmartLinkStats(accountId);
         return {
             smartLinks,
-            stats
+            stats,
         };
     }
     static async createDefaultSmartLinks(accountId) {
         const defaultSmartLinks = [
             {
-                name: 'Mobile vs Desktop Redirect',
-                description: 'Redirect mobile users to mobile site, desktop users to desktop site',
-                baseUrl: 'https://example.com',
-                type: 'DEVICE_TARGETED',
+                name: "Mobile vs Desktop Redirect",
+                description: "Redirect mobile users to mobile site, desktop users to desktop site",
+                baseUrl: "https://example.com",
+                type: "DEVICE_TARGETED",
                 targets: [
                     {
-                        id: 'mobile',
-                        name: 'Mobile Site',
-                        url: 'https://m.example.com',
+                        id: "mobile",
+                        name: "Mobile Site",
+                        url: "https://m.example.com",
                         weight: 1,
                         conditions: [
                             {
-                                field: 'device',
-                                operator: 'EQUALS',
-                                value: 'mobile',
-                                logic: 'AND',
-                                caseSensitive: false
-                            }
+                                field: "device",
+                                operator: "EQUALS",
+                                value: "mobile",
+                                logic: "AND",
+                                caseSensitive: false,
+                            },
                         ],
                         isDefault: false,
-                        isActive: true
+                        isActive: true,
                     },
                     {
-                        id: 'desktop',
-                        name: 'Desktop Site',
-                        url: 'https://www.example.com',
+                        id: "desktop",
+                        name: "Desktop Site",
+                        url: "https://www.example.com",
                         weight: 1,
                         conditions: [],
                         isDefault: true,
-                        isActive: true
-                    }
-                ]
+                        isActive: true,
+                    },
+                ],
             },
             {
-                name: 'Geo-Targeted Landing Pages',
-                description: 'Redirect users to country-specific landing pages',
-                baseUrl: 'https://example.com',
-                type: 'GEO_TARGETED',
+                name: "Geo-Targeted Landing Pages",
+                description: "Redirect users to country-specific landing pages",
+                baseUrl: "https://example.com",
+                type: "GEO_TARGETED",
                 targets: [
                     {
-                        id: 'us',
-                        name: 'US Landing Page',
-                        url: 'https://us.example.com',
+                        id: "us",
+                        name: "US Landing Page",
+                        url: "https://us.example.com",
                         weight: 1,
                         conditions: [
                             {
-                                field: 'country',
-                                operator: 'EQUALS',
-                                value: 'US',
-                                logic: 'AND',
-                                caseSensitive: false
-                            }
+                                field: "country",
+                                operator: "EQUALS",
+                                value: "US",
+                                logic: "AND",
+                                caseSensitive: false,
+                            },
                         ],
                         isDefault: false,
-                        isActive: true
+                        isActive: true,
                     },
                     {
-                        id: 'uk',
-                        name: 'UK Landing Page',
-                        url: 'https://uk.example.com',
+                        id: "uk",
+                        name: "UK Landing Page",
+                        url: "https://uk.example.com",
                         weight: 1,
                         conditions: [
                             {
-                                field: 'country',
-                                operator: 'EQUALS',
-                                value: 'GB',
-                                logic: 'AND',
-                                caseSensitive: false
-                            }
+                                field: "country",
+                                operator: "EQUALS",
+                                value: "GB",
+                                logic: "AND",
+                                caseSensitive: false,
+                            },
                         ],
                         isDefault: false,
-                        isActive: true
+                        isActive: true,
                     },
                     {
-                        id: 'default',
-                        name: 'Default Landing Page',
-                        url: 'https://www.example.com',
+                        id: "default",
+                        name: "Default Landing Page",
+                        url: "https://www.example.com",
                         weight: 1,
                         conditions: [],
                         isDefault: true,
-                        isActive: true
-                    }
-                ]
-            }
+                        isActive: true,
+                    },
+                ],
+            },
         ];
         const createdSmartLinks = [];
         for (const smartLinkData of defaultSmartLinks) {
             const smartLink = await this.create({
                 accountId,
-                ...smartLinkData
+                ...smartLinkData,
             });
             createdSmartLinks.push(smartLink);
         }

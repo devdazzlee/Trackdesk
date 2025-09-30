@@ -5,49 +5,56 @@ const client_1 = require("@prisma/client");
 const prisma = new client_1.PrismaClient();
 class DashboardReportsModel {
     static async createWidget(data) {
-        return await prisma.dashboardWidget.create({
+        return (await prisma.dashboardWidget.create({
             data: {
                 accountId: data.accountId,
                 name: data.name,
                 type: data.type,
                 title: data.title,
-                description: data.description || '',
+                description: data.description || "",
                 dataSource: data.dataSource,
                 query: data.query,
                 settings: data.settings || {
-                    colors: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'],
+                    colors: ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"],
                     showLegend: true,
                     showGrid: true,
                     showTooltip: true,
                     animation: true,
                     refreshInterval: 300,
-                    customSettings: {}
+                    customSettings: {},
                 },
                 position: data.position || { x: 0, y: 0, z: 0 },
-                size: data.size || { width: 4, height: 3, minWidth: 2, minHeight: 2, maxWidth: 12, maxHeight: 8 },
+                size: data.size || {
+                    width: 4,
+                    height: 3,
+                    minWidth: 2,
+                    minHeight: 2,
+                    maxWidth: 12,
+                    maxHeight: 8,
+                },
                 permissions: data.permissions || [],
                 roles: data.roles || [],
-                status: data.status || 'ACTIVE'
-            }
-        });
+                status: data.status || "ACTIVE",
+            },
+        }));
     }
     static async findWidgetById(id) {
-        return await prisma.dashboardWidget.findUnique({
-            where: { id }
-        });
+        return (await prisma.dashboardWidget.findUnique({
+            where: { id },
+        }));
     }
     static async updateWidget(id, data) {
-        return await prisma.dashboardWidget.update({
+        return (await prisma.dashboardWidget.update({
             where: { id },
             data: {
                 ...data,
-                updatedAt: new Date()
-            }
-        });
+                updatedAt: new Date(),
+            },
+        }));
     }
     static async deleteWidget(id) {
         await prisma.dashboardWidget.delete({
-            where: { id }
+            where: { id },
         });
     }
     static async listWidgets(accountId, filters = {}) {
@@ -56,43 +63,43 @@ class DashboardReportsModel {
             where.status = filters.status;
         if (filters.type)
             where.type = filters.type;
-        return await prisma.dashboardWidget.findMany({
+        return (await prisma.dashboardWidget.findMany({
             where,
-            orderBy: { createdAt: 'desc' }
-        });
+            orderBy: { createdAt: "desc" },
+        }));
     }
     static async createReportTemplate(data) {
-        return await prisma.reportTemplate.create({
+        return (await prisma.reportTemplate.create({
             data: {
                 accountId: data.accountId,
                 name: data.name,
-                description: data.description || '',
+                description: data.description || "",
                 type: data.type,
-                category: data.category || 'General',
+                category: data.category || "General",
                 template: data.template,
                 isPublic: data.isPublic || false,
                 isDefault: data.isDefault || false,
-                status: data.status || 'ACTIVE'
-            }
-        });
+                status: data.status || "ACTIVE",
+            },
+        }));
     }
     static async findReportTemplateById(id) {
-        return await prisma.reportTemplate.findUnique({
-            where: { id }
-        });
+        return (await prisma.reportTemplate.findUnique({
+            where: { id },
+        }));
     }
     static async updateReportTemplate(id, data) {
-        return await prisma.reportTemplate.update({
+        return (await prisma.reportTemplate.update({
             where: { id },
             data: {
                 ...data,
-                updatedAt: new Date()
-            }
-        });
+                updatedAt: new Date(),
+            },
+        }));
     }
     static async deleteReportTemplate(id) {
         await prisma.reportTemplate.delete({
-            where: { id }
+            where: { id },
         });
     }
     static async listReportTemplates(accountId, filters = {}) {
@@ -107,19 +114,19 @@ class DashboardReportsModel {
             where.isPublic = filters.isPublic;
         if (filters.isDefault !== undefined)
             where.isDefault = filters.isDefault;
-        return await prisma.reportTemplate.findMany({
+        return (await prisma.reportTemplate.findMany({
             where,
-            orderBy: { name: 'asc' }
-        });
+            orderBy: { name: "asc" },
+        }));
     }
     static async createCustomReport(data) {
-        return await prisma.customReport.create({
+        return (await prisma.customReport.create({
             data: {
                 accountId: data.accountId,
                 name: data.name,
-                description: data.description || '',
+                description: data.description || "",
                 type: data.type,
-                category: data.category || 'General',
+                category: data.category || "General",
                 templateId: data.templateId,
                 widgets: data.widgets || [],
                 layout: data.layout || {
@@ -128,50 +135,50 @@ class DashboardReportsModel {
                     gap: 16,
                     padding: 16,
                     responsive: true,
-                    breakpoints: {}
+                    breakpoints: {},
                 },
                 filters: data.filters || {
                     dateRange: {
                         enabled: true,
-                        defaultRange: '30d',
-                        customRange: true
+                        defaultRange: "30d",
+                        customRange: true,
                     },
                     filters: [],
-                    presets: []
+                    presets: [],
                 },
                 exportSettings: data.exportSettings || {
-                    formats: ['PDF', 'CSV', 'EXCEL'],
+                    formats: ["PDF", "CSV", "EXCEL"],
                     includeCharts: true,
                     includeData: true,
                     includeFilters: true,
-                    customHeader: '',
-                    customFooter: ''
+                    customHeader: "",
+                    customFooter: "",
                 },
                 permissions: data.permissions || [],
                 roles: data.roles || [],
-                status: data.status || 'DRAFT',
+                status: data.status || "DRAFT",
                 isPublic: data.isPublic || false,
-                createdBy: data.createdBy
-            }
-        });
+                createdBy: data.createdBy,
+            },
+        }));
     }
     static async findCustomReportById(id) {
-        return await prisma.customReport.findUnique({
-            where: { id }
-        });
+        return (await prisma.customReport.findUnique({
+            where: { id },
+        }));
     }
     static async updateCustomReport(id, data) {
-        return await prisma.customReport.update({
+        return (await prisma.customReport.update({
             where: { id },
             data: {
                 ...data,
-                updatedAt: new Date()
-            }
-        });
+                updatedAt: new Date(),
+            },
+        }));
     }
     static async deleteCustomReport(id) {
         await prisma.customReport.delete({
-            where: { id }
+            where: { id },
         });
     }
     static async listCustomReports(accountId, filters = {}) {
@@ -186,44 +193,44 @@ class DashboardReportsModel {
             where.createdBy = filters.createdBy;
         if (filters.isPublic !== undefined)
             where.isPublic = filters.isPublic;
-        return await prisma.customReport.findMany({
+        return (await prisma.customReport.findMany({
             where,
-            orderBy: { createdAt: 'desc' }
-        });
+            orderBy: { createdAt: "desc" },
+        }));
     }
     static async createReportSchedule(data) {
-        return await prisma.reportSchedule.create({
+        return (await prisma.reportSchedule.create({
             data: {
                 reportId: data.reportId,
                 name: data.name,
                 frequency: data.frequency,
                 time: data.time,
-                timezone: data.timezone || 'UTC',
+                timezone: data.timezone || "UTC",
                 recipients: data.recipients || [],
-                format: data.format || 'PDF',
+                format: data.format || "PDF",
                 filters: data.filters || {},
-                status: data.status || 'ACTIVE',
-                nextRun: this.calculateNextRun(data.frequency, data.time, data.timezone || 'UTC')
-            }
-        });
+                status: data.status || "ACTIVE",
+                nextRun: this.calculateNextRun(data.frequency, data.time, data.timezone || "UTC"),
+            },
+        }));
     }
     static async findReportScheduleById(id) {
-        return await prisma.reportSchedule.findUnique({
-            where: { id }
-        });
+        return (await prisma.reportSchedule.findUnique({
+            where: { id },
+        }));
     }
     static async updateReportSchedule(id, data) {
-        return await prisma.reportSchedule.update({
+        return (await prisma.reportSchedule.update({
             where: { id },
             data: {
                 ...data,
-                updatedAt: new Date()
-            }
-        });
+                updatedAt: new Date(),
+            },
+        }));
     }
     static async deleteReportSchedule(id) {
         await prisma.reportSchedule.delete({
-            where: { id }
+            where: { id },
         });
     }
     static async listReportSchedules(reportId, filters = {}) {
@@ -232,41 +239,41 @@ class DashboardReportsModel {
             where.status = filters.status;
         if (filters.frequency)
             where.frequency = filters.frequency;
-        return await prisma.reportSchedule.findMany({
+        return (await prisma.reportSchedule.findMany({
             where,
-            orderBy: { createdAt: 'desc' }
-        });
+            orderBy: { createdAt: "desc" },
+        }));
     }
     static async executeReport(reportId, filters = {}, recipients = []) {
         const report = await this.findCustomReportById(reportId);
         if (!report) {
-            throw new Error('Report not found');
+            throw new Error("Report not found");
         }
-        const execution = await prisma.reportExecution.create({
+        const execution = (await prisma.reportExecution.create({
             data: {
                 reportId,
-                status: 'PENDING',
+                status: "PENDING",
                 startedAt: new Date(),
                 recipients,
-                filters
-            }
-        });
+                filters,
+            },
+        }));
         try {
             await prisma.reportExecution.update({
                 where: { id: execution.id },
-                data: { status: 'RUNNING' }
+                data: { status: "RUNNING" },
             });
             const reportData = await this.generateReportData(report, filters);
             const exportResult = await this.exportReport(report, reportData, filters);
             await prisma.reportExecution.update({
                 where: { id: execution.id },
                 data: {
-                    status: 'COMPLETED',
+                    status: "COMPLETED",
                     completedAt: new Date(),
                     duration: Date.now() - execution.startedAt.getTime(),
                     fileUrl: exportResult.url,
-                    fileSize: exportResult.size
-                }
+                    fileSize: exportResult.size,
+                },
             });
             if (recipients.length > 0) {
                 await this.sendReportToRecipients(execution.id, recipients, exportResult);
@@ -277,11 +284,11 @@ class DashboardReportsModel {
             await prisma.reportExecution.update({
                 where: { id: execution.id },
                 data: {
-                    status: 'FAILED',
+                    status: "FAILED",
                     completedAt: new Date(),
                     duration: Date.now() - execution.startedAt.getTime(),
-                    errorMessage: error.message
-                }
+                    errorMessage: error.message,
+                },
             });
             throw error;
         }
@@ -302,18 +309,18 @@ class DashboardReportsModel {
     }
     static async executeWidgetQuery(widget, filters) {
         switch (widget.dataSource) {
-            case 'affiliates':
+            case "affiliates":
                 return await this.getAffiliateData(widget.query, filters);
-            case 'offers':
+            case "offers":
                 return await this.getOfferData(widget.query, filters);
-            case 'clicks':
+            case "clicks":
                 return await this.getClickData(widget.query, filters);
-            case 'conversions':
+            case "conversions":
                 return await this.getConversionData(widget.query, filters);
-            case 'payouts':
+            case "payouts":
                 return await this.getPayoutData(widget.query, filters);
             default:
-                return { error: 'Unknown data source' };
+                return { error: "Unknown data source" };
         }
     }
     static async getAffiliateData(query, filters) {
@@ -332,32 +339,32 @@ class DashboardReportsModel {
         return { data: [], total: 0 };
     }
     static async exportReport(report, data, filters) {
-        return { url: 'https://example.com/report.pdf', size: 1024 };
+        return { url: "https://example.com/report.pdf", size: 1024 };
     }
     static async sendReportToRecipients(executionId, recipients, exportResult) {
-        console.log('Sending report to recipients:', recipients);
+        console.log("Sending report to recipients:", recipients);
     }
     static calculateNextRun(frequency, time, timezone) {
         const now = new Date();
-        const [hours, minutes] = time.split(':').map(Number);
+        const [hours, minutes] = time.split(":").map(Number);
         let nextRun = new Date(now);
         nextRun.setHours(hours, minutes, 0, 0);
         switch (frequency) {
-            case 'DAILY':
+            case "DAILY":
                 if (nextRun <= now) {
                     nextRun.setDate(nextRun.getDate() + 1);
                 }
                 break;
-            case 'WEEKLY':
+            case "WEEKLY":
                 nextRun.setDate(nextRun.getDate() + 7);
                 break;
-            case 'MONTHLY':
+            case "MONTHLY":
                 nextRun.setMonth(nextRun.getMonth() + 1);
                 break;
-            case 'QUARTERLY':
+            case "QUARTERLY":
                 nextRun.setMonth(nextRun.getMonth() + 3);
                 break;
-            case 'YEARLY':
+            case "YEARLY":
                 nextRun.setFullYear(nextRun.getFullYear() + 1);
                 break;
         }
@@ -365,33 +372,33 @@ class DashboardReportsModel {
     }
     static async getReportExecutions(reportId, page = 1, limit = 20) {
         const skip = (page - 1) * limit;
-        return await prisma.reportExecution.findMany({
+        return (await prisma.reportExecution.findMany({
             where: { reportId },
             skip,
             take: limit,
-            orderBy: { startedAt: 'desc' }
-        });
+            orderBy: { startedAt: "desc" },
+        }));
     }
     static async getDashboardStats(accountId) {
         const widgets = await this.listWidgets(accountId);
         const templates = await this.listReportTemplates(accountId);
         const reports = await this.listCustomReports(accountId);
         const schedules = await prisma.reportSchedule.findMany({
-            where: { report: { accountId } }
+            where: { report: { accountId } },
         });
         const stats = {
             totalWidgets: widgets.length,
-            activeWidgets: widgets.filter(w => w.status === 'ACTIVE').length,
+            activeWidgets: widgets.filter((w) => w.status === "ACTIVE").length,
             totalTemplates: templates.length,
-            activeTemplates: templates.filter(t => t.status === 'ACTIVE').length,
+            activeTemplates: templates.filter((t) => t.status === "ACTIVE").length,
             totalReports: reports.length,
-            activeReports: reports.filter(r => r.status === 'ACTIVE').length,
+            activeReports: reports.filter((r) => r.status === "ACTIVE").length,
             totalSchedules: schedules.length,
-            activeSchedules: schedules.filter(s => s.status === 'ACTIVE').length,
+            activeSchedules: schedules.filter((s) => s.status === "ACTIVE").length,
             byType: {},
-            byStatus: {}
+            byStatus: {},
         };
-        widgets.forEach(widget => {
+        widgets.forEach((widget) => {
             stats.byType[widget.type] = (stats.byType[widget.type] || 0) + 1;
             stats.byStatus[widget.status] = (stats.byStatus[widget.status] || 0) + 1;
         });
@@ -400,52 +407,112 @@ class DashboardReportsModel {
     static async createDefaultTemplates(accountId) {
         const defaultTemplates = [
             {
-                name: 'Affiliate Performance Dashboard',
-                description: 'Comprehensive dashboard for affiliate performance metrics',
-                type: 'DASHBOARD',
-                category: 'Performance',
+                name: "Affiliate Performance Dashboard",
+                description: "Comprehensive dashboard for affiliate performance metrics",
+                type: "DASHBOARD",
+                category: "Performance",
                 template: {
                     widgets: [
                         {
-                            id: 'total-earnings',
-                            type: 'METRIC',
-                            title: 'Total Earnings',
-                            dataSource: 'affiliates',
-                            query: 'SELECT SUM(totalEarnings) as value FROM affiliateProfile',
-                            settings: { colors: ['#10b981'], showLegend: false, showGrid: false, showTooltip: false, animation: false, refreshInterval: 300, customSettings: {} },
+                            id: "total-earnings",
+                            type: "METRIC",
+                            title: "Total Earnings",
+                            dataSource: "affiliates",
+                            query: "SELECT SUM(totalEarnings) as value FROM affiliateProfile",
+                            settings: {
+                                colors: ["#10b981"],
+                                showLegend: false,
+                                showGrid: false,
+                                showTooltip: false,
+                                animation: false,
+                                refreshInterval: 300,
+                                customSettings: {},
+                            },
                             position: { x: 0, y: 0, z: 0 },
-                            size: { width: 3, height: 2, minWidth: 2, minHeight: 2, maxWidth: 12, maxHeight: 8 }
+                            size: {
+                                width: 3,
+                                height: 2,
+                                minWidth: 2,
+                                minHeight: 2,
+                                maxWidth: 12,
+                                maxHeight: 8,
+                            },
                         },
                         {
-                            id: 'total-clicks',
-                            type: 'METRIC',
-                            title: 'Total Clicks',
-                            dataSource: 'clicks',
-                            query: 'SELECT COUNT(*) as value FROM click',
-                            settings: { colors: ['#3b82f6'], showLegend: false, showGrid: false, showTooltip: false, animation: false, refreshInterval: 300, customSettings: {} },
+                            id: "total-clicks",
+                            type: "METRIC",
+                            title: "Total Clicks",
+                            dataSource: "clicks",
+                            query: "SELECT COUNT(*) as value FROM click",
+                            settings: {
+                                colors: ["#3b82f6"],
+                                showLegend: false,
+                                showGrid: false,
+                                showTooltip: false,
+                                animation: false,
+                                refreshInterval: 300,
+                                customSettings: {},
+                            },
                             position: { x: 3, y: 0, z: 0 },
-                            size: { width: 3, height: 2, minWidth: 2, minHeight: 2, maxWidth: 12, maxHeight: 8 }
+                            size: {
+                                width: 3,
+                                height: 2,
+                                minWidth: 2,
+                                minHeight: 2,
+                                maxWidth: 12,
+                                maxHeight: 8,
+                            },
                         },
                         {
-                            id: 'total-conversions',
-                            type: 'METRIC',
-                            title: 'Total Conversions',
-                            dataSource: 'conversions',
-                            query: 'SELECT COUNT(*) as value FROM conversion',
-                            settings: { colors: ['#f59e0b'], showLegend: false, showGrid: false, showTooltip: false, animation: false, refreshInterval: 300, customSettings: {} },
+                            id: "total-conversions",
+                            type: "METRIC",
+                            title: "Total Conversions",
+                            dataSource: "conversions",
+                            query: "SELECT COUNT(*) as value FROM conversion",
+                            settings: {
+                                colors: ["#f59e0b"],
+                                showLegend: false,
+                                showGrid: false,
+                                showTooltip: false,
+                                animation: false,
+                                refreshInterval: 300,
+                                customSettings: {},
+                            },
                             position: { x: 6, y: 0, z: 0 },
-                            size: { width: 3, height: 2, minWidth: 2, minHeight: 2, maxWidth: 12, maxHeight: 8 }
+                            size: {
+                                width: 3,
+                                height: 2,
+                                minWidth: 2,
+                                minHeight: 2,
+                                maxWidth: 12,
+                                maxHeight: 8,
+                            },
                         },
                         {
-                            id: 'conversion-rate',
-                            type: 'METRIC',
-                            title: 'Conversion Rate',
-                            dataSource: 'conversions',
-                            query: 'SELECT (COUNT(*) / (SELECT COUNT(*) FROM click)) * 100 as value FROM conversion',
-                            settings: { colors: ['#ef4444'], showLegend: false, showGrid: false, showTooltip: false, animation: false, refreshInterval: 300, customSettings: {} },
+                            id: "conversion-rate",
+                            type: "METRIC",
+                            title: "Conversion Rate",
+                            dataSource: "conversions",
+                            query: "SELECT (COUNT(*) / (SELECT COUNT(*) FROM click)) * 100 as value FROM conversion",
+                            settings: {
+                                colors: ["#ef4444"],
+                                showLegend: false,
+                                showGrid: false,
+                                showTooltip: false,
+                                animation: false,
+                                refreshInterval: 300,
+                                customSettings: {},
+                            },
                             position: { x: 9, y: 0, z: 0 },
-                            size: { width: 3, height: 2, minWidth: 2, minHeight: 2, maxWidth: 12, maxHeight: 8 }
-                        }
+                            size: {
+                                width: 3,
+                                height: 2,
+                                minWidth: 2,
+                                minHeight: 2,
+                                maxWidth: 12,
+                                maxHeight: 8,
+                            },
+                        },
                     ],
                     layout: {
                         columns: 12,
@@ -453,34 +520,34 @@ class DashboardReportsModel {
                         gap: 16,
                         padding: 16,
                         responsive: true,
-                        breakpoints: {}
+                        breakpoints: {},
                     },
                     filters: {
                         dateRange: {
                             enabled: true,
-                            defaultRange: '30d',
-                            customRange: true
+                            defaultRange: "30d",
+                            customRange: true,
                         },
                         filters: [],
-                        presets: []
+                        presets: [],
                     },
                     exportSettings: {
-                        formats: ['PDF', 'CSV', 'EXCEL'],
+                        formats: ["PDF", "CSV", "EXCEL"],
                         includeCharts: true,
                         includeData: true,
                         includeFilters: true,
-                        customHeader: '',
-                        customFooter: ''
-                    }
+                        customHeader: "",
+                        customFooter: "",
+                    },
                 },
-                isDefault: true
-            }
+                isDefault: true,
+            },
         ];
         const createdTemplates = [];
         for (const templateData of defaultTemplates) {
             const template = await this.createReportTemplate({
                 accountId,
-                ...templateData
+                ...templateData,
             });
             createdTemplates.push(template);
         }
@@ -495,7 +562,7 @@ class DashboardReportsModel {
             widgets,
             templates,
             reports,
-            stats
+            stats,
         };
     }
 }

@@ -6,12 +6,12 @@ export interface AffiliateManager {
     email: string;
     phone?: string;
     department: string;
-    role: 'MANAGER' | 'SENIOR_MANAGER' | 'DIRECTOR' | 'VP';
+    role: "MANAGER" | "SENIOR_MANAGER" | "DIRECTOR" | "VP";
     permissions: ManagerPermissions;
     assignedAffiliates: string[];
     assignedOffers: string[];
     assignedRegions: string[];
-    status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+    status: "ACTIVE" | "INACTIVE" | "SUSPENDED";
     createdAt: Date;
     updatedAt: Date;
 }

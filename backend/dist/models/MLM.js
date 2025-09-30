@@ -7,10 +7,12 @@ class MLMModel {
     static async createStructure(data) {
         return await prisma.mlmStructure.create({
             data: {
+                accountId: data.accountId,
                 name: data.name,
-                maxTiers: data.maxTiers,
-                commissionRates: data.commissionRates || [],
-                status: data.status || 'ACTIVE',
+                type: data.type || 'BINARY',
+                maxLevels: data.maxLevels || 10,
+                settings: data.settings || {},
+                status: data.status || 'ACTIVE'
             }
         });
     }
@@ -28,55 +30,55 @@ class MLMModel {
     static async createRelationship(data) {
         return await prisma.mlmRelationship.create({
             data: {
+                structureId: data.structureId,
+                sponsorId: data.sponsorId,
                 affiliateId: data.affiliateId,
-                parentId: data.parentId,
-                tier: data.tier,
-                path: data.path,
-                status: data.status || 'ACTIVE',
+                position: data.position || 'LEFT',
+                level: data.level || 1
             }
         });
     }
-    static async findRelationshipByAffiliate(affiliateId) {
+    static async findRelationshipByAffiliate(affiliateId, structureId) {
         return await prisma.mlmRelationship.findUnique({
-            where: { affiliateId }
+            where: {
+                structureId_affiliateId: {
+                    structureId,
+                    affiliateId
+                }
+            }
         });
     }
-    static async getDownline(affiliateId, maxTiers = 10) {
-        const relationship = await this.findRelationshipByAffiliate(affiliateId);
+    static async getDownline(affiliateId, structureId, maxLevels = 10) {
+        const relationship = await this.findRelationshipByAffiliate(affiliateId, structureId);
         if (!relationship) {
             return [];
         }
-        const pathPattern = `${relationship.path}.%`;
         return await prisma.mlmRelationship.findMany({
             where: {
-                path: {
-                    startsWith: relationship.path + '.'
-                },
-                tier: {
-                    lte: relationship.tier + maxTiers
-                },
-                status: 'ACTIVE'
+                structureId,
+                sponsorId: affiliateId,
+                level: {
+                    lte: relationship.level + maxLevels
+                }
             },
-            orderBy: { tier: 'asc' }
+            orderBy: { level: 'asc' }
         });
     }
-    static async getUpline(affiliateId) {
-        const relationship = await this.findRelationshipByAffiliate(affiliateId);
+    static async getUpline(affiliateId, structureId) {
+        const relationship = await this.findRelationshipByAffiliate(affiliateId, structureId);
         if (!relationship) {
             return [];
         }
-        const pathParts = relationship.path.split('.');
         const upline = [];
-        for (let i = pathParts.length - 1; i > 0; i--) {
-            const parentPath = pathParts.slice(0, i).join('.');
-            const parent = await prisma.mlmRelationship.findFirst({
-                where: {
-                    path: parentPath,
-                    status: 'ACTIVE'
-                }
-            });
-            if (parent) {
-                upline.push(parent);
+        let currentSponsorId = relationship.sponsorId;
+        while (currentSponsorId) {
+            const sponsor = await this.findRelationshipByAffiliate(currentSponsorId, structureId);
+            if (sponsor) {
+                upline.push(sponsor);
+                currentSponsorId = sponsor.sponsorId;
+            }
+            else {
+                break;
             }
         }
         return upline;
@@ -87,29 +89,19 @@ class MLMModel {
             throw new Error('MLM structure not found');
         }
         const commissions = [];
-        const upline = await this.getUpline(affiliateId);
+        const upline = await this.getUpline(affiliateId, structureId);
         for (const member of upline) {
-            if (member.tier > structure.maxTiers) {
+            if (member.level > structure.maxLevels) {
                 continue;
             }
-            const commissionRate = structure.commissionRates.find(rate => rate.tier === member.tier);
-            if (!commissionRate) {
-                continue;
-            }
-            let commissionAmount = 0;
-            if (commissionRate.type === 'PERCENTAGE') {
-                commissionAmount = (amount * commissionRate.rate) / 100;
-            }
-            else {
-                commissionAmount = commissionRate.rate;
-            }
-            const commission = await prisma.mlmCommission.create({
+            const commissionRate = 5;
+            const commissionAmount = (amount * commissionRate) / 100;
+            const commission = await prisma.commission.create({
                 data: {
                     conversionId,
                     affiliateId: member.affiliateId,
-                    tier: member.tier,
                     amount: commissionAmount,
-                    rate: commissionRate.rate,
+                    rate: commissionRate,
                     status: 'PENDING'
                 }
             });
@@ -117,19 +109,19 @@ class MLMModel {
         }
         return commissions;
     }
-    static async getMLMStats(affiliateId) {
-        const relationship = await this.findRelationshipByAffiliate(affiliateId);
+    static async getMLMStats(affiliateId, structureId) {
+        const relationship = await this.findRelationshipByAffiliate(affiliateId, structureId);
         if (!relationship) {
             return {
-                tier: 0,
+                level: 0,
                 downlineCount: 0,
                 totalCommissions: 0,
                 pendingCommissions: 0,
                 paidCommissions: 0
             };
         }
-        const downline = await this.getDownline(affiliateId);
-        const commissions = await prisma.mlmCommission.findMany({
+        const downline = await this.getDownline(affiliateId, structureId);
+        const commissions = await prisma.commission.findMany({
             where: { affiliateId }
         });
         const totalCommissions = commissions.reduce((sum, comm) => sum + comm.amount, 0);
@@ -140,13 +132,13 @@ class MLMModel {
             .filter(comm => comm.status === 'PAID')
             .reduce((sum, comm) => sum + comm.amount, 0);
         return {
-            tier: relationship.tier,
+            level: relationship.level,
             downlineCount: downline.length,
             totalCommissions,
             pendingCommissions,
             paidCommissions,
-            downlineByTier: downline.reduce((acc, member) => {
-                acc[member.tier] = (acc[member.tier] || 0) + 1;
+            downlineByLevel: downline.reduce((acc, member) => {
+                acc[member.level] = (acc[member.level] || 0) + 1;
                 return acc;
             }, {})
         };
@@ -159,7 +151,7 @@ class MLMModel {
                 lte: endDate
             };
         }
-        const commissions = await prisma.mlmCommission.findMany({
+        const commissions = await prisma.commission.findMany({
             where,
             include: {
                 conversion: true,
@@ -173,19 +165,10 @@ class MLMModel {
         const stats = {
             totalCommissions: commissions.length,
             totalAmount: commissions.reduce((sum, comm) => sum + comm.amount, 0),
-            byTier: {},
             byAffiliate: {},
             byStatus: {}
         };
         commissions.forEach(commission => {
-            if (!stats.byTier[commission.tier]) {
-                stats.byTier[commission.tier] = {
-                    count: 0,
-                    amount: 0
-                };
-            }
-            stats.byTier[commission.tier].count++;
-            stats.byTier[commission.tier].amount += commission.amount;
             if (!stats.byAffiliate[commission.affiliateId]) {
                 stats.byAffiliate[commission.affiliateId] = {
                     count: 0,
@@ -200,13 +183,13 @@ class MLMModel {
         return stats;
     }
     static async approveCommission(commissionId) {
-        return await prisma.mlmCommission.update({
+        return await prisma.commission.update({
             where: { id: commissionId },
             data: { status: 'APPROVED' }
         });
     }
     static async payCommission(commissionId) {
-        return await prisma.mlmCommission.update({
+        return await prisma.commission.update({
             where: { id: commissionId },
             data: { status: 'PAID' }
         });

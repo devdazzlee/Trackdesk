@@ -2,7 +2,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.OffersController = void 0;
 const Offers_1 = require("../models/Offers");
-require("../types/express");
 class OffersController {
     static async createOffer(req, res) {
         try {

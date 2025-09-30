@@ -1,22 +1,7 @@
-import { Request, Response } from 'express';
-import { OfferService } from '../services/OfferService';
-import { z } from 'zod';
-
-// Extend Express Request interface to include user
-declare global {
-  namespace Express {
-    interface Request {
-      user?: {
-        id: string;
-        email: string;
-        role: string;
-        accountId: string;
-        affiliateId?: string;
-        userId?: string;
-      };
-    }
-  }
-}
+import { Request, Response } from "express";
+import { OfferService } from "../services/OfferService";
+import { z } from "zod";
+import "../types/express";
 
 const offerService = new OfferService();
 
@@ -28,7 +13,7 @@ const createOfferSchema = z.object({
   startDate: z.string().datetime(),
   endDate: z.string().datetime().optional(),
   terms: z.string().optional(),
-  requirements: z.string().optional()
+  requirements: z.string().optional(),
 });
 
 const updateOfferSchema = z.object({
@@ -40,49 +25,51 @@ const updateOfferSchema = z.object({
   endDate: z.string().datetime().optional(),
   terms: z.string().optional(),
   requirements: z.string().optional(),
-  status: z.enum(['ACTIVE', 'INACTIVE', 'PAUSED', 'EXPIRED']).optional()
+  status: z.enum(["ACTIVE", "INACTIVE", "PAUSED", "EXPIRED"]).optional(),
 });
 
 const applyForOfferSchema = z.object({
-  message: z.string().optional()
+  message: z.string().optional(),
 });
 
 const updateApplicationSchema = z.object({
-  status: z.enum(['PENDING', 'APPROVED', 'REJECTED']),
-  message: z.string().optional()
+  status: z.enum(["PENDING", "APPROVED", "REJECTED"]),
+  message: z.string().optional(),
 });
 
 const createCreativeSchema = z.object({
   name: z.string().min(1),
-  type: z.enum(['BANNER', 'LOGO', 'SOCIAL_MEDIA', 'EMAIL_TEMPLATE', 'VIDEO']),
+  type: z.enum(["BANNER", "LOGO", "SOCIAL_MEDIA", "EMAIL_TEMPLATE", "VIDEO"]),
   size: z.string().min(1),
   format: z.string().min(1),
   url: z.string().url(),
-  downloadUrl: z.string().url()
+  downloadUrl: z.string().url(),
 });
 
 const updateCreativeSchema = z.object({
   name: z.string().min(1).optional(),
-  type: z.enum(['BANNER', 'LOGO', 'SOCIAL_MEDIA', 'EMAIL_TEMPLATE', 'VIDEO']).optional(),
+  type: z
+    .enum(["BANNER", "LOGO", "SOCIAL_MEDIA", "EMAIL_TEMPLATE", "VIDEO"])
+    .optional(),
   size: z.string().min(1).optional(),
   format: z.string().min(1).optional(),
   url: z.string().url().optional(),
-  downloadUrl: z.string().url().optional()
+  downloadUrl: z.string().url().optional(),
 });
 
 export class OfferController {
   async getAllOffers(req: Request, res: Response) {
     try {
       const { page = 1, limit = 10, search, status, category } = req.query;
-      
+
       const offers = await offerService.getAllOffers({
         page: parseInt(page as string),
         limit: parseInt(limit as string),
         search: search as string,
         status: status as string,
-        category: category as string
+        category: category as string,
       });
-      
+
       res.json(offers);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -102,11 +89,14 @@ export class OfferController {
   async createOffer(req: Request, res: Response) {
     try {
       const data = createOfferSchema.parse(req.body);
-      const offer = await offerService.createOffer(data as any);
+      const accountId = req.user?.accountId || "default"; // Get accountId from request user or use default
+      const offer = await offerService.createOffer(data as any, accountId);
       res.status(201).json(offer);
     } catch (error: any) {
-      if (error.name === 'ZodError') {
-        return res.status(400).json({ error: 'Invalid input data', details: error.errors });
+      if (error.name === "ZodError") {
+        return res
+          .status(400)
+          .json({ error: "Invalid input data", details: error.errors });
       }
       res.status(400).json({ error: error.message });
     }
@@ -119,8 +109,10 @@ export class OfferController {
       const offer = await offerService.updateOffer(id, data);
       res.json(offer);
     } catch (error: any) {
-      if (error.name === 'ZodError') {
-        return res.status(400).json({ error: 'Invalid input data', details: error.errors });
+      if (error.name === "ZodError") {
+        return res
+          .status(400)
+          .json({ error: "Invalid input data", details: error.errors });
       }
       res.status(404).json({ error: error.message });
     }
@@ -130,7 +122,7 @@ export class OfferController {
     try {
       const { id } = req.params;
       await offerService.deleteOffer(id);
-      res.json({ message: 'Offer deleted successfully' });
+      res.json({ message: "Offer deleted successfully" });
     } catch (error: any) {
       res.status(404).json({ error: error.message });
     }
@@ -140,13 +132,13 @@ export class OfferController {
     try {
       const { id } = req.params;
       const { page = 1, limit = 10, status } = req.query;
-      
+
       const applications = await offerService.getOfferApplications(id, {
         page: parseInt(page as string),
         limit: parseInt(limit as string),
-        status: status as string
+        status: status as string,
       });
-      
+
       res.json(applications);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -157,11 +149,17 @@ export class OfferController {
     try {
       const { id } = req.params;
       const data = applyForOfferSchema.parse(req.body);
-      const application = await offerService.applyForOffer(id, req.user.id, data);
+      const application = await offerService.applyForOffer(
+        id,
+        req.user.id,
+        data
+      );
       res.status(201).json(application);
     } catch (error: any) {
-      if (error.name === 'ZodError') {
-        return res.status(400).json({ error: 'Invalid input data', details: error.errors });
+      if (error.name === "ZodError") {
+        return res
+          .status(400)
+          .json({ error: "Invalid input data", details: error.errors });
       }
       res.status(400).json({ error: error.message });
     }
@@ -171,11 +169,16 @@ export class OfferController {
     try {
       const { applicationId } = req.params;
       const data = updateApplicationSchema.parse(req.body);
-      const application = await offerService.updateApplication(applicationId, data as any);
+      const application = await offerService.updateApplication(
+        applicationId,
+        data as any
+      );
       res.json(application);
     } catch (error: any) {
-      if (error.name === 'ZodError') {
-        return res.status(400).json({ error: 'Invalid input data', details: error.errors });
+      if (error.name === "ZodError") {
+        return res
+          .status(400)
+          .json({ error: "Invalid input data", details: error.errors });
       }
       res.status(404).json({ error: error.message });
     }
@@ -185,7 +188,7 @@ export class OfferController {
     try {
       const { applicationId } = req.params;
       await offerService.deleteApplication(applicationId);
-      res.json({ message: 'Application deleted successfully' });
+      res.json({ message: "Application deleted successfully" });
     } catch (error: any) {
       res.status(404).json({ error: error.message });
     }
@@ -195,13 +198,13 @@ export class OfferController {
     try {
       const { id } = req.params;
       const { page = 1, limit = 10, type } = req.query;
-      
+
       const creatives = await offerService.getOfferCreatives(id, {
         page: parseInt(page as string),
         limit: parseInt(limit as string),
-        type: type as string
+        type: type as string,
       });
-      
+
       res.json(creatives);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -215,8 +218,10 @@ export class OfferController {
       const creative = await offerService.createCreative(id, data as any);
       res.status(201).json(creative);
     } catch (error: any) {
-      if (error.name === 'ZodError') {
-        return res.status(400).json({ error: 'Invalid input data', details: error.errors });
+      if (error.name === "ZodError") {
+        return res
+          .status(400)
+          .json({ error: "Invalid input data", details: error.errors });
       }
       res.status(400).json({ error: error.message });
     }
@@ -229,8 +234,10 @@ export class OfferController {
       const creative = await offerService.updateCreative(creativeId, data);
       res.json(creative);
     } catch (error: any) {
-      if (error.name === 'ZodError') {
-        return res.status(400).json({ error: 'Invalid input data', details: error.errors });
+      if (error.name === "ZodError") {
+        return res
+          .status(400)
+          .json({ error: "Invalid input data", details: error.errors });
       }
       res.status(404).json({ error: error.message });
     }
@@ -240,7 +247,7 @@ export class OfferController {
     try {
       const { creativeId } = req.params;
       await offerService.deleteCreative(creativeId);
-      res.json({ message: 'Creative deleted successfully' });
+      res.json({ message: "Creative deleted successfully" });
     } catch (error: any) {
       res.status(404).json({ error: error.message });
     }
@@ -249,14 +256,14 @@ export class OfferController {
   async getOfferAnalytics(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const { timeRange = '30d', startDate, endDate } = req.query;
-      
+      const { timeRange = "30d", startDate, endDate } = req.query;
+
       const analytics = await offerService.getOfferAnalytics(id, {
         timeRange: timeRange as string,
         startDate: startDate as string,
-        endDate: endDate as string
+        endDate: endDate as string,
       });
-      
+
       res.json(analytics);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -266,15 +273,20 @@ export class OfferController {
   async getOfferClicks(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const { timeRange = '30d', startDate, endDate, groupBy = 'day' } = req.query;
-      
+      const {
+        timeRange = "30d",
+        startDate,
+        endDate,
+        groupBy = "day",
+      } = req.query;
+
       const analytics = await offerService.getOfferClicks(id, {
         timeRange: timeRange as string,
         startDate: startDate as string,
         endDate: endDate as string,
-        groupBy: groupBy as string
+        groupBy: groupBy as string,
       });
-      
+
       res.json(analytics);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -284,15 +296,20 @@ export class OfferController {
   async getOfferConversions(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const { timeRange = '30d', startDate, endDate, groupBy = 'day' } = req.query;
-      
+      const {
+        timeRange = "30d",
+        startDate,
+        endDate,
+        groupBy = "day",
+      } = req.query;
+
       const analytics = await offerService.getOfferConversions(id, {
         timeRange: timeRange as string,
         startDate: startDate as string,
         endDate: endDate as string,
-        groupBy: groupBy as string
+        groupBy: groupBy as string,
       });
-      
+
       res.json(analytics);
     } catch (error: any) {
       res.status(500).json({ error: error.message });

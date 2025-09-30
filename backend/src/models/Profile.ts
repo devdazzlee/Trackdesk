@@ -1,5 +1,5 @@
-import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcryptjs';
+import { PrismaClient } from "@prisma/client";
+import * as bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
@@ -55,12 +55,12 @@ export interface SecuritySettings {
 
 export interface UserPreferences {
   dashboard: {
-    defaultView: 'OVERVIEW' | 'DETAILED' | 'CUSTOM';
+    defaultView: "OVERVIEW" | "DETAILED" | "CUSTOM";
     widgets: string[];
     refreshInterval: number;
   };
   reports: {
-    defaultFormat: 'PDF' | 'CSV' | 'EXCEL';
+    defaultFormat: "PDF" | "CSV" | "EXCEL";
     includeCharts: boolean;
     autoSchedule: boolean;
   };
@@ -72,104 +72,116 @@ export interface UserPreferences {
 }
 
 export class ProfileModel {
-  static async createProfile(userId: string, data: Partial<UserProfile>): Promise<UserProfile> {
+  static async createProfile(userId: string, data: any): Promise<any> {
     const user = await prisma.user.findUnique({
-      where: { id: userId }
+      where: { id: userId },
     });
 
     if (!user) {
-      throw new Error('User not found');
+      throw new Error("User not found");
     }
 
-    return await prisma.userProfile.create({
+    return (await prisma.userProfile.create({
       data: {
         userId,
         firstName: data.firstName || user.firstName,
         lastName: data.lastName || user.lastName,
-        email: data.email || user.email,
-        phone: data.phone,
         avatar: data.avatar,
-        timezone: data.timezone || 'UTC',
-        language: data.language || 'en',
-        dateFormat: data.dateFormat || 'MM/DD/YYYY',
-        currency: data.currency || 'USD',
-        notifications: data.notifications || {
-          email: {
-            commissionEarned: true,
-            payoutProcessed: true,
-            accountUpdates: true,
-            marketingEmails: false,
-            systemAlerts: true
+        bio: data.bio || "",
+        settings: (data.settings || {
+          email: data.email || user.email,
+          phone: data.phone,
+          timezone: data.timezone || "UTC",
+          language: data.language || "en",
+          dateFormat: data.dateFormat || "MM/DD/YYYY",
+          currency: data.currency || "USD",
+          notifications: data.notifications || {
+            email: {
+              commissionEarned: true,
+              payoutProcessed: true,
+              accountUpdates: true,
+              marketingEmails: false,
+              systemAlerts: true,
+            },
+            push: {
+              commissionEarned: true,
+              payoutProcessed: true,
+              accountUpdates: true,
+              systemAlerts: true,
+            },
+            sms: {
+              payoutProcessed: false,
+              securityAlerts: true,
+            },
           },
-          push: {
-            commissionEarned: true,
-            payoutProcessed: true,
-            accountUpdates: true,
-            systemAlerts: true
+          security: data.security || {
+            twoFactorEnabled: false,
+            loginAlerts: true,
+            sessionTimeout: 30,
+            allowedIPs: [],
+            passwordLastChanged: new Date(),
+            lastPasswordChange: new Date(),
           },
-          sms: {
-            payoutProcessed: false,
-            securityAlerts: true
-          }
-        },
-        security: data.security || {
-          twoFactorEnabled: false,
-          loginAlerts: true,
-          sessionTimeout: 30,
-          allowedIPs: [],
-          passwordLastChanged: new Date(),
-          lastPasswordChange: new Date()
-        },
-        preferences: data.preferences || {
+        }) as any,
+        preferences: (data.preferences || {
           dashboard: {
-            defaultView: 'OVERVIEW',
-            widgets: ['earnings', 'clicks', 'conversions', 'offers'],
-            refreshInterval: 30
+            defaultView: "OVERVIEW",
+            widgets: ["earnings", "clicks", "conversions", "offers"],
+            refreshInterval: 30,
           },
           reports: {
-            defaultFormat: 'PDF',
+            defaultFormat: "PDF",
             includeCharts: true,
-            autoSchedule: false
+            autoSchedule: false,
           },
           affiliate: {
             showPersonalInfo: true,
             allowDirectContact: true,
-            publicProfile: false
-          }
-        }
-      }
-    }) as UserProfile;
+            publicProfile: false,
+          },
+        }) as any,
+      },
+    })) as unknown as any;
   }
 
-  static async getProfile(userId: string): Promise<UserProfile | null> {
-    return await prisma.userProfile.findUnique({
-      where: { userId }
-    }) as UserProfile | null;
+  static async getProfile(userId: string): Promise<any | null> {
+    return (await prisma.userProfile.findUnique({
+      where: { userId },
+    })) as unknown as any | null;
   }
 
-  static async updateProfile(userId: string, data: Partial<UserProfile>): Promise<UserProfile> {
-    return await prisma.userProfile.update({
+  static async updateProfile(userId: string, data: any): Promise<any> {
+    return (await prisma.userProfile.update({
       where: { userId },
       data: {
         ...data,
-        updatedAt: new Date()
-      }
-    }) as UserProfile;
+        settings: data.settings as any,
+        preferences: data.preferences as any,
+        updatedAt: new Date(),
+      },
+    })) as unknown as any;
   }
 
-  static async updatePassword(userId: string, currentPassword: string, newPassword: string): Promise<boolean> {
+  static async updatePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string
+  ): Promise<boolean> {
     const user = await prisma.user.findUnique({
-      where: { id: userId }
+      where: { id: userId },
     });
 
     if (!user) {
-      throw new Error('User not found');
+      throw new Error("User not found");
     }
 
     // Verify current password
-    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    const isCurrentPasswordValid = await bcrypt.compare(
+      currentPassword,
+      user.password
+    );
     if (!isCurrentPasswordValid) {
-      throw new Error('Current password is incorrect');
+      throw new Error("Current password is incorrect");
     }
 
     // Hash new password
@@ -178,105 +190,143 @@ export class ProfileModel {
     // Update password
     await prisma.user.update({
       where: { id: userId },
-      data: { password: hashedNewPassword }
+      data: { password: hashedNewPassword },
     });
 
     // Update profile security settings
-    await this.updateProfile(userId, {
-      security: {
-        passwordLastChanged: new Date(),
-        lastPasswordChange: new Date()
-      }
-    });
+    const profile = await this.getProfile(userId);
+    if (profile) {
+      const currentSettings = (profile.settings as any) || {};
+      const updatedSettings = {
+        ...currentSettings,
+        security: {
+          ...currentSettings.security,
+          passwordLastChanged: new Date(),
+          lastPasswordChange: new Date(),
+        },
+      };
+      await this.updateProfile(userId, { settings: updatedSettings });
+    }
 
     return true;
   }
 
-  static async updateNotificationSettings(userId: string, settings: Partial<NotificationSettings>): Promise<UserProfile> {
+  static async updateNotificationSettings(
+    userId: string,
+    settings: any
+  ): Promise<any> {
     const profile = await this.getProfile(userId);
     if (!profile) {
-      throw new Error('Profile not found');
+      throw new Error("Profile not found");
     }
 
-    const updatedNotifications = {
-      ...profile.notifications,
-      ...settings
+    const currentSettings = (profile.settings as any) || {};
+    const updatedSettings = {
+      ...currentSettings,
+      notifications: {
+        ...currentSettings.notifications,
+        ...settings,
+      },
     };
 
     return await this.updateProfile(userId, {
-      notifications: updatedNotifications
+      settings: updatedSettings,
     });
   }
 
-  static async updateSecuritySettings(userId: string, settings: Partial<SecuritySettings>): Promise<UserProfile> {
+  static async updateSecuritySettings(
+    userId: string,
+    settings: any
+  ): Promise<any> {
     const profile = await this.getProfile(userId);
     if (!profile) {
-      throw new Error('Profile not found');
+      throw new Error("Profile not found");
     }
 
-    const updatedSecurity = {
-      ...profile.security,
-      ...settings
+    const currentSettings = (profile.settings as any) || {};
+    const updatedSettings = {
+      ...currentSettings,
+      security: {
+        ...currentSettings.security,
+        ...settings,
+      },
     };
 
     return await this.updateProfile(userId, {
-      security: updatedSecurity
+      settings: updatedSettings,
     });
   }
 
-  static async updatePreferences(userId: string, preferences: Partial<UserPreferences>): Promise<UserProfile> {
+  static async updatePreferences(
+    userId: string,
+    preferences: any
+  ): Promise<any> {
     const profile = await this.getProfile(userId);
     if (!profile) {
-      throw new Error('Profile not found');
+      throw new Error("Profile not found");
     }
 
+    const currentPreferences = (profile.preferences as any) || {};
     const updatedPreferences = {
-      ...profile.preferences,
-      ...preferences
+      ...currentPreferences,
+      ...preferences,
     };
 
     return await this.updateProfile(userId, {
-      preferences: updatedPreferences
+      preferences: updatedPreferences,
     });
   }
 
-  static async uploadAvatar(userId: string, avatarUrl: string): Promise<UserProfile> {
+  static async uploadAvatar(userId: string, avatarUrl: string): Promise<any> {
     return await this.updateProfile(userId, { avatar: avatarUrl });
   }
 
-  static async enableTwoFactor(userId: string, secret: string, backupCodes: string[]): Promise<UserProfile> {
+  static async enableTwoFactor(
+    userId: string,
+    secret: string,
+    backupCodes: string[]
+  ): Promise<any> {
     return await this.updateSecuritySettings(userId, {
       twoFactorEnabled: true,
       twoFactorSecret: secret,
-      backupCodes
+      backupCodes,
     });
   }
 
-  static async disableTwoFactor(userId: string): Promise<UserProfile> {
+  static async disableTwoFactor(userId: string): Promise<any> {
     return await this.updateSecuritySettings(userId, {
       twoFactorEnabled: false,
       twoFactorSecret: undefined,
-      backupCodes: undefined
+      backupCodes: undefined,
     });
   }
 
-  static async addAllowedIP(userId: string, ipAddress: string): Promise<UserProfile> {
+  static async addAllowedIP(userId: string, ipAddress: string): Promise<any> {
     const profile = await this.getProfile(userId);
     if (!profile) {
-      throw new Error('Profile not found');
+      throw new Error("Profile not found");
     }
 
-    const allowedIPs = [...profile.security.allowedIPs, ipAddress];
+    const currentSettings = (profile.settings as any) || {};
+    const currentSecurity = currentSettings.security || {};
+    const allowedIPs = [...(currentSecurity.allowedIPs || []), ipAddress];
     return await this.updateSecuritySettings(userId, { allowedIPs });
   }
 
-  static async removeAllowedIP(userId: string, ipAddress: string): Promise<UserProfile> {
+  static async removeAllowedIP(
+    userId: string,
+    ipAddress: string
+  ): Promise<any> {
     const profile = await this.getProfile(userId);
     if (!profile) {
-      throw new Error('Profile not found');
+      throw new Error("Profile not found");
     }
 
-    const allowedIPs = profile.security.allowedIPs.filter(ip => ip !== ipAddress);
+    const currentSettings = (profile.settings as any) || {};
+    const currentSecurity = currentSettings.security || {};
+    const allowedIPs = (currentSecurity.allowedIPs || []).filter(
+      (ip: string) => ip !== ipAddress
+    );
     return await this.updateSecuritySettings(userId, { allowedIPs });
   }
 
@@ -289,31 +339,41 @@ export class ProfileModel {
     const affiliate = await prisma.affiliateProfile.findUnique({
       where: { userId },
       include: {
-        user: true
-      }
+        user: true,
+      },
     });
+
+    const settings = (profile.settings as any) || {};
+    const preferences = (profile.preferences as any) || {};
 
     return {
       id: profile.id,
       firstName: profile.firstName,
       lastName: profile.lastName,
       avatar: profile.avatar,
-      timezone: profile.timezone,
-      language: profile.language,
-      currency: profile.currency,
-      affiliate: affiliate ? {
-        companyName: affiliate.companyName,
-        website: affiliate.website,
-        totalEarnings: affiliate.totalEarnings,
-        totalClicks: affiliate.totalClicks,
-        totalConversions: affiliate.totalConversions,
-        tier: affiliate.tier
-      } : null,
-      preferences: profile.preferences.affiliate
+      timezone: settings.timezone,
+      language: settings.language,
+      currency: settings.currency,
+      affiliate: affiliate
+        ? {
+            companyName: affiliate.companyName,
+            website: affiliate.website,
+            totalEarnings: affiliate.totalEarnings,
+            totalClicks: affiliate.totalClicks,
+            totalConversions: affiliate.totalConversions,
+            tier: affiliate.tier,
+          }
+        : null,
+      preferences: preferences.affiliate,
     };
   }
 
-  static async searchProfiles(query: string, filters: any = {}, page: number = 1, limit: number = 20): Promise<UserProfile[]> {
+  static async searchProfiles(
+    query: string,
+    filters: any = {},
+    page: number = 1,
+    limit: number = 20
+  ): Promise<any[]> {
     const skip = (page - 1) * limit;
     const where: any = {};
 
@@ -321,20 +381,15 @@ export class ProfileModel {
       where.OR = [
         { firstName: { contains: query } },
         { lastName: { contains: query } },
-        { email: { contains: query } }
       ];
     }
 
-    if (filters.timezone) where.timezone = filters.timezone;
-    if (filters.language) where.language = filters.language;
-    if (filters.currency) where.currency = filters.currency;
-
-    return await prisma.userProfile.findMany({
+    return (await prisma.userProfile.findMany({
       where,
       skip,
       take: limit,
-      orderBy: { updatedAt: 'desc' }
-    }) as UserProfile[];
+      orderBy: { updatedAt: "desc" },
+    })) as unknown as any[];
   }
 
   static async getProfileStats(userId: string): Promise<any> {
@@ -344,12 +399,17 @@ export class ProfileModel {
     }
 
     const affiliate = await prisma.affiliateProfile.findUnique({
-      where: { userId }
+      where: { userId },
     });
 
     const user = await prisma.user.findUnique({
-      where: { id: userId }
+      where: { id: userId },
     });
+
+    const settings = (profile.settings as any) || {};
+    const preferences = (profile.preferences as any) || {};
+    const security = settings.security || {};
+    const notifications = settings.notifications || {};
 
     return {
       profile,
@@ -360,22 +420,27 @@ export class ProfileModel {
         role: user?.role,
         status: user?.status,
         createdAt: user?.createdAt,
-        lastLoginAt: user?.lastLoginAt
+        lastLoginAt: user?.lastLoginAt,
       },
       security: {
-        twoFactorEnabled: profile.security.twoFactorEnabled,
-        loginAlerts: profile.security.loginAlerts,
-        allowedIPsCount: profile.security.allowedIPs.length,
-        passwordAge: Math.floor((Date.now() - profile.security.lastPasswordChange.getTime()) / (1000 * 60 * 60 * 24))
+        twoFactorEnabled: security.twoFactorEnabled || false,
+        loginAlerts: security.loginAlerts || false,
+        allowedIPsCount: (security.allowedIPs || []).length,
+        passwordAge: security.lastPasswordChange
+          ? Math.floor(
+              (Date.now() - new Date(security.lastPasswordChange).getTime()) /
+                (1000 * 60 * 60 * 24)
+            )
+          : 0,
       },
-      notifications: profile.notifications,
-      preferences: profile.preferences
+      notifications,
+      preferences,
     };
   }
 
   static async deleteProfile(userId: string): Promise<void> {
     await prisma.userProfile.delete({
-      where: { userId }
+      where: { userId },
     });
   }
 
@@ -386,11 +451,11 @@ export class ProfileModel {
     }
 
     const affiliate = await prisma.affiliateProfile.findUnique({
-      where: { userId }
+      where: { userId },
     });
 
     const user = await prisma.user.findUnique({
-      where: { id: userId }
+      where: { id: userId },
     });
 
     return {
@@ -402,11 +467,9 @@ export class ProfileModel {
         role: user?.role,
         status: user?.status,
         createdAt: user?.createdAt,
-        lastLoginAt: user?.lastLoginAt
+        lastLoginAt: user?.lastLoginAt,
       },
-      exportedAt: new Date().toISOString()
+      exportedAt: new Date().toISOString(),
     };
   }
 }
-
-
