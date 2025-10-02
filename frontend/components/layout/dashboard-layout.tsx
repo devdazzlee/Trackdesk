@@ -1,13 +1,13 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { useState } from "react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,7 +15,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 import {
   Home,
   BarChart3,
@@ -24,6 +24,7 @@ import {
   BookOpen,
   Settings,
   User,
+  Users,
   Bell,
   Menu,
   LogOut,
@@ -37,12 +38,15 @@ import {
   FileText,
   Send,
   AlertTriangle,
-} from "lucide-react"
-import { cn } from "@/lib/utils"
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import { LogoutButton } from "@/components/auth/LogoutButton";
+import { getFullName, getInitials } from "@/lib/auth-client";
 
 interface DashboardLayoutProps {
-  children: React.ReactNode
-  userType?: "affiliate" | "admin"
+  children: React.ReactNode;
+  userType?: "affiliate" | "admin" | "manager";
 }
 
 const affiliateNavItems = [
@@ -101,7 +105,75 @@ const affiliateNavItems = [
       { title: "Notifications", href: "/dashboard/settings/notifications" },
     ],
   },
-]
+];
+
+const managerNavItems = [
+  {
+    title: "Manager Dashboard",
+    href: "/manager",
+    icon: Home,
+  },
+  {
+    title: "Affiliate Management",
+    href: "/manager/affiliates",
+    icon: User,
+    subItems: [
+      { title: "All Affiliates", href: "/manager/affiliates/all" },
+      { title: "Approval Queue", href: "/manager/affiliates/approval" },
+      { title: "Performance Review", href: "/manager/affiliates/performance" },
+    ],
+  },
+  {
+    title: "Analytics & Reports",
+    href: "/manager/analytics",
+    icon: BarChart3,
+    subItems: [
+      { title: "Revenue Reports", href: "/manager/analytics/revenue" },
+      { title: "Traffic Analysis", href: "/manager/analytics/traffic" },
+      { title: "Conversion Reports", href: "/manager/analytics/conversions" },
+    ],
+  },
+  {
+    title: "Offer Management",
+    href: "/manager/offers",
+    icon: LinkIcon,
+    subItems: [
+      { title: "Active Offers", href: "/manager/offers/active" },
+      { title: "Create Offer", href: "/manager/offers/create" },
+      { title: "Performance", href: "/manager/offers/performance" },
+    ],
+  },
+  {
+    title: "Payout Management",
+    href: "/manager/payouts",
+    icon: DollarSign,
+    subItems: [
+      { title: "Pending Payouts", href: "/manager/payouts/pending" },
+      { title: "Payout History", href: "/manager/payouts/history" },
+      { title: "Payout Settings", href: "/manager/payouts/settings" },
+    ],
+  },
+  {
+    title: "Team Management",
+    href: "/manager/team",
+    icon: Users,
+    subItems: [
+      { title: "Team Overview", href: "/manager/team/overview" },
+      { title: "Performance", href: "/manager/team/performance" },
+      { title: "Assignments", href: "/manager/team/assignments" },
+    ],
+  },
+  {
+    title: "Settings",
+    href: "/manager/settings",
+    icon: Settings,
+    subItems: [
+      { title: "Profile", href: "/manager/settings/profile" },
+      { title: "Security", href: "/manager/settings/security" },
+      { title: "Notifications", href: "/manager/settings/notifications" },
+    ],
+  },
+];
 
 const adminNavItems = [
   {
@@ -157,56 +229,79 @@ const adminNavItems = [
     href: "/admin/settings",
     icon: Settings,
   },
-]
+];
 
-export default function DashboardLayout({ children, userType = "affiliate" }: DashboardLayoutProps) {
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [expandedItems, setExpandedItems] = useState<string[]>([])
-  const [notificationsOpen, setNotificationsOpen] = useState(false)
-  const pathname = usePathname()
-  const router = useRouter()
-  
-  const navItems = userType === "admin" ? adminNavItems : affiliateNavItems
+export default function DashboardLayout({
+  children,
+  userType = "affiliate",
+}: DashboardLayoutProps) {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [expandedItems, setExpandedItems] = useState<string[]>([]);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const pathname = usePathname();
+  const router = useRouter();
+  const { user, logout } = useAuth();
+
+  const navItems =
+    userType === "admin"
+      ? adminNavItems
+      : userType === "manager"
+      ? managerNavItems
+      : affiliateNavItems;
 
   const toggleExpanded = (title: string) => {
-    setExpandedItems(prev =>
+    setExpandedItems((prev) =>
       prev.includes(title)
-        ? prev.filter(item => item !== title)
+        ? prev.filter((item) => item !== title)
         : [...prev, title]
-    )
-  }
+    );
+  };
 
   const isActive = (href: string) => {
     if (href === "/dashboard" || href === "/admin") {
-      return pathname === href
+      return pathname === href;
     }
-    return pathname.startsWith(href)
-  }
+    return pathname.startsWith(href);
+  };
 
-  const handleLogout = () => {
-    // In a real app, you would clear tokens, call logout API, etc.
-    router.push("/auth/login")
-  }
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.push("/auth/login");
+    } catch (error) {
+      console.error("Logout error:", error);
+      router.push("/auth/login");
+    }
+  };
 
   const handleProfileClick = () => {
-    const profilePath = userType === "admin" ? "/admin/settings" : "/dashboard/settings/profile"
-    router.push(profilePath)
-  }
+    let profilePath = "/dashboard/settings/profile";
+    if (userType === "admin") profilePath = "/admin/settings";
+    else if (userType === "manager") profilePath = "/manager/settings/profile";
+    router.push(profilePath);
+  };
 
   const handleSettingsClick = () => {
-    const settingsPath = userType === "admin" ? "/admin/settings" : "/dashboard/settings"
-    router.push(settingsPath)
-  }
+    let settingsPath = "/dashboard/settings";
+    if (userType === "admin") settingsPath = "/admin/settings";
+    else if (userType === "manager") settingsPath = "/manager/settings";
+    router.push(settingsPath);
+  };
 
   const handleSupportClick = () => {
-    const supportPath = userType === "admin" ? "/admin/settings" : "/dashboard/resources/support"
-    router.push(supportPath)
-  }
+    let supportPath = "/dashboard/resources/support";
+    if (userType === "admin") supportPath = "/admin/settings";
+    else if (userType === "manager") supportPath = "/manager/settings";
+    router.push(supportPath);
+  };
 
   const handleViewAllNotifications = () => {
-    const notificationsPath = userType === "admin" ? "/admin/notifications" : "/dashboard/notifications"
-    router.push(notificationsPath)
-  }
+    let notificationsPath = "/dashboard/notifications";
+    if (userType === "admin") notificationsPath = "/admin/notifications";
+    else if (userType === "manager")
+      notificationsPath = "/manager/notifications";
+    router.push(notificationsPath);
+  };
 
   // Mock notifications data
   const notifications = [
@@ -215,23 +310,23 @@ export default function DashboardLayout({ children, userType = "affiliate" }: Da
       title: "New conversion recorded",
       message: "You earned $15.50 from a new conversion",
       time: "2 minutes ago",
-      unread: true
+      unread: true,
     },
     {
-      id: "2", 
+      id: "2",
       title: "Payout processed",
       message: "Your payout of $250.00 has been processed",
       time: "1 hour ago",
-      unread: true
+      unread: true,
     },
     {
       id: "3",
       title: "New offer available",
       message: "Check out our latest Black Friday offer",
       time: "3 hours ago",
-      unread: false
-    }
-  ]
+      unread: false,
+    },
+  ];
 
   const SidebarContent = () => (
     <div className="flex h-full flex-col">
@@ -242,7 +337,11 @@ export default function DashboardLayout({ children, userType = "affiliate" }: Da
             <span className="text-white font-bold text-sm">A</span>
           </div>
           <span className="font-bold text-lg">
-            {userType === "admin" ? "Admin Panel" : "AffiliateHub"}
+            {userType === "admin"
+              ? "Trackdesk Admin"
+              : userType === "manager"
+              ? "Trackdesk Manager"
+              : "Trackdesk"}
           </span>
         </Link>
       </div>
@@ -250,9 +349,9 @@ export default function DashboardLayout({ children, userType = "affiliate" }: Da
       {/* Navigation */}
       <nav className="flex-1 space-y-1 p-4">
         {navItems.map((item) => {
-          const hasSubItems = item.subItems && item.subItems.length > 0
-          const isExpanded = expandedItems.includes(item.title)
-          const isItemActive = isActive(item.href)
+          const hasSubItems = item.subItems && item.subItems.length > 0;
+          const isExpanded = expandedItems.includes(item.title);
+          const isItemActive = isActive(item.href);
 
           return (
             <div key={item.title}>
@@ -301,18 +400,17 @@ export default function DashboardLayout({ children, userType = "affiliate" }: Da
                       size="sm"
                       className={cn(
                         "w-full justify-start h-8 px-3 text-left font-normal text-sm",
-                        pathname === subItem.href && "bg-blue-50 text-blue-700 hover:bg-blue-100"
+                        pathname === subItem.href &&
+                          "bg-blue-50 text-blue-700 hover:bg-blue-100"
                       )}
                     >
-                      <Link href={subItem.href}>
-                        {subItem.title}
-                      </Link>
+                      <Link href={subItem.href}>{subItem.title}</Link>
                     </Button>
                   ))}
                 </div>
               )}
             </div>
-          )
+          );
         })}
       </nav>
 
@@ -320,21 +418,25 @@ export default function DashboardLayout({ children, userType = "affiliate" }: Da
       <div className="p-4 border-t">
         <div className="flex items-center space-x-3 p-3 rounded-lg bg-slate-50">
           <Avatar className="h-8 w-8">
-            <AvatarImage src="/placeholder-avatar.jpg" />
-            <AvatarFallback>JD</AvatarFallback>
+            <AvatarImage src={user?.avatar || "/placeholder-avatar.jpg"} />
+            <AvatarFallback>{user ? getInitials(user) : "U"}</AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-slate-900 truncate">
-              John Doe
+              {user ? getFullName(user) : "User"}
             </p>
             <p className="text-xs text-slate-500 truncate">
-              {userType === "admin" ? "Admin" : "Affiliate Partner"}
+              {userType === "admin"
+                ? "Admin"
+                : userType === "manager"
+                ? "Manager"
+                : "Affiliate Partner"}
             </p>
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 
   return (
     <div className="h-screen flex overflow-hidden bg-slate-50">
@@ -368,31 +470,39 @@ export default function DashboardLayout({ children, userType = "affiliate" }: Da
                   <SidebarContent />
                 </SheetContent>
               </Sheet>
-              
+
               <div>
                 <h1 className="text-xl font-semibold text-slate-900">
-                  {userType === "admin" ? "Admin Dashboard" : "Affiliate Dashboard"}
+                  {userType === "admin"
+                    ? "Admin Dashboard"
+                    : userType === "manager"
+                    ? "Manager Dashboard"
+                    : "Affiliate Dashboard"}
                 </h1>
                 <p className="text-sm text-slate-500">
-                  {userType === "admin" 
-                    ? "Manage your affiliate program" 
-                    : "Track your performance and earnings"
-                  }
+                  {userType === "admin"
+                    ? "Manage your affiliate program"
+                    : userType === "manager"
+                    ? "Manage affiliates and performance"
+                    : "Track your performance and earnings"}
                 </p>
               </div>
             </div>
 
             <div className="flex items-center space-x-4">
               {/* Notifications */}
-              <DropdownMenu open={notificationsOpen} onOpenChange={setNotificationsOpen}>
+              <DropdownMenu
+                open={notificationsOpen}
+                onOpenChange={setNotificationsOpen}
+              >
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm" className="relative">
                     <Bell className="h-5 w-5" />
-                    <Badge 
-                      variant="destructive" 
+                    <Badge
+                      variant="destructive"
                       className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
                     >
-                      {notifications.filter(n => n.unread).length}
+                      {notifications.filter((n) => n.unread).length}
                     </Badge>
                   </Button>
                 </DropdownMenuTrigger>
@@ -400,12 +510,21 @@ export default function DashboardLayout({ children, userType = "affiliate" }: Da
                   <DropdownMenuLabel>Notifications</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   {notifications.map((notification) => (
-                    <DropdownMenuItem key={notification.id} className="flex flex-col items-start p-3">
+                    <DropdownMenuItem
+                      key={notification.id}
+                      className="flex flex-col items-start p-3"
+                    >
                       <div className="flex items-start justify-between w-full">
                         <div className="flex-1">
-                          <p className="font-medium text-sm">{notification.title}</p>
-                          <p className="text-xs text-slate-600 mt-1">{notification.message}</p>
-                          <p className="text-xs text-slate-400 mt-1">{notification.time}</p>
+                          <p className="font-medium text-sm">
+                            {notification.title}
+                          </p>
+                          <p className="text-xs text-slate-600 mt-1">
+                            {notification.message}
+                          </p>
+                          <p className="text-xs text-slate-400 mt-1">
+                            {notification.time}
+                          </p>
                         </div>
                         {notification.unread && (
                           <div className="w-2 h-2 bg-blue-600 rounded-full ml-2 mt-1"></div>
@@ -414,8 +533,13 @@ export default function DashboardLayout({ children, userType = "affiliate" }: Da
                     </DropdownMenuItem>
                   ))}
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem className="text-center" onClick={handleViewAllNotifications}>
-                    <span className="text-sm text-blue-600">View all notifications</span>
+                  <DropdownMenuItem
+                    className="text-center"
+                    onClick={handleViewAllNotifications}
+                  >
+                    <span className="text-sm text-blue-600">
+                      View all notifications
+                    </span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -423,15 +547,28 @@ export default function DashboardLayout({ children, userType = "affiliate" }: Da
               {/* User Menu */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="flex items-center space-x-2">
+                  <Button
+                    variant="ghost"
+                    className="flex items-center space-x-2"
+                  >
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src="/placeholder-avatar.jpg" />
-                      <AvatarFallback>JD</AvatarFallback>
+                      <AvatarImage
+                        src={user?.avatar || "/placeholder-avatar.jpg"}
+                      />
+                      <AvatarFallback>
+                        {user ? getInitials(user) : "U"}
+                      </AvatarFallback>
                     </Avatar>
                     <div className="hidden md:block text-left">
-                      <p className="text-sm font-medium">John Doe</p>
+                      <p className="text-sm font-medium">
+                        {user ? getFullName(user) : "User"}
+                      </p>
                       <p className="text-xs text-slate-500">
-                        {userType === "admin" ? "Admin" : "Affiliate"}
+                        {userType === "admin"
+                          ? "Admin"
+                          : userType === "manager"
+                          ? "Manager"
+                          : "Affiliate"}
                       </p>
                     </div>
                     <ChevronDown className="h-4 w-4" />
@@ -464,10 +601,8 @@ export default function DashboardLayout({ children, userType = "affiliate" }: Da
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-auto">
-          {children}
-        </main>
+        <main className="flex-1 overflow-auto">{children}</main>
       </div>
     </div>
-  )
+  );
 }

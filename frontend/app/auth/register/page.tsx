@@ -33,15 +33,22 @@ export default function RegisterPage() {
   });
   const [error, setError] = useState("");
 
-  const { register, isAuthenticated } = useAuth();
+  const { register, isAuthenticated, user } = useAuth();
   const router = useRouter();
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (isAuthenticated) {
-      router.push("/dashboard");
+    if (isAuthenticated && user) {
+      // Role-based redirects after registration
+      if (user.role === "ADMIN") {
+        router.push("/admin");
+      } else if (user.role === "MANAGER") {
+        router.push("/manager");
+      } else {
+        router.push("/dashboard");
+      }
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, user, router]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));

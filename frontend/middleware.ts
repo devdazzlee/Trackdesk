@@ -5,6 +5,7 @@ import type { NextRequest } from "next/server";
 const protectedRoutes = [
   "/dashboard",
   "/admin",
+  "/manager",
   "/profile",
   "/settings",
   "/analytics",
@@ -88,10 +89,19 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/unauthorized", request.url));
   }
 
-  // If accessing root path, redirect based on auth status
+  // If accessing root path, redirect based on auth status and role
   if (pathname === "/") {
     if (accessToken && user) {
-      return NextResponse.redirect(new URL("/dashboard", request.url));
+      // Role-based redirects
+      if (user.role === "ADMIN") {
+        return NextResponse.redirect(new URL("/admin", request.url));
+      } else if (user.role === "MANAGER") {
+        return NextResponse.redirect(new URL("/manager", request.url));
+      } else if (user.role === "AFFILIATE") {
+        return NextResponse.redirect(new URL("/dashboard", request.url));
+      } else {
+        return NextResponse.redirect(new URL("/dashboard", request.url));
+      }
     } else {
       return NextResponse.redirect(new URL("/auth/login", request.url));
     }
