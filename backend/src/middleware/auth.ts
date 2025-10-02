@@ -1,6 +1,15 @@
-import { Request, Response, NextFunction } from 'express';
-import * as jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
+import { Request, Response, NextFunction } from "express";
+import * as jwt from "jsonwebtoken";
+import { PrismaClient } from "@prisma/client";
+
+// Cookie configuration
+export const COOKIE_CONFIG = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "strict" as const,
+  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  path: "/",
+};
 
 const prisma = new PrismaClient();
 
@@ -17,12 +26,22 @@ export interface AuthenticatedRequest extends Request {
   };
 }
 
-export const authenticateToken = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+export const authenticateToken = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  // First try to get token from Authorization header
+  const authHeader = req.headers["authorization"];
+  let token = authHeader && authHeader.split(" ")[1];
+
+  // If no token in header, try to get from cookies
+  if (!token) {
+    token = req.cookies?.accessToken || req.cookies?.token;
+  }
 
   if (!token) {
-    return res.status(401).json({ error: 'Access token required' });
+    return res.status(401).json({ error: "Access token required" });
   }
 
   try {
@@ -31,12 +50,12 @@ export const authenticateToken = async (req: AuthenticatedRequest, res: Response
       where: { id: decoded.userId },
       include: {
         affiliateProfile: true,
-        adminProfile: true
-      }
+        adminProfile: true,
+      },
     });
 
     if (!user) {
-      return res.status(401).json({ error: 'Invalid token' });
+      return res.status(401).json({ error: "Invalid token" });
     }
 
     req.user = {
@@ -47,60 +66,78 @@ export const authenticateToken = async (req: AuthenticatedRequest, res: Response
       affiliateId: user.affiliateProfile?.id,
       userId: user.id,
       affiliateProfile: user.affiliateProfile,
-      adminProfile: user.adminProfile
+      adminProfile: user.adminProfile,
     };
 
     next();
   } catch (error) {
-    return res.status(403).json({ error: 'Invalid token' });
+    return res.status(403).json({ error: "Invalid token" });
   }
 };
 
 export const requireRole = (roles: string[]) => {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     if (!req.user) {
-      return res.status(401).json({ error: 'Authentication required' });
+      return res.status(401).json({ error: "Authentication required" });
     }
 
     if (!roles.includes(req.user.role)) {
-      return res.status(403).json({ error: 'Insufficient permissions' });
+      return res.status(403).json({ error: "Insufficient permissions" });
     }
 
     next();
   };
 };
 
-export const requireAffiliate = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+export const requireAffiliate = (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) => {
   if (!req.user) {
-    return res.status(401).json({ error: 'Authentication required' });
+    return res.status(401).json({ error: "Authentication required" });
   }
 
-  if (req.user.role !== 'AFFILIATE') {
-    return res.status(403).json({ error: 'Affiliate access required' });
+  if (req.user.role !== "AFFILIATE") {
+    return res.status(403).json({ error: "Affiliate access required" });
   }
 
   if (!req.user.affiliateProfile) {
-    return res.status(404).json({ error: 'Affiliate profile not found' });
+    return res.status(404).json({ error: "Affiliate profile not found" });
   }
 
   next();
 };
 
-export const requireAdmin = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+export const requireAdmin = (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) => {
   if (!req.user) {
-    return res.status(401).json({ error: 'Authentication required' });
+    return res.status(401).json({ error: "Authentication required" });
   }
 
-  if (!['ADMIN', 'MANAGER'].includes(req.user.role)) {
-    return res.status(403).json({ error: 'Admin access required' });
+  if (!["ADMIN", "MANAGER"].includes(req.user.role)) {
+    return res.status(403).json({ error: "Admin access required" });
   }
 
   next();
 };
 
-export const optionalAuth = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+export const optionalAuth = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  // First try to get token from Authorization header
+  const authHeader = req.headers["authorization"];
+  let token = authHeader && authHeader.split(" ")[1];
+
+  // If no token in header, try to get from cookies
+  if (!token) {
+    token = req.cookies?.accessToken || req.cookies?.token;
+  }
 
   if (token) {
     try {
@@ -109,8 +146,8 @@ export const optionalAuth = async (req: AuthenticatedRequest, res: Response, nex
         where: { id: decoded.userId },
         include: {
           affiliateProfile: true,
-          adminProfile: true
-        }
+          adminProfile: true,
+        },
       });
 
       if (user) {
@@ -122,7 +159,7 @@ export const optionalAuth = async (req: AuthenticatedRequest, res: Response, nex
           affiliateId: user.affiliateProfile?.id,
           userId: user.id,
           affiliateProfile: user.affiliateProfile,
-          adminProfile: user.adminProfile
+          adminProfile: user.adminProfile,
         };
       }
     } catch (error) {
@@ -133,4 +170,29 @@ export const optionalAuth = async (req: AuthenticatedRequest, res: Response, nex
   next();
 };
 
+// Cookie utility functions
+export const setAuthCookies = (res: Response, token: string, user: any) => {
+  // Set access token cookie
+  res.cookie("accessToken", token, COOKIE_CONFIG);
 
+  // Set user data cookie (non-sensitive info only)
+  const userData = {
+    id: user.id,
+    email: user.email,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    role: user.role,
+    avatar: user.avatar,
+  };
+
+  res.cookie("userData", JSON.stringify(userData), {
+    ...COOKIE_CONFIG,
+    httpOnly: false, // Allow frontend to read user data
+  });
+};
+
+export const clearAuthCookies = (res: Response) => {
+  res.clearCookie("accessToken", { path: "/" });
+  res.clearCookie("userData", { path: "/" });
+  res.clearCookie("token", { path: "/" }); // Legacy support
+};

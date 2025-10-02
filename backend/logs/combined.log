@@ -216,3 +216,151 @@
 {"level":"info","message":"🚀 Trackdesk Backend Server running on port 3003","timestamp":"2025-09-30T15:39:20.619Z"}
 {"level":"info","message":"📡 WebSocket server running on port 3003","timestamp":"2025-09-30T15:39:20.622Z"}
 {"level":"info","message":"🌐 Environment: production","timestamp":"2025-09-30T15:39:20.622Z"}
+{"level":"info","message":"🚀 Trackdesk Backend Server running on port 3003","timestamp":"2025-09-30T15:56:51.382Z"}
+{"level":"info","message":"📡 WebSocket server running on port 3003","timestamp":"2025-09-30T15:56:51.385Z"}
+{"level":"info","message":"🌐 Environment: production","timestamp":"2025-09-30T15:56:51.386Z"}
+{"level":"info","message":"🚀 Trackdesk Backend Server running on port 3003","timestamp":"2025-10-01T14:43:55.947Z"}
+{"level":"info","message":"📡 WebSocket server running on port 3003","timestamp":"2025-10-01T14:43:55.950Z"}
+{"level":"info","message":"🌐 Environment: production","timestamp":"2025-10-01T14:43:55.951Z"}
+{"level":"info","message":"SIGTERM received, shutting down gracefully","timestamp":"2025-10-01T14:59:29.505Z"}
+{"level":"info","message":"🚀 Trackdesk Backend Server running on port 3003","timestamp":"2025-10-01T14:59:30.878Z"}
+{"level":"info","message":"📡 WebSocket server running on port 3003","timestamp":"2025-10-01T14:59:30.882Z"}
+{"level":"info","message":"🌐 Environment: production","timestamp":"2025-10-01T14:59:30.883Z"}
+{"level":"info","message":"SIGTERM received, shutting down gracefully","timestamp":"2025-10-01T14:59:33.288Z"}
+{"level":"info","message":"🚀 Trackdesk Backend Server running on port 3003","timestamp":"2025-10-01T14:59:34.282Z"}
+{"level":"info","message":"📡 WebSocket server running on port 3003","timestamp":"2025-10-01T14:59:34.284Z"}
+{"level":"info","message":"🌐 Environment: production","timestamp":"2025-10-01T14:59:34.285Z"}
+{"level":"info","message":"SIGTERM received, shutting down gracefully","timestamp":"2025-10-01T14:59:54.180Z"}
+{"level":"info","message":"🚀 Trackdesk Backend Server running on port 3003","timestamp":"2025-10-01T14:59:55.229Z"}
+{"level":"info","message":"📡 WebSocket server running on port 3003","timestamp":"2025-10-01T14:59:55.232Z"}
+{"level":"info","message":"🌐 Environment: production","timestamp":"2025-10-01T14:59:55.232Z"}
+{"level":"info","message":"SIGTERM received, shutting down gracefully","timestamp":"2025-10-01T15:00:05.163Z"}
+{"level":"info","message":"🚀 Trackdesk Backend Server running on port 3003","timestamp":"2025-10-01T15:00:06.301Z"}
+{"level":"info","message":"📡 WebSocket server running on port 3003","timestamp":"2025-10-01T15:00:06.304Z"}
+{"level":"info","message":"🌐 Environment: production","timestamp":"2025-10-01T15:00:06.304Z"}
+{"level":"info","message":"SIGTERM received, shutting down gracefully","timestamp":"2025-10-01T15:00:14.899Z"}
+{"level":"info","message":"🚀 Trackdesk Backend Server running on port 3003","timestamp":"2025-10-01T15:00:15.895Z"}
+{"level":"info","message":"📡 WebSocket server running on port 3003","timestamp":"2025-10-01T15:00:15.898Z"}
+{"level":"info","message":"🌐 Environment: production","timestamp":"2025-10-01T15:00:15.898Z"}
+{"level":"info","message":"SIGTERM received, shutting down gracefully","timestamp":"2025-10-01T15:00:21.369Z"}
+{"level":"info","message":"🚀 Trackdesk Backend Server running on port 3003","timestamp":"2025-10-01T15:00:22.365Z"}
+{"level":"info","message":"📡 WebSocket server running on port 3003","timestamp":"2025-10-01T15:00:22.368Z"}
+{"level":"info","message":"🌐 Environment: production","timestamp":"2025-10-01T15:00:22.368Z"}
+{"level":"info","message":"SIGTERM received, shutting down gracefully","timestamp":"2025-10-01T15:00:24.712Z"}
+{"level":"info","message":"🚀 Trackdesk Backend Server running on port 3003","timestamp":"2025-10-01T15:00:25.657Z"}
+{"level":"info","message":"📡 WebSocket server running on port 3003","timestamp":"2025-10-01T15:00:25.660Z"}
+{"level":"info","message":"🌐 Environment: production","timestamp":"2025-10-01T15:00:25.660Z"}
+{"level":"info","message":"SIGTERM received, shutting down gracefully","timestamp":"2025-10-01T15:00:28.935Z"}
+{"level":"info","message":"🚀 Trackdesk Backend Server running on port 3003","timestamp":"2025-10-01T15:00:29.797Z"}
+{"level":"info","message":"📡 WebSocket server running on port 3003","timestamp":"2025-10-01T15:00:29.800Z"}
+{"level":"info","message":"🌐 Environment: production","timestamp":"2025-10-01T15:00:29.801Z"}
+{"level":"info","message":"SIGTERM received, shutting down gracefully","timestamp":"2025-10-01T15:00:32.702Z"}
+{"level":"info","message":"🚀 Trackdesk Backend Server running on port 3003","timestamp":"2025-10-01T15:00:33.632Z"}
+{"level":"info","message":"📡 WebSocket server running on port 3003","timestamp":"2025-10-01T15:00:33.635Z"}
+{"level":"info","message":"🌐 Environment: production","timestamp":"2025-10-01T15:00:33.635Z"}
+{"level":"info","message":"SIGTERM received, shutting down gracefully","timestamp":"2025-10-01T15:00:36.377Z"}
+{"level":"info","message":"🚀 Trackdesk Backend Server running on port 3003","timestamp":"2025-10-01T15:00:37.239Z"}
+{"level":"info","message":"📡 WebSocket server running on port 3003","timestamp":"2025-10-01T15:00:37.242Z"}
+{"level":"info","message":"🌐 Environment: production","timestamp":"2025-10-01T15:00:37.242Z"}
+{"level":"info","message":"SIGTERM received, shutting down gracefully","timestamp":"2025-10-01T15:00:40.053Z"}
+{"level":"info","message":"🚀 Trackdesk Backend Server running on port 3003","timestamp":"2025-10-01T15:00:40.919Z"}
+{"level":"info","message":"📡 WebSocket server running on port 3003","timestamp":"2025-10-01T15:00:40.922Z"}
+{"level":"info","message":"🌐 Environment: production","timestamp":"2025-10-01T15:00:40.922Z"}
+{"level":"info","message":"SIGTERM received, shutting down gracefully","timestamp":"2025-10-01T15:00:42.827Z"}
+{"level":"info","message":"🚀 Trackdesk Backend Server running on port 3003","timestamp":"2025-10-01T15:00:44.137Z"}
+{"level":"info","message":"📡 WebSocket server running on port 3003","timestamp":"2025-10-01T15:00:44.140Z"}
+{"level":"info","message":"🌐 Environment: production","timestamp":"2025-10-01T15:00:44.141Z"}
+{"level":"info","message":"SIGTERM received, shutting down gracefully","timestamp":"2025-10-01T15:00:55.992Z"}
+{"level":"info","message":"🚀 Trackdesk Backend Server running on port 3003","timestamp":"2025-10-01T15:00:57.183Z"}
+{"level":"info","message":"📡 WebSocket server running on port 3003","timestamp":"2025-10-01T15:00:57.186Z"}
+{"level":"info","message":"🌐 Environment: production","timestamp":"2025-10-01T15:00:57.187Z"}
+{"level":"info","message":"SIGTERM received, shutting down gracefully","timestamp":"2025-10-01T15:00:58.307Z"}
+{"level":"info","message":"🚀 Trackdesk Backend Server running on port 3003","timestamp":"2025-10-01T15:00:59.557Z"}
+{"level":"info","message":"📡 WebSocket server running on port 3003","timestamp":"2025-10-01T15:00:59.560Z"}
+{"level":"info","message":"🌐 Environment: production","timestamp":"2025-10-01T15:00:59.561Z"}
+{"level":"info","message":"SIGTERM received, shutting down gracefully","timestamp":"2025-10-01T15:01:00.912Z"}
+{"level":"info","message":"🚀 Trackdesk Backend Server running on port 3003","timestamp":"2025-10-01T15:01:02.203Z"}
+{"level":"info","message":"📡 WebSocket server running on port 3003","timestamp":"2025-10-01T15:01:02.206Z"}
+{"level":"info","message":"🌐 Environment: production","timestamp":"2025-10-01T15:01:02.206Z"}
+{"level":"info","message":"SIGTERM received, shutting down gracefully","timestamp":"2025-10-01T15:01:04.530Z"}
+{"level":"info","message":"🚀 Trackdesk Backend Server running on port 3003","timestamp":"2025-10-01T15:01:05.717Z"}
+{"level":"info","message":"📡 WebSocket server running on port 3003","timestamp":"2025-10-01T15:01:05.719Z"}
+{"level":"info","message":"🌐 Environment: production","timestamp":"2025-10-01T15:01:05.720Z"}
+{"level":"info","message":"SIGTERM received, shutting down gracefully","timestamp":"2025-10-01T15:01:08.974Z"}
+{"level":"info","message":"🚀 Trackdesk Backend Server running on port 3003","timestamp":"2025-10-01T15:01:10.120Z"}
+{"level":"info","message":"📡 WebSocket server running on port 3003","timestamp":"2025-10-01T15:01:10.122Z"}
+{"level":"info","message":"🌐 Environment: production","timestamp":"2025-10-01T15:01:10.123Z"}
+{"level":"info","message":"SIGTERM received, shutting down gracefully","timestamp":"2025-10-01T15:01:12.547Z"}
+{"level":"info","message":"🚀 Trackdesk Backend Server running on port 3003","timestamp":"2025-10-01T15:01:13.512Z"}
+{"level":"info","message":"📡 WebSocket server running on port 3003","timestamp":"2025-10-01T15:01:13.515Z"}
+{"level":"info","message":"🌐 Environment: production","timestamp":"2025-10-01T15:01:13.515Z"}
+{"level":"info","message":"SIGTERM received, shutting down gracefully","timestamp":"2025-10-01T15:02:56.903Z"}
+{"level":"info","message":"🚀 Trackdesk Backend Server running on port 3003","timestamp":"2025-10-01T15:02:57.932Z"}
+{"level":"info","message":"📡 WebSocket server running on port 3003","timestamp":"2025-10-01T15:02:57.936Z"}
+{"level":"info","message":"🌐 Environment: production","timestamp":"2025-10-01T15:02:57.936Z"}
+{"level":"info","message":"SIGTERM received, shutting down gracefully","timestamp":"2025-10-01T15:03:27.579Z"}
+{"level":"info","message":"🚀 Trackdesk Backend Server running on port 3003","timestamp":"2025-10-01T15:03:28.527Z"}
+{"level":"info","message":"📡 WebSocket server running on port 3003","timestamp":"2025-10-01T15:03:28.530Z"}
+{"level":"info","message":"🌐 Environment: production","timestamp":"2025-10-01T15:03:28.531Z"}
+{"level":"info","message":"SIGTERM received, shutting down gracefully","timestamp":"2025-10-01T15:04:58.963Z"}
+{"level":"info","message":"🚀 Trackdesk Backend Server running on port 3003","timestamp":"2025-10-01T15:05:00.723Z"}
+{"level":"info","message":"📡 WebSocket server running on port 3003","timestamp":"2025-10-01T15:05:00.727Z"}
+{"level":"info","message":"🌐 Environment: production","timestamp":"2025-10-01T15:05:00.727Z"}
+{"level":"info","message":"🚀 Trackdesk Backend Server running on port 3003","timestamp":"2025-10-01T21:29:45.684Z"}
+{"level":"info","message":"📡 WebSocket server running on port 3003","timestamp":"2025-10-01T21:29:45.689Z"}
+{"level":"info","message":"🌐 Environment: production","timestamp":"2025-10-01T21:29:45.690Z"}
+{"level":"info","message":"SIGTERM received, shutting down gracefully","timestamp":"2025-10-01T21:51:05.993Z"}
+{"level":"info","message":"🚀 Trackdesk Backend Server running on port 3003","timestamp":"2025-10-01T21:51:09.025Z"}
+{"level":"info","message":"📡 WebSocket server running on port 3003","timestamp":"2025-10-01T21:51:09.029Z"}
+{"level":"info","message":"🌐 Environment: production","timestamp":"2025-10-01T21:51:09.029Z"}
+{"level":"info","message":"SIGTERM received, shutting down gracefully","timestamp":"2025-10-01T21:51:21.660Z"}
+{"level":"info","message":"🚀 Trackdesk Backend Server running on port 3003","timestamp":"2025-10-01T21:51:22.733Z"}
+{"level":"info","message":"📡 WebSocket server running on port 3003","timestamp":"2025-10-01T21:51:22.736Z"}
+{"level":"info","message":"🌐 Environment: production","timestamp":"2025-10-01T21:51:22.736Z"}
+{"level":"info","message":"SIGTERM received, shutting down gracefully","timestamp":"2025-10-01T21:51:26.231Z"}
+{"level":"info","message":"🚀 Trackdesk Backend Server running on port 3003","timestamp":"2025-10-01T21:51:27.372Z"}
+{"level":"info","message":"📡 WebSocket server running on port 3003","timestamp":"2025-10-01T21:51:27.376Z"}
+{"level":"info","message":"🌐 Environment: production","timestamp":"2025-10-01T21:51:27.376Z"}
+{"level":"info","message":"SIGTERM received, shutting down gracefully","timestamp":"2025-10-01T21:51:30.651Z"}
+{"level":"info","message":"🚀 Trackdesk Backend Server running on port 3003","timestamp":"2025-10-01T21:51:31.751Z"}
+{"level":"info","message":"📡 WebSocket server running on port 3003","timestamp":"2025-10-01T21:51:31.755Z"}
+{"level":"info","message":"🌐 Environment: production","timestamp":"2025-10-01T21:51:31.755Z"}
+{"level":"info","message":"SIGTERM received, shutting down gracefully","timestamp":"2025-10-01T21:51:40.523Z"}
+{"level":"info","message":"🚀 Trackdesk Backend Server running on port 3003","timestamp":"2025-10-01T21:51:41.643Z"}
+{"level":"info","message":"📡 WebSocket server running on port 3003","timestamp":"2025-10-01T21:51:41.646Z"}
+{"level":"info","message":"🌐 Environment: production","timestamp":"2025-10-01T21:51:41.647Z"}
+{"level":"info","message":"SIGTERM received, shutting down gracefully","timestamp":"2025-10-01T21:51:46.217Z"}
+{"level":"info","message":"🚀 Trackdesk Backend Server running on port 3003","timestamp":"2025-10-01T21:51:47.296Z"}
+{"level":"info","message":"📡 WebSocket server running on port 3003","timestamp":"2025-10-01T21:51:47.300Z"}
+{"level":"info","message":"🌐 Environment: production","timestamp":"2025-10-01T21:51:47.300Z"}
+{"level":"info","message":"SIGTERM received, shutting down gracefully","timestamp":"2025-10-01T21:51:50.137Z"}
+{"level":"info","message":"🚀 Trackdesk Backend Server running on port 3003","timestamp":"2025-10-01T21:51:51.207Z"}
+{"level":"info","message":"📡 WebSocket server running on port 3003","timestamp":"2025-10-01T21:51:51.210Z"}
+{"level":"info","message":"🌐 Environment: production","timestamp":"2025-10-01T21:51:51.210Z"}
+{"level":"info","message":"SIGTERM received, shutting down gracefully","timestamp":"2025-10-01T21:51:53.914Z"}
+{"level":"info","message":"🚀 Trackdesk Backend Server running on port 3003","timestamp":"2025-10-01T21:51:54.965Z"}
+{"level":"info","message":"📡 WebSocket server running on port 3003","timestamp":"2025-10-01T21:51:54.968Z"}
+{"level":"info","message":"🌐 Environment: production","timestamp":"2025-10-01T21:51:54.968Z"}
+{"level":"info","message":"SIGTERM received, shutting down gracefully","timestamp":"2025-10-01T21:51:57.827Z"}
+{"level":"info","message":"🚀 Trackdesk Backend Server running on port 3003","timestamp":"2025-10-01T21:51:58.932Z"}
+{"level":"info","message":"📡 WebSocket server running on port 3003","timestamp":"2025-10-01T21:51:58.935Z"}
+{"level":"info","message":"🌐 Environment: production","timestamp":"2025-10-01T21:51:58.935Z"}
+{"level":"info","message":"SIGTERM received, shutting down gracefully","timestamp":"2025-10-01T21:53:14.740Z"}
+{"level":"info","message":"🚀 Trackdesk Backend Server running on port 3003","timestamp":"2025-10-01T21:53:15.907Z"}
+{"level":"info","message":"📡 WebSocket server running on port 3003","timestamp":"2025-10-01T21:53:15.913Z"}
+{"level":"info","message":"🌐 Environment: production","timestamp":"2025-10-01T21:53:15.914Z"}
+{"level":"info","message":"SIGTERM received, shutting down gracefully","timestamp":"2025-10-01T21:53:19.035Z"}
+{"level":"info","message":"🚀 Trackdesk Backend Server running on port 3003","timestamp":"2025-10-01T21:53:20.140Z"}
+{"level":"info","message":"📡 WebSocket server running on port 3003","timestamp":"2025-10-01T21:53:20.143Z"}
+{"level":"info","message":"🌐 Environment: production","timestamp":"2025-10-01T21:53:20.144Z"}
+{"level":"info","message":"SIGTERM received, shutting down gracefully","timestamp":"2025-10-01T21:57:40.760Z"}
+{"level":"info","message":"🚀 Trackdesk Backend Server running on port 3003","timestamp":"2025-10-01T21:57:42.230Z"}
+{"level":"info","message":"📡 WebSocket server running on port 3003","timestamp":"2025-10-01T21:57:42.233Z"}
+{"level":"info","message":"🌐 Environment: production","timestamp":"2025-10-01T21:57:42.234Z"}
+{"level":"info","message":"SIGTERM received, shutting down gracefully","timestamp":"2025-10-01T21:57:57.724Z"}
+{"level":"info","message":"🚀 Trackdesk Backend Server running on port 3003","timestamp":"2025-10-01T21:58:00.685Z"}
+{"level":"info","message":"📡 WebSocket server running on port 3003","timestamp":"2025-10-01T21:58:00.688Z"}
+{"level":"info","message":"🌐 Environment: production","timestamp":"2025-10-01T21:58:00.689Z"}
+{"level":"info","message":"🚀 Trackdesk Backend Server running on port 3003","timestamp":"2025-10-01T22:13:08.141Z"}
+{"level":"info","message":"📡 WebSocket server running on port 3003","timestamp":"2025-10-01T22:13:08.148Z"}
+{"level":"info","message":"🌐 Environment: production","timestamp":"2025-10-01T22:13:08.148Z"}

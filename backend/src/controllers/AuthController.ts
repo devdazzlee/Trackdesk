@@ -1,8 +1,9 @@
-import { Request, Response } from 'express';
-import { AuthService } from '../services/AuthService';
-import { EmailService } from '../services/EmailService';
-import { SecurityService } from '../services/SecurityService';
-import { z } from 'zod';
+import { Request, Response } from "express";
+import { AuthService } from "../services/AuthService";
+import { EmailService } from "../services/EmailService";
+import { SecurityService } from "../services/SecurityService";
+import { setAuthCookies, clearAuthCookies } from "../middleware/auth";
+import { z } from "zod";
 
 const authService = new AuthService();
 const emailService = new EmailService();
@@ -14,26 +15,26 @@ const registerSchema = z.object({
   password: z.string().min(8),
   firstName: z.string().min(1),
   lastName: z.string().min(1),
-  role: z.enum(['ADMIN', 'AFFILIATE', 'MANAGER']).optional()
+  role: z.enum(["ADMIN", "AFFILIATE", "MANAGER"]).optional(),
 });
 
 const loginSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(1)
+  password: z.string().min(1),
 });
 
 const forgotPasswordSchema = z.object({
-  email: z.string().email()
+  email: z.string().email(),
 });
 
 const resetPasswordSchema = z.object({
   token: z.string(),
-  password: z.string().min(8)
+  password: z.string().min(8),
 });
 
 const changePasswordSchema = z.object({
   currentPassword: z.string(),
-  newPassword: z.string().min(8)
+  newPassword: z.string().min(8),
 });
 
 const updateProfileSchema = z.object({
@@ -41,7 +42,7 @@ const updateProfileSchema = z.object({
   lastName: z.string().min(1).optional(),
   phone: z.string().optional(),
   timezone: z.string().optional(),
-  language: z.string().optional()
+  language: z.string().optional(),
 });
 
 export class AuthController {
@@ -49,18 +50,23 @@ export class AuthController {
     try {
       const data = registerSchema.parse(req.body);
       const result = await authService.register(data as any);
-      
+
       // Send welcome email
       await emailService.sendWelcomeEmail(data.email, data.firstName);
-      
+
+      // Set authentication cookies
+      setAuthCookies(res, result.token, result.user);
+
       res.status(201).json({
-        message: 'User created successfully',
+        message: "User created successfully",
         token: result.token,
-        user: result.user
+        user: result.user,
       });
     } catch (error: any) {
-      if (error.name === 'ZodError') {
-        return res.status(400).json({ error: 'Invalid input data', details: error.errors });
+      if (error.name === "ZodError") {
+        return res
+          .status(400)
+          .json({ error: "Invalid input data", details: error.errors });
       }
       res.status(400).json({ error: error.message });
     }
@@ -69,16 +75,25 @@ export class AuthController {
   async login(req: Request, res: Response) {
     try {
       const data = loginSchema.parse(req.body);
-      const result = await authService.login(data as any, req.ip, req.get('User-Agent'));
-      
+      const result = await authService.login(
+        data as any,
+        req.ip,
+        req.get("User-Agent")
+      );
+
+      // Set authentication cookies
+      setAuthCookies(res, result.token, result.user);
+
       res.json({
-        message: 'Login successful',
+        message: "Login successful",
         token: result.token,
-        user: result.user
+        user: result.user,
       });
     } catch (error: any) {
-      if (error.name === 'ZodError') {
-        return res.status(400).json({ error: 'Invalid input data', details: error.errors });
+      if (error.name === "ZodError") {
+        return res
+          .status(400)
+          .json({ error: "Invalid input data", details: error.errors });
       }
       res.status(401).json({ error: error.message });
     }
@@ -87,7 +102,11 @@ export class AuthController {
   async logout(req: any, res: Response) {
     try {
       await authService.logout(req.user.id);
-      res.json({ message: 'Logout successful' });
+
+      // Clear authentication cookies
+      clearAuthCookies(res);
+
+      res.json({ message: "Logout successful" });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -108,8 +127,10 @@ export class AuthController {
       const user = await authService.updateProfile(req.user.id, data);
       res.json(user);
     } catch (error: any) {
-      if (error.name === 'ZodError') {
-        return res.status(400).json({ error: 'Invalid input data', details: error.errors });
+      if (error.name === "ZodError") {
+        return res
+          .status(400)
+          .json({ error: "Invalid input data", details: error.errors });
       }
       res.status(500).json({ error: error.message });
     }
@@ -118,11 +139,17 @@ export class AuthController {
   async changePassword(req: any, res: Response) {
     try {
       const data = changePasswordSchema.parse(req.body);
-      await authService.changePassword(req.user.id, data.currentPassword, data.newPassword);
-      res.json({ message: 'Password changed successfully' });
+      await authService.changePassword(
+        req.user.id,
+        data.currentPassword,
+        data.newPassword
+      );
+      res.json({ message: "Password changed successfully" });
     } catch (error: any) {
-      if (error.name === 'ZodError') {
-        return res.status(400).json({ error: 'Invalid input data', details: error.errors });
+      if (error.name === "ZodError") {
+        return res
+          .status(400)
+          .json({ error: "Invalid input data", details: error.errors });
       }
       res.status(400).json({ error: error.message });
     }
@@ -132,10 +159,12 @@ export class AuthController {
     try {
       const data = forgotPasswordSchema.parse(req.body);
       await authService.forgotPassword(data.email);
-      res.json({ message: 'Password reset email sent' });
+      res.json({ message: "Password reset email sent" });
     } catch (error: any) {
-      if (error.name === 'ZodError') {
-        return res.status(400).json({ error: 'Invalid input data', details: error.errors });
+      if (error.name === "ZodError") {
+        return res
+          .status(400)
+          .json({ error: "Invalid input data", details: error.errors });
       }
       res.status(500).json({ error: error.message });
     }
@@ -145,10 +174,12 @@ export class AuthController {
     try {
       const data = resetPasswordSchema.parse(req.body);
       await authService.resetPassword(data.token, data.password);
-      res.json({ message: 'Password reset successfully' });
+      res.json({ message: "Password reset successfully" });
     } catch (error: any) {
-      if (error.name === 'ZodError') {
-        return res.status(400).json({ error: 'Invalid input data', details: error.errors });
+      if (error.name === "ZodError") {
+        return res
+          .status(400)
+          .json({ error: "Invalid input data", details: error.errors });
       }
       res.status(400).json({ error: error.message });
     }
@@ -167,12 +198,12 @@ export class AuthController {
     try {
       const { token } = req.body;
       const isValid = await securityService.verify2FAToken(req.user.id, token);
-      
+
       if (isValid) {
         await authService.enable2FA(req.user.id);
-        res.json({ message: '2FA enabled successfully' });
+        res.json({ message: "2FA enabled successfully" });
       } else {
-        res.status(400).json({ error: 'Invalid token' });
+        res.status(400).json({ error: "Invalid token" });
       }
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -182,7 +213,7 @@ export class AuthController {
   async disable2FA(req: any, res: Response) {
     try {
       await authService.disable2FA(req.user.id);
-      res.json({ message: '2FA disabled successfully' });
+      res.json({ message: "2FA disabled successfully" });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
