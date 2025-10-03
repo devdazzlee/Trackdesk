@@ -17,7 +17,7 @@ export interface AuthResponse {
 
 // API Configuration
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3002/api";
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3003/api";
 
 // Cookie names
 const COOKIE_NAMES = {
@@ -71,13 +71,29 @@ export class AuthClient {
 
     const expires = new Date();
     expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
-    document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/;secure;samesite=strict`;
+
+    // Don't use secure in development (localhost)
+    const isSecure = window.location.protocol === "https:";
+    const secureFlag = isSecure ? ";secure" : "";
+
+    document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/${secureFlag};samesite=lax`;
   }
 
   private deleteCookie(name: string): void {
     if (typeof document === "undefined") return;
 
+    // Don't use secure in development (localhost)
+    const isSecure = window.location.protocol === "https:";
+    const secureFlag = isSecure ? ";secure" : "";
+
+    // Clear cookie with multiple attempts to ensure it's deleted
     document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;`;
+    document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/${secureFlag};samesite=lax`;
+    document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/${secureFlag};samesite=strict`;
+    document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;samesite=lax`;
+    document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;samesite=strict`;
+
+    console.log(`Attempting to delete cookie: ${name}`);
   }
 
   public getUser(): User | null {
@@ -100,9 +116,12 @@ export class AuthClient {
   }
 
   public clearAuth(): void {
-    this.deleteCookie(COOKIE_NAMES.ACCESS_TOKEN);
+    console.log("Clearing authentication...");
+    // Note: accessToken is httpOnly and can only be cleared by the server
+    // Only clear userData if it's not httpOnly
     this.deleteCookie(COOKIE_NAMES.USER_DATA);
     this.user = null;
+    console.log("Authentication cleared");
   }
 
   public async login(
@@ -171,16 +190,18 @@ export class AuthClient {
 
   public async logout(): Promise<void> {
     try {
-      const token = this.getToken();
-      if (token) {
-        await fetch(`${API_BASE_URL}/auth/logout`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-        });
+      // Call the logout API - the backend will read the HttpOnly cookie
+      const response = await fetch(`${API_BASE_URL}/auth/logout`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include", // This sends the HttpOnly cookie
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Logout API error:", response.statusText, errorText);
       }
     } catch (error) {
       console.error("Logout error:", error);

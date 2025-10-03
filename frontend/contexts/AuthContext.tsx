@@ -109,11 +109,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } finally {
       setUser(null);
       setIsLoading(false);
+      // Force a page refresh to ensure all state is cleared
+      if (typeof window !== "undefined") {
+        window.location.href = "/";
+      }
     }
   };
 
   const refreshUser = async (): Promise<void> => {
     try {
+      // Check if there's a token before trying to get profile
+      const token = authClient.getToken();
+      if (!token) {
+        console.log("No token found, skipping profile refresh");
+        setUser(null);
+        return;
+      }
+
       const userData = await authClient.getProfile();
       setUser(userData);
     } catch (error) {

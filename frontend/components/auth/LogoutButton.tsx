@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { LogOut, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -28,7 +27,6 @@ export function LogoutButton({
 }: LogoutButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { logout } = useAuth();
-  const router = useRouter();
 
   const handleLogout = async () => {
     setIsLoading(true);
@@ -36,7 +34,7 @@ export function LogoutButton({
     try {
       await logout();
       toast.success("Logged out successfully");
-      router.push("/auth/login");
+      // Note: Router push is handled by the logout function in AuthContext
     } catch (error: any) {
       console.error("Logout error:", error);
       toast.error("Logout failed. Please try again.");

@@ -1,12 +1,12 @@
 // Development  URL
-export const API_URL = "http://localhost:3002/api";
+export const API_URL = "http://localhost:3003/api";
 
 // Production URL
 // export const API_URL = "https://trackdesk.com/api";
 
 // Configuration object
 export const config = {
-  apiUrl: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3002/api",
+  apiUrl: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3003/api",
   appName: "Trackdesk",
   version: "1.0.0",
   environment: process.env.NODE_ENV || "development",

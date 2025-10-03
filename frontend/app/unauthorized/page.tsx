@@ -1,7 +1,9 @@
+"use client";
+
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Shield, ArrowLeft } from "lucide-react";
+import { Shield, ArrowLeft, Home, LogIn } from "lucide-react";
 
 export default function UnauthorizedPage() {
   return (
@@ -19,25 +21,40 @@ export default function UnauthorizedPage() {
           <div className="text-center">
             <p className="text-gray-600 mb-4">
               You don't have permission to access this page. This area is
-              restricted to administrators only.
+              restricted to authorized users only.
             </p>
             <p className="text-sm text-gray-500">
-              If you believe this is an error, please contact your
-              administrator.
+              If you believe this is an error, please contact your administrator
+              or try logging in with a different account.
             </p>
           </div>
 
           <div className="space-y-3">
-            <Link href="/dashboard" className="block">
-              <Button className="w-full">Go to Dashboard</Button>
+            <Link href="/" className="block">
+              <Button className="w-full bg-gradient-to-r from-blue-600 to-teal-600 hover:from-blue-700 hover:to-teal-700">
+                <Home className="h-4 w-4 mr-2" />
+                Go to Home
+              </Button>
             </Link>
 
             <Link href="/auth/login" className="block">
               <Button variant="outline" className="w-full">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Login
+                <LogIn className="h-4 w-4 mr-2" />
+                Sign In
               </Button>
             </Link>
+          </div>
+
+          <div className="text-center">
+            <p className="text-xs text-gray-500">
+              Need help?{" "}
+              <Link
+                href="/contact"
+                className="text-blue-600 hover:text-blue-700"
+              >
+                Contact Support
+              </Link>
+            </p>
           </div>
         </CardContent>
       </Card>

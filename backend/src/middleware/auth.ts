@@ -192,7 +192,14 @@ export const setAuthCookies = (res: Response, token: string, user: any) => {
 };
 
 export const clearAuthCookies = (res: Response) => {
-  res.clearCookie("accessToken", { path: "/" });
-  res.clearCookie("userData", { path: "/" });
-  res.clearCookie("token", { path: "/" }); // Legacy support
+  const clearOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict" as const,
+    path: "/",
+  };
+
+  res.clearCookie("accessToken", clearOptions);
+  res.clearCookie("userData", clearOptions);
+  res.clearCookie("token", clearOptions); // Legacy support
 };

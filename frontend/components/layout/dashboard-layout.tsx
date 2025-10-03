@@ -240,7 +240,7 @@ export default function DashboardLayout({
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
 
   const navItems =
     userType === "admin"
@@ -262,16 +262,6 @@ export default function DashboardLayout({
       return pathname === href;
     }
     return pathname.startsWith(href);
-  };
-
-  const handleLogout = async () => {
-    try {
-      await logout();
-      router.push("/auth/login");
-    } catch (error) {
-      console.error("Logout error:", error);
-      router.push("/auth/login");
-    }
   };
 
   const handleProfileClick = () => {
@@ -590,10 +580,15 @@ export default function DashboardLayout({
                     Help & Support
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout}>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Sign out
-                  </DropdownMenuItem>
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <LogoutButton
+                      variant="ghost"
+                      className="w-full justify-start"
+                      size="sm"
+                    >
+                      Sign out
+                    </LogoutButton>
+                  </div>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>

@@ -69,9 +69,7 @@ export function middleware(request: NextRequest) {
 
   // If accessing a protected route without authentication
   if (isProtectedRoute && !accessToken) {
-    const loginUrl = new URL("/auth/login", request.url);
-    loginUrl.searchParams.set("redirect", pathname);
-    return NextResponse.redirect(loginUrl);
+    return NextResponse.redirect(new URL("/unauthorized", request.url));
   }
 
   // If accessing an auth route while authenticated, redirect to dashboard
@@ -89,10 +87,28 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/unauthorized", request.url));
   }
 
+  // If accessing manager routes without proper role
+  if (
+    pathname.startsWith("/manager") &&
+    (!accessToken || !user || !["ADMIN", "MANAGER"].includes(user.role))
+  ) {
+    return NextResponse.redirect(new URL("/unauthorized", request.url));
+  }
+
+  // If accessing affiliate dashboard without proper role
+  if (
+    pathname.startsWith("/dashboard") &&
+    accessToken &&
+    user &&
+    !["AFFILIATE", "ADMIN", "MANAGER"].includes(user.role)
+  ) {
+    return NextResponse.redirect(new URL("/unauthorized", request.url));
+  }
+
   // If accessing root path, redirect based on auth status and role
   if (pathname === "/") {
     if (accessToken && user) {
-      // Role-based redirects
+      // Role-based redirects for authenticated users
       if (user.role === "ADMIN") {
         return NextResponse.redirect(new URL("/admin", request.url));
       } else if (user.role === "MANAGER") {
@@ -103,7 +119,8 @@ export function middleware(request: NextRequest) {
         return NextResponse.redirect(new URL("/dashboard", request.url));
       }
     } else {
-      return NextResponse.redirect(new URL("/auth/login", request.url));
+      // Allow guest users to see the home page
+      return NextResponse.next();
     }
   }
 
@@ -120,6 +137,6 @@ export const config = {
      * - favicon.ico (favicon file)
      * - public files (public folder)
      */
-    "/((?!api|_next/static|_next/image|favicon.ico|public).*)",
+    "/((?!api|_next/static|_next/image|favicon.ico|public|unauthorized).*)",
   ],
 };
