@@ -33,6 +33,7 @@ import affiliateLinksRoutes from "./routes/affiliate-links"; // Newly added
 import couponsRoutes from "./routes/coupons"; // Newly added
 import notificationsRoutes from "./routes/notifications"; // Newly added
 import programUpdatesRoutes from "./routes/program-updates"; // Newly added
+import trackingRoutes from "./routes/tracking"; // CDN tracking routes
 
 // Load environment variables
 dotenv.config();
@@ -111,6 +112,7 @@ app.use("/api/affiliate-links", affiliateLinksRoutes); // Newly added
 app.use("/api/coupons", couponsRoutes); // Newly added
 app.use("/api/notifications", notificationsRoutes); // Newly added
 app.use("/api/program-updates", programUpdatesRoutes); // Newly added
+app.use("/api/tracking", trackingRoutes); // CDN tracking routes
 
 // WebSocket connection handling
 io.on("connection", (socket) => {
