@@ -36,6 +36,15 @@ import programUpdatesRoutes from "./routes/program-updates"; // Newly added
 import trackingRoutes from "./routes/tracking"; // CDN tracking routes
 import referralRoutes from "./routes/referral"; // Referral system routes
 import commissionManagementRoutes from "./routes/commission-management"; // Commission management routes
+import commissionsRoutes from "./routes/commissions"; // Affiliate commissions routes
+import statisticsRoutes from "./routes/statistics"; // Statistics routes
+import linksRoutes from "./routes/links"; // Links & Assets routes
+import supportRoutes from "./routes/support"; // Support & Resources routes
+import settingsRoutes from "./routes/settings"; // Settings routes
+import adminDashboardRoutes from "./routes/admin-dashboard"; // Admin dashboard routes
+import adminAffiliatesRoutes from "./routes/admin-affiliates"; // Admin affiliate management routes
+import adminPayoutsRoutes from "./routes/admin-payouts"; // Admin payout management routes
+import adminOffersRoutes from "./routes/admin-offers"; // Admin offers management routes
 
 // Load environment variables
 dotenv.config();
@@ -130,6 +139,15 @@ app.use("/api/program-updates", programUpdatesRoutes); // Newly added
 app.use("/api/tracking", trackingRoutes); // CDN tracking routes
 app.use("/api/referral", referralRoutes); // Referral system routes
 app.use("/api/commission-management", commissionManagementRoutes); // Commission management routes
+app.use("/api/commissions", commissionsRoutes); // Affiliate commissions routes
+app.use("/api/statistics", statisticsRoutes); // Statistics routes
+app.use("/api/links", linksRoutes); // Links & Assets routes
+app.use("/api/support", supportRoutes); // Support & Resources routes
+app.use("/api/settings", settingsRoutes); // Settings routes
+app.use("/api/admin/dashboard", adminDashboardRoutes); // Admin dashboard routes
+app.use("/api/admin/affiliates", adminAffiliatesRoutes); // Admin affiliate management
+app.use("/api/admin/payouts", adminPayoutsRoutes); // Admin payout management
+app.use("/api/admin/offers", adminOffersRoutes); // Admin offers management
 
 // WebSocket connection handling
 io.on("connection", (socket) => {

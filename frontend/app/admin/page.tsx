@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@/contexts/AuthContext";
+import { useState, useEffect } from "react";
 import { KPITile } from "@/components/dashboard/kpi-tile";
 import { LineChartComponent } from "@/components/charts/line-chart";
 import { BarChartComponent } from "@/components/charts/bar-chart";
@@ -28,8 +29,11 @@ import {
   CreditCard,
   BarChart3,
   Send,
+  RefreshCw,
 } from "lucide-react";
 import { getFullName } from "@/lib/auth-client";
+import { toast } from "sonner";
+import { config } from "@/config/config";
 
 // Mock data for program overview - updated to match your chart design
 const programPerformanceData = [
@@ -281,10 +285,84 @@ const getStatusBadge = (status: string) => {
   }
 };
 
+interface AdminDashboardData {
+  statistics: {
+    totalAffiliates: number;
+    activeAffiliates: number;
+    pendingAffiliates: number;
+    totalRevenue: number;
+    totalCommissions: number;
+    averageCommissionRate: number;
+    totalClicks: number;
+    totalConversions: number;
+    conversionRate: number;
+  };
+  dailyPerformance: Array<{
+    date: string;
+    totalClicks: number;
+    conversions: number;
+    revenue: number;
+  }>;
+  topAffiliates: Array<{
+    id: string;
+    name: string;
+    email: string;
+    status: string;
+    tier: string;
+    totalEarnings: number;
+    totalConversions: number;
+    lastActivity: Date | string | null;
+  }>;
+  pendingPayouts: Array<any>;
+  systemAlerts: Array<any>;
+}
+
 export default function AdminDashboardPage() {
   const { user, isLoading } = useAuth();
+  const [dashboardData, setDashboardData] = useState<AdminDashboardData | null>(
+    null
+  );
+  const [isDataLoading, setIsDataLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  if (isLoading) {
+  useEffect(() => {
+    if (user) {
+      fetchDashboardData();
+    }
+  }, [user]);
+
+  const fetchDashboardData = async () => {
+    try {
+      const response = await fetch(
+        `${config.apiUrl}/admin/dashboard/overview`,
+        {
+          credentials: "include",
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setDashboardData(data);
+      } else {
+        console.error("Failed to fetch admin dashboard data:", response.status);
+        toast.error("Failed to load dashboard data");
+      }
+    } catch (error) {
+      console.error("Error fetching admin dashboard data:", error);
+      toast.error("Failed to load dashboard data");
+    } finally {
+      setIsDataLoading(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await fetchDashboardData();
+    setIsRefreshing(false);
+    toast.success("Dashboard data refreshed");
+  };
+
+  if (isLoading || isDataLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
@@ -307,6 +385,24 @@ export default function AdminDashboardPage() {
     );
   }
 
+  if (!dashboardData) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            No Data Available
+          </h2>
+          <Button onClick={handleRefresh} disabled={isRefreshing}>
+            <RefreshCw
+              className={`w-4 h-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`}
+            />
+            Try Again
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 space-y-6">
       {/* Welcome Banner */}
@@ -318,7 +414,18 @@ export default function AdminDashboardPage() {
               Manage your affiliate program and track overall performance
             </p>
           </div>
-          <div className="hidden md:block">
+          <div className="hidden md:flex items-center space-x-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+            >
+              <RefreshCw
+                className={`h-4 w-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`}
+              />
+              {isRefreshing ? "Refreshing..." : "Refresh"}
+            </Button>
             <Button variant="secondary" size="sm">
               <Calendar className="h-4 w-4 mr-2" />
               Last 7 Days
@@ -331,15 +438,15 @@ export default function AdminDashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <KPITile
           title="Total Affiliates"
-          value={127}
+          value={dashboardData.statistics.totalAffiliates}
           change={{ value: 8.5, type: "increase", period: "last month" }}
           icon={Users}
           iconColor="text-blue-600"
-          description="Active affiliate partners"
+          description={`${dashboardData.statistics.activeAffiliates} active, ${dashboardData.statistics.pendingAffiliates} pending`}
         />
         <KPITile
           title="Total Revenue"
-          value={85620}
+          value={Math.round(dashboardData.statistics.totalRevenue)}
           change={{ value: 15.3, type: "increase", period: "last month" }}
           icon={DollarSign}
           iconColor="text-green-600"
@@ -347,7 +454,7 @@ export default function AdminDashboardPage() {
         />
         <KPITile
           title="Total Commissions"
-          value={25686}
+          value={Math.round(dashboardData.statistics.totalCommissions)}
           change={{ value: 15.3, type: "increase", period: "last month" }}
           icon={TrendingUp}
           iconColor="text-emerald-600"
@@ -355,7 +462,9 @@ export default function AdminDashboardPage() {
         />
         <KPITile
           title="Conversion Rate"
-          value="6.2%"
+          value={`${(
+            Math.round(dashboardData.statistics.conversionRate * 10) / 10
+          ).toFixed(1)}%`}
           change={{ value: 0.8, type: "increase", period: "last month" }}
           icon={Target}
           iconColor="text-purple-600"
@@ -366,7 +475,7 @@ export default function AdminDashboardPage() {
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <LineChartComponent
-          data={programPerformanceData}
+          data={dashboardData.dailyPerformance}
           title="Program Performance"
           description="Overall program metrics over time"
           dataKey="date"
@@ -374,28 +483,22 @@ export default function AdminDashboardPage() {
           lines={[
             { dataKey: "totalClicks", stroke: "#3b82f6", name: "Total Clicks" },
             {
-              dataKey: "totalConversions",
+              dataKey: "conversions",
               stroke: "#10b981",
-              name: "Total Conversions",
+              name: "Conversions",
             },
             {
-              dataKey: "totalRevenue",
+              dataKey: "revenue",
               stroke: "#f59e0b",
-              name: "Total Revenue ($)",
+              name: "Revenue ($)",
             },
           ]}
         />
-        <DoughnutChartComponent
-          data={trafficSourcesData}
-          title="Traffic Sources"
-          description="Where your traffic comes from"
-        />
-      </div>
-
-      {/* Additional Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <BarChartComponent
-          data={topAffiliatesData}
+          data={dashboardData.topAffiliates.map((aff) => ({
+            affiliate: aff.name.split(" ")[0] || "Unknown",
+            revenue: aff.totalEarnings,
+          }))}
           title="Top Performing Affiliates"
           description="Best performing affiliates this month"
           dataKey="affiliate"
@@ -431,10 +534,26 @@ export default function AdminDashboardPage() {
       {/* Data Tables */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <DataTable
-          title="Recent Affiliates"
-          description="Latest affiliate registrations and activity"
+          title="Top Affiliates"
+          description="Top performing affiliates this month"
           columns={affiliateColumns}
-          data={recentAffiliates}
+          data={dashboardData.topAffiliates.map((aff) => ({
+            id: aff.id,
+            name: aff.name,
+            email: aff.email,
+            joinDate: "-",
+            status: aff.status.toLowerCase(),
+            tier: aff.tier,
+            totalEarnings: aff.totalEarnings,
+            totalClicks: 0,
+            totalConversions: aff.totalConversions,
+            conversionRate: 0,
+            lastActivity: aff.lastActivity
+              ? new Date(aff.lastActivity).toLocaleDateString()
+              : "N/A",
+            paymentMethod: "PayPal",
+            country: "Unknown",
+          }))}
           searchable={true}
           filterable={true}
           exportable={true}
@@ -446,7 +565,7 @@ export default function AdminDashboardPage() {
           title="Pending Payouts"
           description="Affiliate payout requests awaiting approval"
           columns={payoutColumns}
-          data={pendingPayouts}
+          data={dashboardData.pendingPayouts}
           searchable={true}
           filterable={true}
           exportable={true}
@@ -468,7 +587,7 @@ export default function AdminDashboardPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {systemAlerts.map((alert, index) => (
+            {dashboardData.systemAlerts.map((alert, index) => (
               <div
                 key={index}
                 className={`p-4 rounded-lg border ${alert.color}`}

@@ -1,27 +1,60 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
-import { 
-  MessageCircle, 
-  Mail, 
-  Phone, 
-  Clock, 
+import { useState, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import {
+  MessageCircle,
+  Mail,
+  Phone,
+  Clock,
   CheckCircle,
   AlertCircle,
   FileText,
   ExternalLink,
-  Send
-} from "lucide-react"
-import { toast } from "sonner"
+  Send,
+  RefreshCw,
+  Inbox,
+} from "lucide-react";
+import { toast } from "sonner";
+import { config } from "@/config/config";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-// Mock support data
+interface SupportTicket {
+  id: string;
+  subject: string;
+  category: string;
+  status: string;
+  priority: string;
+  createdAt: Date;
+  updatedAt: Date;
+  lastResponse: string;
+  messages: number;
+}
+
+interface TicketSummary {
+  open: number;
+  inProgress: number;
+  resolved: number;
+}
+
 const supportChannels = [
   {
     id: 1,
@@ -31,7 +64,7 @@ const supportChannels = [
     availability: "24/7",
     responseTime: "2-5 minutes",
     status: "online",
-    color: "text-green-600"
+    color: "text-green-600",
   },
   {
     id: 2,
@@ -41,7 +74,7 @@ const supportChannels = [
     availability: "24/7",
     responseTime: "2-4 hours",
     status: "online",
-    color: "text-blue-600"
+    color: "text-blue-600",
   },
   {
     id: 3,
@@ -51,9 +84,9 @@ const supportChannels = [
     availability: "Mon-Fri 9AM-6PM EST",
     responseTime: "Immediate",
     status: "online",
-    color: "text-purple-600"
-  }
-]
+    color: "text-purple-600",
+  },
+];
 
 const supportCategories = [
   "Account Issues",
@@ -62,313 +95,432 @@ const supportCategories = [
   "Commission Questions",
   "Marketing Materials",
   "Program Terms",
-  "Other"
-]
+  "Other",
+];
 
 const priorityLevels = [
-  { value: "low", label: "Low", description: "General questions" },
-  { value: "medium", label: "Medium", description: "Account or payment issues" },
-  { value: "high", label: "High", description: "Urgent technical problems" },
-  { value: "critical", label: "Critical", description: "System outages or security issues" }
-]
+  { value: "Low", label: "Low", description: "General questions" },
+  {
+    value: "Medium",
+    label: "Medium",
+    description: "Account or payment issues",
+  },
+  { value: "High", label: "High", description: "Urgent technical problems" },
+  {
+    value: "Critical",
+    label: "Critical",
+    description: "System outages or security issues",
+  },
+];
 
 export default function ContactSupportPage() {
+  const [tickets, setTickets] = useState<SupportTicket[]>([]);
+  const [ticketSummary, setTicketSummary] = useState<TicketSummary | null>(
+    null
+  );
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const [formData, setFormData] = useState({
-    category: "",
-    priority: "",
     subject: "",
+    category: "",
+    priority: "Medium",
     message: "",
-    email: "affiliate@example.com"
-  })
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  });
+
+  useEffect(() => {
+    fetchTickets();
+  }, []);
+
+  const fetchTickets = async () => {
+    try {
+      const response = await fetch(`${config.apiUrl}/support/tickets`, {
+        credentials: "include",
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setTickets(data.tickets || []);
+        setTicketSummary(data.summary || null);
+      } else {
+        console.error("Failed to fetch tickets:", response.status);
+      }
+    } catch (error) {
+      console.error("Error fetching tickets:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await fetchTickets();
+    setIsRefreshing(false);
+    toast.success("Tickets refreshed");
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsSubmitting(true)
-    
-    // Simulate form submission
-    setTimeout(() => {
-      setIsSubmitting(false)
-      toast.success("Support ticket submitted successfully!")
-      setFormData({
-        category: "",
-        priority: "",
-        subject: "",
-        message: "",
-        email: "affiliate@example.com"
-      })
-    }, 2000)
-  }
+    e.preventDefault();
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }))
-  }
+    if (!formData.subject || !formData.category || !formData.message) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch(`${config.apiUrl}/support/tickets`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify(formData),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        toast.success(data.message || "Ticket created successfully");
+        setFormData({
+          subject: "",
+          category: "",
+          priority: "Medium",
+          message: "",
+        });
+        fetchTickets(); // Refresh tickets list
+      } else {
+        const error = await response.json();
+        toast.error(error.error || "Failed to create ticket");
+      }
+    } catch (error) {
+      console.error("Error creating ticket:", error);
+      toast.error("Failed to create support ticket");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    const variants = {
+      Open: "default",
+      "In Progress": "secondary",
+      Resolved: "outline",
+    } as const;
+
+    const icons = {
+      Open: Clock,
+      "In Progress": AlertCircle,
+      Resolved: CheckCircle,
+    };
+
+    const Icon = icons[status as keyof typeof icons];
+
+    return (
+      <Badge variant={variants[status as keyof typeof variants]}>
+        {Icon && <Icon className="w-3 h-3 mr-1" />}
+        {status}
+      </Badge>
+    );
+  };
+
+  const getPriorityBadge = (priority: string) => {
+    const colors = {
+      Low: "bg-gray-100 text-gray-800",
+      Medium: "bg-blue-100 text-blue-800",
+      High: "bg-orange-100 text-orange-800",
+      Critical: "bg-red-100 text-red-800",
+    };
+
+    return (
+      <Badge className={colors[priority as keyof typeof colors]}>
+        {priority}
+      </Badge>
+    );
+  };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 lg:p-8 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Contact Support</h1>
-          <p className="text-slate-600">Get help from our dedicated support team</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">Contact Support</h1>
+          <p className="text-muted-foreground">
+            Get help from our support team
+          </p>
         </div>
-        <div className="flex items-center space-x-3">
-          <Button variant="outline" size="sm">
-            <FileText className="h-4 w-4 mr-2" />
-            View Tickets
-          </Button>
-        </div>
+        <Button
+          variant="outline"
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          className="w-full sm:w-auto"
+        >
+          <RefreshCw
+            className={`w-4 h-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`}
+          />
+          {isRefreshing ? "Refreshing..." : "Refresh"}
+        </Button>
       </div>
 
-      {/* Support Channels */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {supportChannels.map((channel) => (
-          <Card key={channel.id} className="hover:shadow-md transition-shadow">
-            <CardContent className="p-6 text-center">
-              <div className={`w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4`}>
-                <channel.icon className={`h-6 w-6 ${channel.color}`} />
-              </div>
-              <h3 className="font-medium text-slate-900 mb-2">{channel.name}</h3>
-              <p className="text-sm text-slate-600 mb-4">{channel.description}</p>
-              <div className="space-y-2 mb-4">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-500">Availability:</span>
-                  <span className="font-medium">{channel.availability}</span>
-                </div>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-500">Response Time:</span>
-                  <span className="font-medium">{channel.responseTime}</span>
-                </div>
-              </div>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="w-full"
-                disabled={channel.status !== "online"}
-              >
-                {channel.status === "online" ? "Start Chat" : "Offline"}
-              </Button>
+      {/* Ticket Summary */}
+      {ticketSummary && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Open Tickets
+              </CardTitle>
+              <Clock className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{ticketSummary.open}</div>
+              <p className="text-xs text-muted-foreground">Awaiting response</p>
             </CardContent>
           </Card>
-        ))}
-      </div>
-
-      {/* Support Form */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Submit a Support Ticket</CardTitle>
-          <CardDescription>
-            Fill out the form below and we'll get back to you as soon as possible
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="category">Category</Label>
-                <Select value={formData.category} onValueChange={(value) => handleInputChange("category", value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {supportCategories.map(category => (
-                      <SelectItem key={category} value={category.toLowerCase().replace(" ", "-")}>
-                        {category}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">In Progress</CardTitle>
+              <AlertCircle className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {ticketSummary.inProgress}
               </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="priority">Priority Level</Label>
-                <Select value={formData.priority} onValueChange={(value) => handleInputChange("priority", value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select priority" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {priorityLevels.map(priority => (
-                      <SelectItem key={priority.value} value={priority.value}>
-                        <div>
-                          <div className="font-medium">{priority.label}</div>
-                          <div className="text-xs text-slate-500">{priority.description}</div>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="email">Email Address</Label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => handleInputChange("email", e.target.value)}
-                placeholder="Enter your email address"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="subject">Subject</Label>
-              <Input
-                id="subject"
-                value={formData.subject}
-                onChange={(e) => handleInputChange("subject", e.target.value)}
-                placeholder="Brief description of your issue"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="message">Message</Label>
-              <Textarea
-                id="message"
-                value={formData.message}
-                onChange={(e) => handleInputChange("message", e.target.value)}
-                placeholder="Please provide detailed information about your issue..."
-                rows={6}
-              />
-            </div>
-            
-            <Button type="submit" disabled={isSubmitting} className="w-full">
-              <Send className="h-4 w-4 mr-2" />
-              {isSubmitting ? "Submitting..." : "Submit Ticket"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-
-      {/* Support Information */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Support Hours</CardTitle>
-            <CardDescription>When you can reach our support team</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <Clock className="h-5 w-5 text-blue-600" />
-                <span className="font-medium">Live Chat</span>
-              </div>
-              <Badge variant="default" className="bg-green-600">24/7</Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <Mail className="h-5 w-5 text-blue-600" />
-                <span className="font-medium">Email Support</span>
-              </div>
-              <Badge variant="default" className="bg-green-600">24/7</Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <Phone className="h-5 w-5 text-blue-600" />
-                <span className="font-medium">Phone Support</span>
-              </div>
-              <Badge variant="outline">Mon-Fri 9AM-6PM EST</Badge>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Response Times</CardTitle>
-            <CardDescription>How quickly we respond to different types of requests</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Critical Issues</span>
-              <Badge variant="destructive">Immediate</Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm">High Priority</span>
-              <Badge variant="default" className="bg-orange-600">2-4 hours</Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Medium Priority</span>
-              <Badge variant="default" className="bg-blue-600">4-8 hours</Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Low Priority</span>
-              <Badge variant="outline">24-48 hours</Badge>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* FAQ Quick Links */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Quick Help</CardTitle>
-          <CardDescription>Common issues and solutions</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <Button variant="outline" className="justify-start h-auto p-4">
-              <div className="text-left">
-                <div className="font-medium">Commission Not Showing</div>
-                <div className="text-xs text-slate-500 mt-1">Check approval status and timeline</div>
-              </div>
-            </Button>
-            <Button variant="outline" className="justify-start h-auto p-4">
-              <div className="text-left">
-                <div className="font-medium">Payment Issues</div>
-                <div className="text-xs text-slate-500 mt-1">Troubleshoot payout problems</div>
-              </div>
-            </Button>
-            <Button variant="outline" className="justify-start h-auto p-4">
-              <div className="text-left">
-                <div className="font-medium">Link Generation</div>
-                <div className="text-xs text-slate-500 mt-1">Create and manage affiliate links</div>
-              </div>
-            </Button>
-            <Button variant="outline" className="justify-start h-auto p-4">
-              <div className="text-left">
-                <div className="font-medium">Account Access</div>
-                <div className="text-xs text-slate-500 mt-1">Login and security issues</div>
-              </div>
-            </Button>
-            <Button variant="outline" className="justify-start h-auto p-4">
-              <div className="text-left">
-                <div className="font-medium">Marketing Materials</div>
-                <div className="text-xs text-slate-500 mt-1">Download banners and assets</div>
-              </div>
-            </Button>
-            <Button variant="outline" className="justify-start h-auto p-4">
-              <div className="text-left">
-                <div className="font-medium">Program Terms</div>
-                <div className="text-xs text-slate-500 mt-1">Understand terms and conditions</div>
-              </div>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Emergency Contact */}
-      <Card className="border-red-200 bg-red-50">
-        <CardContent className="p-6">
-          <div className="flex items-start space-x-3">
-            <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
-            <div>
-              <h4 className="font-medium text-red-800">Emergency Support</h4>
-              <p className="text-sm text-red-700 mt-1 mb-3">
-                For critical issues affecting your account or urgent security concerns, contact our emergency support line.
+              <p className="text-xs text-muted-foreground">Being handled</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Resolved</CardTitle>
+              <CheckCircle className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{ticketSummary.resolved}</div>
+              <p className="text-xs text-muted-foreground">
+                Successfully closed
               </p>
-              <Button variant="outline" className="border-red-300 text-red-700 hover:bg-red-100">
-                <Phone className="h-4 w-4 mr-2" />
-                Emergency Hotline: +1 (555) 123-4567
-              </Button>
-            </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      <Tabs defaultValue="create" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="create">Create Ticket</TabsTrigger>
+          <TabsTrigger value="myTickets">My Tickets</TabsTrigger>
+        </TabsList>
+
+        {/* Create Ticket Tab */}
+        <TabsContent value="create" className="space-y-6">
+          {/* Support Channels */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {supportChannels.map((channel) => (
+              <Card
+                key={channel.id}
+                className="hover:shadow-md transition-shadow"
+              >
+                <CardContent className="pt-6">
+                  <div className="flex flex-col items-center text-center space-y-3">
+                    <div
+                      className={`w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center`}
+                    >
+                      <channel.icon className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold mb-1">{channel.name}</h3>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        {channel.description}
+                      </p>
+                      <div className="flex flex-col space-y-1 text-xs">
+                        <div className="flex items-center justify-center space-x-1">
+                          <Clock className="w-3 h-3" />
+                          <span>{channel.availability}</span>
+                        </div>
+                        <div className="text-muted-foreground">
+                          Response: {channel.responseTime}
+                        </div>
+                      </div>
+                    </div>
+                    <Badge
+                      className={
+                        channel.status === "online"
+                          ? "bg-green-100 text-green-800"
+                          : "bg-gray-100 text-gray-800"
+                      }
+                    >
+                      {channel.status === "online" ? "Online" : "Offline"}
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
-        </CardContent>
-      </Card>
+
+          {/* Contact Form */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Submit a Support Ticket</CardTitle>
+              <CardDescription>
+                Fill out the form below and we'll get back to you soon
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="subject">Subject *</Label>
+                    <Input
+                      id="subject"
+                      placeholder="Brief description of your issue"
+                      value={formData.subject}
+                      onChange={(e) =>
+                        setFormData({ ...formData, subject: e.target.value })
+                      }
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="category">Category *</Label>
+                    <Select
+                      value={formData.category}
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, category: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {supportCategories.map((cat) => (
+                          <SelectItem key={cat} value={cat}>
+                            {cat}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="priority">Priority Level *</Label>
+                  <Select
+                    value={formData.priority}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, priority: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {priorityLevels.map((level) => (
+                        <SelectItem key={level.value} value={level.value}>
+                          <div>
+                            <div className="font-medium">{level.label}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {level.description}
+                            </div>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="message">Message *</Label>
+                  <Textarea
+                    id="message"
+                    placeholder="Describe your issue in detail..."
+                    value={formData.message}
+                    onChange={(e) =>
+                      setFormData({ ...formData, message: e.target.value })
+                    }
+                    rows={6}
+                    required
+                  />
+                </div>
+
+                <Button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full md:w-auto"
+                >
+                  <Send className="w-4 h-4 mr-2" />
+                  {isSubmitting ? "Submitting..." : "Submit Ticket"}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* My Tickets Tab */}
+        <TabsContent value="myTickets" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>My Support Tickets</CardTitle>
+              <CardDescription>
+                View and manage your support tickets
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                </div>
+              ) : tickets.length === 0 ? (
+                <div className="text-center py-8">
+                  <Inbox className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">
+                    No Tickets Found
+                  </h3>
+                  <p className="text-muted-foreground">
+                    You haven't created any support tickets yet
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {tickets.map((ticket) => (
+                    <div
+                      key={ticket.id}
+                      className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-3">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2 mb-2">
+                            <h3 className="font-semibold">{ticket.subject}</h3>
+                            {getStatusBadge(ticket.status)}
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <Badge variant="outline">{ticket.category}</Badge>
+                            {getPriorityBadge(ticket.priority)}
+                            <Badge variant="outline">
+                              {ticket.messages} messages
+                            </Badge>
+                          </div>
+                        </div>
+                        <Button variant="outline" size="sm">
+                          <ExternalLink className="w-4 h-4 mr-1" />
+                          View
+                        </Button>
+                      </div>
+
+                      <div className="flex items-center justify-between text-sm text-muted-foreground pt-3 border-t">
+                        <div>
+                          Created:{" "}
+                          {new Date(ticket.createdAt).toLocaleDateString()}
+                        </div>
+                        <div>Last response: {ticket.lastResponse}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
-  )
+  );
 }
-
-

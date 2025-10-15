@@ -1,376 +1,743 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { DataTable } from "@/components/dashboard/data-table"
-import { LineChartComponent } from "@/components/charts/line-chart"
-import { BarChartComponent } from "@/components/charts/bar-chart"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Calendar, Download, Filter, TrendingUp, MousePointer, Target } from "lucide-react"
+import { useState, useEffect } from "react";
+import { DataTable } from "@/components/dashboard/data-table";
+import { LineChartComponent } from "@/components/charts/line-chart";
+import { BarChartComponent } from "@/components/charts/bar-chart";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Calendar,
+  Download,
+  Filter,
+  TrendingUp,
+  MousePointer,
+  Target,
+  RefreshCw,
+} from "lucide-react";
+import { toast } from "sonner";
+import { config } from "@/config/config";
 
-// Mock data for conversions log
-const conversionsData = [
-  {
-    id: "CONV-001",
-    date: "2024-01-07 14:30:25",
-    clickId: "CLK-789",
-    status: "approved",
-    referralType: "Sale",
-    commissionAmount: 30.00,
-    customerValue: 100.00,
-    offer: "Premium Plan",
-    customerEmail: "john@example.com"
-  },
-  {
-    id: "CONV-002",
-    date: "2024-01-07 12:15:10",
-    clickId: "CLK-790",
-    status: "pending",
-    referralType: "Sale",
-    commissionAmount: 15.00,
-    customerValue: 50.00,
-    offer: "Basic Plan",
-    customerEmail: "sarah@example.com"
-  },
-  {
-    id: "CONV-003",
-    date: "2024-01-06 16:45:33",
-    clickId: "CLK-791",
-    status: "approved",
-    referralType: "Sale",
-    commissionAmount: 300.00,
-    customerValue: 1000.00,
-    offer: "Enterprise",
-    customerEmail: "mike@example.com"
-  },
-  {
-    id: "CONV-004",
-    date: "2024-01-06 09:20:15",
-    clickId: "CLK-792",
-    status: "declined",
-    referralType: "Lead",
-    commissionAmount: 5.00,
-    customerValue: 0.00,
-    offer: "Starter",
-    customerEmail: "lisa@example.com"
-  },
-  {
-    id: "CONV-005",
-    date: "2024-01-05 18:10:42",
-    clickId: "CLK-793",
-    status: "approved",
-    referralType: "Sale",
-    commissionAmount: 30.00,
-    customerValue: 100.00,
-    offer: "Premium Plan",
-    customerEmail: "david@example.com"
-  },
-  {
-    id: "CONV-006",
-    date: "2024-01-05 11:35:28",
-    clickId: "CLK-794",
-    status: "approved",
-    referralType: "Sale",
-    commissionAmount: 15.00,
-    customerValue: 50.00,
-    offer: "Basic Plan",
-    customerEmail: "emma@example.com"
-  },
-  {
-    id: "CONV-007",
-    date: "2024-01-04 15:22:17",
-    clickId: "CLK-795",
-    status: "pending",
-    referralType: "Lead",
-    commissionAmount: 5.00,
-    customerValue: 0.00,
-    offer: "Starter",
-    customerEmail: "alex@example.com"
-  },
-  {
-    id: "CONV-008",
-    date: "2024-01-04 08:45:55",
-    clickId: "CLK-796",
-    status: "approved",
-    referralType: "Sale",
-    commissionAmount: 30.00,
-    customerValue: 100.00,
-    offer: "Premium Plan",
-    customerEmail: "sophia@example.com"
-  },
-]
+interface ClickData {
+  id: string;
+  timestamp: string;
+  referralCode: string;
+  storeId: string;
+  url: string;
+  referrer: string;
+  userAgent: string;
+  ipAddress: string;
+  utmSource: string;
+  utmMedium: string;
+  utmCampaign: string;
+  country: string;
+  device: string;
+  browser: string;
+}
 
-// Mock data for clicks log
-const clicksData = [
-  {
-    id: "CLK-789",
-    date: "2024-01-07 14:30:25",
-    source: "Social Media",
-    country: "United States",
-    device: "Desktop",
-    browser: "Chrome",
-    converted: true,
-    conversionId: "CONV-001"
-  },
-  {
-    id: "CLK-790",
-    date: "2024-01-07 12:15:10",
-    source: "Email",
-    country: "Canada",
-    device: "Mobile",
-    browser: "Safari",
-    converted: true,
-    conversionId: "CONV-002"
-  },
-  {
-    id: "CLK-791",
-    date: "2024-01-06 16:45:33",
-    source: "Direct",
-    country: "United Kingdom",
-    device: "Desktop",
-    browser: "Firefox",
-    converted: true,
-    conversionId: "CONV-003"
-  },
-  {
-    id: "CLK-792",
-    date: "2024-01-06 09:20:15",
-    source: "Search Engine",
-    country: "Australia",
-    device: "Tablet",
-    browser: "Chrome",
-    converted: false,
-    conversionId: null
-  },
-  {
-    id: "CLK-793",
-    date: "2024-01-05 18:10:42",
-    source: "Social Media",
-    country: "Germany",
-    device: "Mobile",
-    browser: "Safari",
-    converted: true,
-    conversionId: "CONV-005"
-  },
-]
+interface ConversionData {
+  id: string;
+  date: string;
+  clickId: string;
+  status: string;
+  referralType: string;
+  commissionAmount: number;
+  customerValue: number;
+  offer: string;
+  customerEmail: string;
+  referralCode: string;
+}
 
-// Mock data for traffic analysis
-const trafficAnalysisData = [
-  { date: "2024-01-01", clicks: 120, conversions: 8, conversionRate: 6.67 },
-  { date: "2024-01-02", clicks: 150, conversions: 12, conversionRate: 8.00 },
-  { date: "2024-01-03", clicks: 180, conversions: 15, conversionRate: 8.33 },
-  { date: "2024-01-04", clicks: 200, conversions: 18, conversionRate: 9.00 },
-  { date: "2024-01-05", clicks: 160, conversions: 14, conversionRate: 8.75 },
-  { date: "2024-01-06", clicks: 220, conversions: 20, conversionRate: 9.09 },
-  { date: "2024-01-07", clicks: 190, conversions: 16, conversionRate: 8.42 },
-]
+interface TrafficData {
+  period: string;
+  summary: {
+    totalClicks: number;
+    uniqueVisitors: number;
+    avgSessionDuration: number;
+    bounceRate: number;
+  };
+  trafficBySource: Array<{
+    source: string;
+    clicks: number;
+    percentage: number;
+  }>;
+  deviceStats: {
+    desktop: number;
+    mobile: number;
+    tablet: number;
+  };
+  dailyTraffic: Array<{
+    date: string;
+    clicks: number;
+    uniqueVisitors: number;
+    bounceRate: number;
+  }>;
+  topPages: Array<{
+    url: string;
+    clicks: number;
+    percentage: number;
+  }>;
+}
 
-const topSourcesData = [
-  { source: "Social Media", clicks: 450, conversions: 35, rate: 7.78 },
-  { source: "Email Marketing", clicks: 320, conversions: 28, rate: 8.75 },
-  { source: "Direct Traffic", clicks: 280, conversions: 22, rate: 7.86 },
-  { source: "Search Engines", clicks: 180, conversions: 12, rate: 6.67 },
-  { source: "Referrals", clicks: 120, conversions: 8, rate: 6.67 },
-]
-
-const conversionsColumns = [
-  { key: "id", label: "Conversion ID", sortable: true },
-  { key: "date", label: "Date & Time", sortable: true },
-  { key: "clickId", label: "Click ID", sortable: true },
-  { 
-    key: "status", 
-    label: "Status", 
-    sortable: true,
-    render: (value: string) => (
-      <Badge 
-        variant={
-          value === "approved" ? "default" : 
-          value === "pending" ? "secondary" : 
-          "destructive"
-        }
-      >
-        {value.charAt(0).toUpperCase() + value.slice(1)}
-      </Badge>
-    )
-  },
-  { key: "referralType", label: "Type", sortable: true },
-  { 
-    key: "commissionAmount", 
-    label: "Commission", 
-    sortable: true,
-    render: (value: number) => `$${value.toFixed(2)}`
-  },
-  { 
-    key: "customerValue", 
-    label: "Customer Value", 
-    sortable: true,
-    render: (value: number) => value > 0 ? `$${value.toFixed(2)}` : "-"
-  },
-  { key: "offer", label: "Offer", sortable: true },
-]
-
-const clicksColumns = [
-  { key: "id", label: "Click ID", sortable: true },
-  { key: "date", label: "Date & Time", sortable: true },
-  { key: "source", label: "Source", sortable: true },
-  { key: "country", label: "Country", sortable: true },
-  { key: "device", label: "Device", sortable: true },
-  { key: "browser", label: "Browser", sortable: true },
-  { 
-    key: "converted", 
-    label: "Converted", 
-    sortable: true,
-    render: (value: boolean) => (
-      <Badge variant={value ? "default" : "secondary"}>
-        {value ? "Yes" : "No"}
-      </Badge>
-    )
-  },
-  { key: "conversionId", label: "Conversion ID", sortable: true },
-]
+interface PerformanceData {
+  period: string;
+  metrics: {
+    totalClicks: number;
+    totalConversions: number;
+    conversionRate: number;
+    totalRevenue: number;
+    avgOrderValue: number;
+    revenuePerClick: number;
+  };
+  performanceByCode: Array<{
+    referralCode: string;
+    clicks: number;
+    conversions: number;
+    revenue: number;
+    conversionRate: number;
+    commissionRate: number;
+  }>;
+}
 
 export default function StatisticsPage() {
-  const [selectedPeriod, setSelectedPeriod] = useState("7d")
+  const [selectedPeriod, setSelectedPeriod] = useState("30d");
+  const [selectedTab, setSelectedTab] = useState("overview");
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Data states
+  const [clicksData, setClicksData] = useState<ClickData[]>([]);
+  const [conversionsData, setConversionsData] = useState<ConversionData[]>([]);
+  const [trafficData, setTrafficData] = useState<TrafficData | null>(null);
+  const [performanceData, setPerformanceData] =
+    useState<PerformanceData | null>(null);
+
+  useEffect(() => {
+    fetchAllData();
+  }, [selectedPeriod]);
+
+  const fetchAllData = async () => {
+    setIsLoading(true);
+    await Promise.all([
+      fetchClicksData(),
+      fetchConversionsData(),
+      fetchTrafficData(),
+      fetchPerformanceData(),
+    ]);
+    setIsLoading(false);
+  };
+
+  const fetchClicksData = async () => {
+    try {
+      const response = await fetch(
+        `${config.apiUrl}/statistics/clicks?period=${selectedPeriod}`,
+        {
+          credentials: "include",
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setClicksData(data.data || []);
+      } else {
+        console.error("Failed to fetch clicks data:", response.status);
+      }
+    } catch (error) {
+      console.error("Error fetching clicks data:", error);
+    }
+  };
+
+  const fetchConversionsData = async () => {
+    try {
+      const response = await fetch(
+        `${config.apiUrl}/statistics/conversions?period=${selectedPeriod}`,
+        {
+          credentials: "include",
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setConversionsData(data.data || []);
+      } else {
+        console.error("Failed to fetch conversions data:", response.status);
+      }
+    } catch (error) {
+      console.error("Error fetching conversions data:", error);
+    }
+  };
+
+  const fetchTrafficData = async () => {
+    try {
+      const response = await fetch(
+        `${config.apiUrl}/statistics/traffic?period=${selectedPeriod}`,
+        {
+          credentials: "include",
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setTrafficData(data);
+      } else {
+        console.error("Failed to fetch traffic data:", response.status);
+      }
+    } catch (error) {
+      console.error("Error fetching traffic data:", error);
+    }
+  };
+
+  const fetchPerformanceData = async () => {
+    try {
+      const response = await fetch(
+        `${config.apiUrl}/statistics/performance?period=${selectedPeriod}`,
+        {
+          credentials: "include",
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setPerformanceData(data);
+      } else {
+        console.error("Failed to fetch performance data:", response.status);
+      }
+    } catch (error) {
+      console.error("Error fetching performance data:", error);
+    }
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await fetchAllData();
+    setIsRefreshing(false);
+    toast.success("Statistics data refreshed");
+  };
+
+  const getStatusBadge = (status: string) => {
+    const variants = {
+      approved: "default",
+      pending: "secondary",
+      declined: "destructive",
+    } as const;
+
+    return (
+      <Badge variant={variants[status as keyof typeof variants]}>
+        {status.charAt(0).toUpperCase() + status.slice(1)}
+      </Badge>
+    );
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 lg:p-8 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Statistics & Analytics</h1>
-          <p className="text-slate-600">Track your performance and analyze traffic patterns</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">
+            Statistics & Analytics
+          </h1>
+          <p className="text-muted-foreground">
+            Track your affiliate performance and traffic insights
+          </p>
         </div>
-        <div className="flex items-center space-x-3">
+        <div className="flex flex-col sm:flex-row gap-2">
           <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-            <SelectTrigger className="w-40">
-              <Calendar className="h-4 w-4 mr-2" />
+            <SelectTrigger className="w-full sm:w-40">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="1d">Today</SelectItem>
-              <SelectItem value="7d">Last 7 Days</SelectItem>
-              <SelectItem value="30d">Last 30 Days</SelectItem>
-              <SelectItem value="90d">Last 90 Days</SelectItem>
-              <SelectItem value="all">All Time</SelectItem>
+              <SelectItem value="7d">Last 7 days</SelectItem>
+              <SelectItem value="30d">Last 30 days</SelectItem>
+              <SelectItem value="90d">Last 90 days</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" size="sm">
-            <Download className="h-4 w-4 mr-2" />
-            Export Data
+          <Button
+            variant="outline"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="w-full sm:w-auto"
+          >
+            <RefreshCw
+              className={`w-4 h-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`}
+            />
+            {isRefreshing ? "Refreshing..." : "Refresh"}
           </Button>
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Clicks</CardTitle>
-            <MousePointer className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">1,420</div>
-            <p className="text-xs text-green-600 flex items-center">
-              <TrendingUp className="h-3 w-3 mr-1" />
-              +12.5% from last period
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Conversions</CardTitle>
-            <Target className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">103</div>
-            <p className="text-xs text-green-600 flex items-center">
-              <TrendingUp className="h-3 w-3 mr-1" />
-              +8.2% from last period
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Conversion Rate</CardTitle>
-            <TrendingUp className="h-4 w-4 text-purple-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">7.25%</div>
-            <p className="text-xs text-green-600 flex items-center">
-              <TrendingUp className="h-3 w-3 mr-1" />
-              +0.8% from last period
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Performance Overview */}
+      {performanceData && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Total Clicks
+              </CardTitle>
+              <MousePointer className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {performanceData.metrics.totalClicks.toLocaleString()}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {selectedPeriod} period
+              </p>
+            </CardContent>
+          </Card>
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <LineChartComponent
-          data={trafficAnalysisData}
-          title="Traffic Analysis"
-          description="Clicks, conversions, and conversion rate over time"
-          dataKey="date"
-          xAxisKey="date"
-          lines={[
-            { dataKey: "clicks", stroke: "#3b82f6", name: "Clicks" },
-            { dataKey: "conversions", stroke: "#10b981", name: "Conversions" },
-            { dataKey: "conversionRate", stroke: "#f59e0b", name: "Conversion Rate (%)" },
-          ]}
-        />
-        <BarChartComponent
-          data={topSourcesData}
-          title="Top Traffic Sources"
-          description="Performance by traffic source"
-          dataKey="source"
-          xAxisKey="source"
-          bars={[
-            { dataKey: "clicks", fill: "#3b82f6", name: "Clicks" },
-            { dataKey: "conversions", fill: "#10b981", name: "Conversions" },
-          ]}
-        />
-      </div>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Conversions</CardTitle>
+              <Target className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {performanceData.metrics.totalConversions}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {performanceData.metrics.conversionRate.toFixed(2)}% conversion
+                rate
+              </p>
+            </CardContent>
+          </Card>
 
-      {/* Data Tables */}
-      <Tabs defaultValue="conversions" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="conversions">Conversions Log</TabsTrigger>
-          <TabsTrigger value="clicks">Clicks Log</TabsTrigger>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Total Revenue
+              </CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                ${performanceData.metrics.totalRevenue.toFixed(2)}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                ${performanceData.metrics.revenuePerClick.toFixed(2)} per click
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Avg Order Value
+              </CardTitle>
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                ${performanceData.metrics.avgOrderValue.toFixed(2)}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Average per conversion
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Main Content */}
+      <Tabs
+        value={selectedTab}
+        onValueChange={setSelectedTab}
+        className="space-y-6"
+      >
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="clicks">Clicks</TabsTrigger>
+          <TabsTrigger value="conversions">Conversions</TabsTrigger>
+          <TabsTrigger value="traffic">Traffic</TabsTrigger>
         </TabsList>
-        
-        <TabsContent value="conversions">
-          <DataTable
-            title="Conversions Log"
-            description="Detailed log of all your conversions"
-            columns={conversionsColumns}
-            data={conversionsData}
-            searchable={true}
-            filterable={true}
-            exportable={true}
-            pagination={true}
-            pageSize={10}
-          />
+
+        {/* Overview Tab */}
+        <TabsContent value="overview" className="space-y-6">
+          {performanceData && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Performance by Referral Code */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Performance by Referral Code</CardTitle>
+                  <CardDescription>
+                    Top performing referral codes
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {performanceData.performanceByCode.length === 0 ? (
+                    <div className="text-center py-8">
+                      <Target className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground">
+                        No performance data available
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {performanceData.performanceByCode
+                        .slice(0, 5)
+                        .map((code, index) => (
+                          <div
+                            key={code.referralCode}
+                            className="flex items-center justify-between p-3 border rounded-lg"
+                          >
+                            <div className="flex items-center space-x-3">
+                              <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold">
+                                {index + 1}
+                              </div>
+                              <div>
+                                <p className="font-medium">
+                                  {code.referralCode}
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  {code.clicks} clicks, {code.conversions}{" "}
+                                  conversions
+                                </p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-bold text-green-600">
+                                ${code.revenue.toFixed(2)}
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                {code.conversionRate.toFixed(1)}% rate
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Daily Performance Chart */}
+              {trafficData && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Daily Traffic</CardTitle>
+                    <CardDescription>
+                      Clicks and visitors over time
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-64">
+                      <LineChartComponent
+                        data={trafficData.dailyTraffic.map((day) => ({
+                          date: day.date,
+                          clicks: day.clicks,
+                          visitors: day.uniqueVisitors,
+                        }))}
+                        title="Daily Traffic Trend"
+                        description="Clicks and visitors over time"
+                        dataKey="clicks"
+                        xAxisKey="date"
+                        lines={[
+                          {
+                            dataKey: "clicks",
+                            stroke: "#3b82f6",
+                            name: "Clicks",
+                          },
+                          {
+                            dataKey: "visitors",
+                            stroke: "#10b981",
+                            name: "Visitors",
+                          },
+                        ]}
+                        height={256}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
         </TabsContent>
-        
-        <TabsContent value="clicks">
-          <DataTable
-            title="Clicks Log"
-            description="Detailed log of all clicks on your affiliate links"
-            columns={clicksColumns}
-            data={clicksData}
-            searchable={true}
-            filterable={true}
-            exportable={true}
-            pagination={true}
-            pageSize={10}
-          />
+
+        {/* Clicks Tab */}
+        <TabsContent value="clicks" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Click Log</CardTitle>
+              <CardDescription>Detailed click tracking data</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {clicksData.length === 0 ? (
+                <div className="text-center py-8">
+                  <MousePointer className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">
+                    No click data available
+                  </p>
+                </div>
+              ) : (
+                <div className="rounded-md border overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left p-4 font-medium">Timestamp</th>
+                        <th className="text-left p-4 font-medium">
+                          Referral Code
+                        </th>
+                        <th className="text-left p-4 font-medium">URL</th>
+                        <th className="text-left p-4 font-medium">Referrer</th>
+                        <th className="text-left p-4 font-medium">Device</th>
+                        <th className="text-left p-4 font-medium">Browser</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {clicksData.slice(0, 20).map((click) => (
+                        <tr
+                          key={click.id}
+                          className="border-b hover:bg-muted/50"
+                        >
+                          <td className="p-4 text-sm">
+                            {new Date(click.timestamp).toLocaleString()}
+                          </td>
+                          <td className="p-4 font-mono text-sm">
+                            {click.referralCode}
+                          </td>
+                          <td
+                            className="p-4 text-sm truncate max-w-xs"
+                            title={click.url}
+                          >
+                            {click.url}
+                          </td>
+                          <td className="p-4 text-sm">{click.referrer}</td>
+                          <td className="p-4">
+                            <Badge variant="outline">{click.device}</Badge>
+                          </td>
+                          <td className="p-4 text-sm">{click.browser}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Conversions Tab */}
+        <TabsContent value="conversions" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Conversions Log</CardTitle>
+              <CardDescription>
+                All conversion events and their details
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {conversionsData.length === 0 ? (
+                <div className="text-center py-8">
+                  <Target className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">
+                    No conversion data available
+                  </p>
+                </div>
+              ) : (
+                <div className="rounded-md border overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left p-4 font-medium">
+                          Conversion ID
+                        </th>
+                        <th className="text-left p-4 font-medium">Date</th>
+                        <th className="text-left p-4 font-medium">Click ID</th>
+                        <th className="text-left p-4 font-medium">Status</th>
+                        <th className="text-left p-4 font-medium">Type</th>
+                        <th className="text-left p-4 font-medium">
+                          Commission
+                        </th>
+                        <th className="text-left p-4 font-medium">
+                          Customer Value
+                        </th>
+                        <th className="text-left p-4 font-medium">Offer</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {conversionsData.slice(0, 20).map((conversion) => (
+                        <tr
+                          key={conversion.id}
+                          className="border-b hover:bg-muted/50"
+                        >
+                          <td className="p-4 font-mono text-sm">
+                            {conversion.id}
+                          </td>
+                          <td className="p-4 text-sm">{conversion.date}</td>
+                          <td className="p-4 font-mono text-sm">
+                            {conversion.clickId}
+                          </td>
+                          <td className="p-4">
+                            {getStatusBadge(conversion.status)}
+                          </td>
+                          <td className="p-4">
+                            <Badge variant="outline">
+                              {conversion.referralType}
+                            </Badge>
+                          </td>
+                          <td className="p-4 font-medium text-green-600">
+                            ${conversion.commissionAmount.toFixed(2)}
+                          </td>
+                          <td className="p-4">
+                            ${conversion.customerValue.toFixed(2)}
+                          </td>
+                          <td className="p-4">{conversion.offer}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Traffic Tab */}
+        <TabsContent value="traffic" className="space-y-6">
+          {trafficData && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Traffic Sources */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Traffic Sources</CardTitle>
+                  <CardDescription>
+                    Where your traffic comes from
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {trafficData.trafficBySource.length === 0 ? (
+                    <div className="text-center py-8">
+                      <Filter className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground">
+                        No traffic source data available
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {trafficData.trafficBySource.map((source, index) => (
+                        <div
+                          key={source.source}
+                          className="flex items-center justify-between"
+                        >
+                          <div className="flex items-center space-x-3">
+                            <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold">
+                              {index + 1}
+                            </div>
+                            <div>
+                              <p className="font-medium">{source.source}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {source.clicks} clicks
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-bold">{source.clicks}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Device Stats */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Device Breakdown</CardTitle>
+                  <CardDescription>Traffic by device type</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">Desktop</span>
+                      <div className="flex items-center space-x-2">
+                        <div className="w-24 bg-gray-200 rounded-full h-2">
+                          <div
+                            className="bg-blue-600 h-2 rounded-full"
+                            style={{
+                              width: `${
+                                (trafficData.deviceStats.desktop /
+                                  trafficData.summary.totalClicks) *
+                                100
+                              }%`,
+                            }}
+                          ></div>
+                        </div>
+                        <span className="text-sm text-muted-foreground w-12 text-right">
+                          {trafficData.deviceStats.desktop}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">Mobile</span>
+                      <div className="flex items-center space-x-2">
+                        <div className="w-24 bg-gray-200 rounded-full h-2">
+                          <div
+                            className="bg-green-600 h-2 rounded-full"
+                            style={{
+                              width: `${
+                                (trafficData.deviceStats.mobile /
+                                  trafficData.summary.totalClicks) *
+                                100
+                              }%`,
+                            }}
+                          ></div>
+                        </div>
+                        <span className="text-sm text-muted-foreground w-12 text-right">
+                          {trafficData.deviceStats.mobile}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">Tablet</span>
+                      <div className="flex items-center space-x-2">
+                        <div className="w-24 bg-gray-200 rounded-full h-2">
+                          <div
+                            className="bg-purple-600 h-2 rounded-full"
+                            style={{
+                              width: `${
+                                (trafficData.deviceStats.tablet /
+                                  trafficData.summary.totalClicks) *
+                                100
+                              }%`,
+                            }}
+                          ></div>
+                        </div>
+                        <span className="text-sm text-muted-foreground w-12 text-right">
+                          {trafficData.deviceStats.tablet}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>
-  )
+  );
 }
-
-

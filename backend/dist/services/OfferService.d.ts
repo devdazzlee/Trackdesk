@@ -82,16 +82,16 @@ export declare class OfferService {
             totalClicks: number;
             totalConversions: number;
             description: string;
-            totalRevenue: number;
             totalCommissions: number;
-            accountId: string;
-            category: string;
-            categoryId: string | null;
             startDate: Date;
             endDate: Date | null;
+            category: string;
+            accountId: string;
+            categoryId: string | null;
             terms: string | null;
             requirements: string | null;
             tags: string[];
+            totalRevenue: number;
         }[];
         pagination: {
             page: number;
@@ -163,16 +163,16 @@ export declare class OfferService {
         totalClicks: number;
         totalConversions: number;
         description: string;
-        totalRevenue: number;
         totalCommissions: number;
-        accountId: string;
-        category: string;
-        categoryId: string | null;
         startDate: Date;
         endDate: Date | null;
+        category: string;
+        accountId: string;
+        categoryId: string | null;
         terms: string | null;
         requirements: string | null;
         tags: string[];
+        totalRevenue: number;
     }>;
     createOffer(data: CreateOfferData, accountId: string): Promise<{
         name: string;
@@ -184,16 +184,16 @@ export declare class OfferService {
         totalClicks: number;
         totalConversions: number;
         description: string;
-        totalRevenue: number;
         totalCommissions: number;
-        accountId: string;
-        category: string;
-        categoryId: string | null;
         startDate: Date;
         endDate: Date | null;
+        category: string;
+        accountId: string;
+        categoryId: string | null;
         terms: string | null;
         requirements: string | null;
         tags: string[];
+        totalRevenue: number;
     }>;
     updateOffer(id: string, data: UpdateOfferData): Promise<{
         name: string;
@@ -205,16 +205,16 @@ export declare class OfferService {
         totalClicks: number;
         totalConversions: number;
         description: string;
-        totalRevenue: number;
         totalCommissions: number;
-        accountId: string;
-        category: string;
-        categoryId: string | null;
         startDate: Date;
         endDate: Date | null;
+        category: string;
+        accountId: string;
+        categoryId: string | null;
         terms: string | null;
         requirements: string | null;
         tags: string[];
+        totalRevenue: number;
     }>;
     deleteOffer(id: string): Promise<void>;
     getOfferApplications(offerId: string, params: GetOfferApplicationsParams): Promise<{

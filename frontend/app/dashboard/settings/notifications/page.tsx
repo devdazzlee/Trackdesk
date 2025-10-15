@@ -1,283 +1,291 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Switch } from "@/components/ui/switch"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
-import { 
-  Bell, 
-  Mail, 
-  Smartphone, 
-  MessageCircle,
-  DollarSign,
-  TrendingUp,
-  AlertCircle,
-  CheckCircle,
-  Save
-} from "lucide-react"
-import { toast } from "sonner"
+import { useState, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Bell, Mail, Smartphone, Save, RefreshCw } from "lucide-react";
+import { toast } from "sonner";
+import { config } from "@/config/config";
 
-export default function NotificationsPage() {
-  const [isLoading, setIsLoading] = useState(false)
-  const [notificationSettings, setNotificationSettings] = useState({
-    // Email Notifications
-    email: {
-      payoutProcessed: true,
-      payoutFailed: true,
-      commissionApproved: true,
-      commissionDeclined: true,
-      monthlyReport: true,
-      lowBalance: true,
-      accountChanges: true,
-      securityAlerts: true
-    },
-    // Push Notifications
-    push: {
-      payoutProcessed: false,
-      payoutFailed: true,
-      commissionApproved: true,
-      commissionDeclined: true,
-      lowBalance: true,
-      securityAlerts: true
-    },
-    // SMS Notifications
-    sms: {
-      payoutProcessed: false,
-      payoutFailed: true,
-      securityAlerts: true
-    },
-    // Frequency Settings
-    frequency: {
-      email: "immediate",
-      push: "immediate",
-      sms: "immediate"
+interface NotificationSettings {
+  email: {
+    newCommission: boolean;
+    payoutProcessed: boolean;
+    weeklyReport: boolean;
+    monthlyReport: boolean;
+    systemUpdates: boolean;
+    marketingEmails: boolean;
+  };
+  push: {
+    newCommission: boolean;
+    payoutProcessed: boolean;
+    highValueSale: boolean;
+    systemAlerts: boolean;
+  };
+  preferences: {
+    frequency: string;
+    quietHours: {
+      enabled: boolean;
+      start: string;
+      end: string;
+    };
+  };
+}
+
+export default function NotificationSettingsPage() {
+  const [settings, setSettings] = useState<NotificationSettings | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    fetchNotificationSettings();
+  }, []);
+
+  const fetchNotificationSettings = async () => {
+    try {
+      const response = await fetch(`${config.apiUrl}/settings/notifications`, {
+        credentials: "include",
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setSettings(data);
+      } else {
+        console.error(
+          "Failed to fetch notification settings:",
+          response.status
+        );
+        toast.error("Failed to load notification settings");
+      }
+    } catch (error) {
+      console.error("Error fetching notification settings:", error);
+      toast.error("Failed to load notification settings");
+    } finally {
+      setIsLoading(false);
     }
-  })
+  };
 
   const handleSave = async () => {
-    setIsLoading(true)
-    // Simulate save
-    setTimeout(() => {
-      setIsLoading(false)
-      toast.success("Notification settings saved successfully!")
-    }, 1000)
+    if (!settings) return;
+
+    setIsSaving(true);
+
+    try {
+      const response = await fetch(`${config.apiUrl}/settings/notifications`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify(settings),
+      });
+
+      if (response.ok) {
+        toast.success("Notification settings updated successfully");
+        fetchNotificationSettings();
+      } else {
+        const error = await response.json();
+        toast.error(error.error || "Failed to update settings");
+      }
+    } catch (error) {
+      console.error("Error updating notification settings:", error);
+      toast.error("Failed to update notification settings");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const updateEmailSetting = (
+    key: keyof NotificationSettings["email"],
+    value: boolean
+  ) => {
+    if (!settings) return;
+    setSettings({
+      ...settings,
+      email: { ...settings.email, [key]: value },
+    });
+  };
+
+  const updatePushSetting = (
+    key: keyof NotificationSettings["push"],
+    value: boolean
+  ) => {
+    if (!settings) return;
+    setSettings({
+      ...settings,
+      push: { ...settings.push, [key]: value },
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
   }
 
-  const handleEmailSettingChange = (key: string, value: boolean) => {
-    setNotificationSettings(prev => ({
-      ...prev,
-      email: {
-        ...prev.email,
-        [key]: value
-      }
-    }))
-  }
-
-  const handlePushSettingChange = (key: string, value: boolean) => {
-    setNotificationSettings(prev => ({
-      ...prev,
-      push: {
-        ...prev.push,
-        [key]: value
-      }
-    }))
-  }
-
-  const handleSMSSettingChange = (key: string, value: boolean) => {
-    setNotificationSettings(prev => ({
-      ...prev,
-      sms: {
-        ...prev.sms,
-        [key]: value
-      }
-    }))
-  }
-
-  const handleFrequencyChange = (type: string, value: string) => {
-    setNotificationSettings(prev => ({
-      ...prev,
-      frequency: {
-        ...prev.frequency,
-        [type]: value
-      }
-    }))
+  if (!settings) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-4">Unable to Load Settings</h2>
+          <Button onClick={fetchNotificationSettings}>
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Try Again
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 lg:p-8 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Notification Settings</h1>
-          <p className="text-slate-600">Manage how and when you receive notifications</p>
-        </div>
-        <Button onClick={handleSave} disabled={isLoading}>
-          <Save className="h-4 w-4 mr-2" />
-          {isLoading ? "Saving..." : "Save Settings"}
-        </Button>
+      <div>
+        <h1 className="text-2xl sm:text-3xl font-bold">
+          Notification Settings
+        </h1>
+        <p className="text-muted-foreground">
+          Manage how you receive notifications
+        </p>
       </div>
-
-      {/* Notification Overview */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Bell className="h-5 w-5 mr-2" />
-            Notification Overview
-          </CardTitle>
-          <CardDescription>Your current notification configuration</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="text-center">
-              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                <Mail className="h-6 w-6 text-blue-600" />
-              </div>
-              <h3 className="font-medium text-slate-900 mb-1">Email Notifications</h3>
-              <Badge variant="default" className="bg-blue-600">8 Active</Badge>
-            </div>
-            <div className="text-center">
-              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                <Smartphone className="h-6 w-6 text-green-600" />
-              </div>
-              <h3 className="font-medium text-slate-900 mb-1">Push Notifications</h3>
-              <Badge variant="outline" className="border-green-300 text-green-700">4 Active</Badge>
-            </div>
-            <div className="text-center">
-              <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                <MessageCircle className="h-6 w-6 text-purple-600" />
-              </div>
-              <h3 className="font-medium text-slate-900 mb-1">SMS Notifications</h3>
-              <Badge variant="outline" className="border-purple-300 text-purple-700">2 Active</Badge>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Email Notifications */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center">
-            <Mail className="h-5 w-5 mr-2" />
-            Email Notifications
-          </CardTitle>
-          <CardDescription>Configure your email notification preferences</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="payoutProcessed">Payout Processed</Label>
-                <p className="text-sm text-slate-500">Get notified when your payout is processed</p>
-              </div>
-              <Switch
-                id="payoutProcessed"
-                checked={notificationSettings.email.payoutProcessed}
-                onCheckedChange={(checked) => handleEmailSettingChange("payoutProcessed", checked)}
-              />
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+              <Mail className="w-5 h-5 text-blue-600" />
             </div>
-            
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="payoutFailed">Payout Failed</Label>
-                <p className="text-sm text-slate-500">Get notified if a payout fails</p>
-              </div>
-              <Switch
-                id="payoutFailed"
-                checked={notificationSettings.email.payoutFailed}
-                onCheckedChange={(checked) => handleEmailSettingChange("payoutFailed", checked)}
-              />
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="commissionApproved">Commission Approved</Label>
-                <p className="text-sm text-slate-500">Get notified when commissions are approved</p>
-              </div>
-              <Switch
-                id="commissionApproved"
-                checked={notificationSettings.email.commissionApproved}
-                onCheckedChange={(checked) => handleEmailSettingChange("commissionApproved", checked)}
-              />
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="commissionDeclined">Commission Declined</Label>
-                <p className="text-sm text-slate-500">Get notified when commissions are declined</p>
-              </div>
-              <Switch
-                id="commissionDeclined"
-                checked={notificationSettings.email.commissionDeclined}
-                onCheckedChange={(checked) => handleEmailSettingChange("commissionDeclined", checked)}
-              />
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="monthlyReport">Monthly Report</Label>
-                <p className="text-sm text-slate-500">Receive monthly performance reports</p>
-              </div>
-              <Switch
-                id="monthlyReport"
-                checked={notificationSettings.email.monthlyReport}
-                onCheckedChange={(checked) => handleEmailSettingChange("monthlyReport", checked)}
-              />
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="lowBalance">Low Balance Alert</Label>
-                <p className="text-sm text-slate-500">Get notified when balance is low</p>
-              </div>
-              <Switch
-                id="lowBalance"
-                checked={notificationSettings.email.lowBalance}
-                onCheckedChange={(checked) => handleEmailSettingChange("lowBalance", checked)}
-              />
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="accountChanges">Account Changes</Label>
-                <p className="text-sm text-slate-500">Get notified of important account changes</p>
-              </div>
-              <Switch
-                id="accountChanges"
-                checked={notificationSettings.email.accountChanges}
-                onCheckedChange={(checked) => handleEmailSettingChange("accountChanges", checked)}
-              />
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="securityAlerts">Security Alerts</Label>
-                <p className="text-sm text-slate-500">Get notified of security-related events</p>
-              </div>
-              <Switch
-                id="securityAlerts"
-                checked={notificationSettings.email.securityAlerts}
-                onCheckedChange={(checked) => handleEmailSettingChange("securityAlerts", checked)}
-              />
+            <div>
+              <CardTitle>Email Notifications</CardTitle>
+              <CardDescription>Receive updates via email</CardDescription>
             </div>
           </div>
-          
-          <div className="pt-4 border-t">
-            <div className="space-y-2">
-              <Label htmlFor="emailFrequency">Email Frequency</Label>
-              <Select value={notificationSettings.frequency.email} onValueChange={(value) => handleFrequencyChange("email", value)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="immediate">Immediate</SelectItem>
-                  <SelectItem value="daily">Daily Digest</SelectItem>
-                  <SelectItem value="weekly">Weekly Summary</SelectItem>
-                </SelectContent>
-              </Select>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <Label htmlFor="newCommission" className="font-medium">
+                New Commission
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Get notified when you earn a new commission
+              </p>
             </div>
+            <Switch
+              id="newCommission"
+              checked={settings.email.newCommission}
+              onCheckedChange={(checked) =>
+                updateEmailSetting("newCommission", checked)
+              }
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <Label htmlFor="payoutProcessed" className="font-medium">
+                Payout Processed
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Notification when your payout is processed
+              </p>
+            </div>
+            <Switch
+              id="payoutProcessed"
+              checked={settings.email.payoutProcessed}
+              onCheckedChange={(checked) =>
+                updateEmailSetting("payoutProcessed", checked)
+              }
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <Label htmlFor="weeklyReport" className="font-medium">
+                Weekly Report
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Receive weekly performance summary
+              </p>
+            </div>
+            <Switch
+              id="weeklyReport"
+              checked={settings.email.weeklyReport}
+              onCheckedChange={(checked) =>
+                updateEmailSetting("weeklyReport", checked)
+              }
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <Label htmlFor="monthlyReport" className="font-medium">
+                Monthly Report
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Receive monthly performance summary
+              </p>
+            </div>
+            <Switch
+              id="monthlyReport"
+              checked={settings.email.monthlyReport}
+              onCheckedChange={(checked) =>
+                updateEmailSetting("monthlyReport", checked)
+              }
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <Label htmlFor="systemUpdates" className="font-medium">
+                System Updates
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Important system and feature updates
+              </p>
+            </div>
+            <Switch
+              id="systemUpdates"
+              checked={settings.email.systemUpdates}
+              onCheckedChange={(checked) =>
+                updateEmailSetting("systemUpdates", checked)
+              }
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <Label htmlFor="marketingEmails" className="font-medium">
+                Marketing Emails
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Promotional offers and marketing content
+              </p>
+            </div>
+            <Switch
+              id="marketingEmails"
+              checked={settings.email.marketingEmails}
+              onCheckedChange={(checked) =>
+                updateEmailSetting("marketingEmails", checked)
+              }
+            />
           </div>
         </CardContent>
       </Card>
@@ -285,196 +293,231 @@ export default function NotificationsPage() {
       {/* Push Notifications */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center">
-            <Smartphone className="h-5 w-5 mr-2" />
-            Push Notifications
-          </CardTitle>
-          <CardDescription>Configure your mobile push notification preferences</CardDescription>
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+              <Smartphone className="w-5 h-5 text-purple-600" />
+            </div>
+            <div>
+              <CardTitle>Push Notifications</CardTitle>
+              <CardDescription>
+                Receive push notifications on your devices
+              </CardDescription>
+            </div>
+          </div>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="pushPayoutProcessed">Payout Processed</Label>
-                <p className="text-sm text-slate-500">Get push notifications for payouts</p>
-              </div>
-              <Switch
-                id="pushPayoutProcessed"
-                checked={notificationSettings.push.payoutProcessed}
-                onCheckedChange={(checked) => handlePushSettingChange("payoutProcessed", checked)}
-              />
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <Label htmlFor="pushNewCommission" className="font-medium">
+                New Commission
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Instant notification for new earnings
+              </p>
             </div>
-            
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="pushPayoutFailed">Payout Failed</Label>
-                <p className="text-sm text-slate-500">Get push notifications for failed payouts</p>
-              </div>
-              <Switch
-                id="pushPayoutFailed"
-                checked={notificationSettings.push.payoutFailed}
-                onCheckedChange={(checked) => handlePushSettingChange("payoutFailed", checked)}
-              />
+            <Switch
+              id="pushNewCommission"
+              checked={settings.push.newCommission}
+              onCheckedChange={(checked) =>
+                updatePushSetting("newCommission", checked)
+              }
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <Label htmlFor="pushPayoutProcessed" className="font-medium">
+                Payout Processed
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Alert when payout is completed
+              </p>
             </div>
-            
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="pushCommissionApproved">Commission Approved</Label>
-                <p className="text-sm text-slate-500">Get push notifications for approved commissions</p>
-              </div>
-              <Switch
-                id="pushCommissionApproved"
-                checked={notificationSettings.push.commissionApproved}
-                onCheckedChange={(checked) => handlePushSettingChange("commissionApproved", checked)}
-              />
+            <Switch
+              id="pushPayoutProcessed"
+              checked={settings.push.payoutProcessed}
+              onCheckedChange={(checked) =>
+                updatePushSetting("payoutProcessed", checked)
+              }
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <Label htmlFor="highValueSale" className="font-medium">
+                High Value Sale
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Alert for high-value conversions
+              </p>
             </div>
-            
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="pushCommissionDeclined">Commission Declined</Label>
-                <p className="text-sm text-slate-500">Get push notifications for declined commissions</p>
-              </div>
-              <Switch
-                id="pushCommissionDeclined"
-                checked={notificationSettings.push.commissionDeclined}
-                onCheckedChange={(checked) => handlePushSettingChange("commissionDeclined", checked)}
-              />
+            <Switch
+              id="highValueSale"
+              checked={settings.push.highValueSale}
+              onCheckedChange={(checked) =>
+                updatePushSetting("highValueSale", checked)
+              }
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <Label htmlFor="systemAlerts" className="font-medium">
+                System Alerts
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Critical system notifications
+              </p>
             </div>
-            
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="pushLowBalance">Low Balance Alert</Label>
-                <p className="text-sm text-slate-500">Get push notifications for low balance</p>
-              </div>
-              <Switch
-                id="pushLowBalance"
-                checked={notificationSettings.push.lowBalance}
-                onCheckedChange={(checked) => handlePushSettingChange("lowBalance", checked)}
-              />
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="pushSecurityAlerts">Security Alerts</Label>
-                <p className="text-sm text-slate-500">Get push notifications for security events</p>
-              </div>
-              <Switch
-                id="pushSecurityAlerts"
-                checked={notificationSettings.push.securityAlerts}
-                onCheckedChange={(checked) => handlePushSettingChange("securityAlerts", checked)}
-              />
-            </div>
+            <Switch
+              id="systemAlerts"
+              checked={settings.push.systemAlerts}
+              onCheckedChange={(checked) =>
+                updatePushSetting("systemAlerts", checked)
+              }
+            />
           </div>
         </CardContent>
       </Card>
 
-      {/* SMS Notifications */}
+      {/* Notification Preferences */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center">
-            <MessageCircle className="h-5 w-5 mr-2" />
-            SMS Notifications
-          </CardTitle>
-          <CardDescription>Configure your SMS notification preferences</CardDescription>
+          <CardTitle>Preferences</CardTitle>
+          <CardDescription>
+            Customize your notification experience
+          </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="smsPayoutProcessed">Payout Processed</Label>
-                <p className="text-sm text-slate-500">Get SMS notifications for payouts</p>
-              </div>
-              <Switch
-                id="smsPayoutProcessed"
-                checked={notificationSettings.sms.payoutProcessed}
-                onCheckedChange={(checked) => handleSMSSettingChange("payoutProcessed", checked)}
-              />
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="smsPayoutFailed">Payout Failed</Label>
-                <p className="text-sm text-slate-500">Get SMS notifications for failed payouts</p>
-              </div>
-              <Switch
-                id="smsPayoutFailed"
-                checked={notificationSettings.sms.payoutFailed}
-                onCheckedChange={(checked) => handleSMSSettingChange("payoutFailed", checked)}
-              />
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="smsSecurityAlerts">Security Alerts</Label>
-                <p className="text-sm text-slate-500">Get SMS notifications for security events</p>
-              </div>
-              <Switch
-                id="smsSecurityAlerts"
-                checked={notificationSettings.sms.securityAlerts}
-                onCheckedChange={(checked) => handleSMSSettingChange("securityAlerts", checked)}
-              />
-            </div>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="frequency">Notification Frequency</Label>
+            <Select
+              value={settings.preferences.frequency}
+              onValueChange={(value) =>
+                setSettings({
+                  ...settings,
+                  preferences: { ...settings.preferences, frequency: value },
+                })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Immediate">Immediate</SelectItem>
+                <SelectItem value="Daily Digest">Daily Digest</SelectItem>
+                <SelectItem value="Weekly Digest">Weekly Digest</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-          
-          <div className="p-4 bg-yellow-50 rounded-lg">
-            <div className="flex items-start space-x-3">
-              <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
-              <div>
-                <h4 className="font-medium text-yellow-800">SMS Notifications</h4>
-                <p className="text-sm text-yellow-700 mt-1">
-                  SMS notifications are only available for critical alerts. Standard messaging rates may apply.
+
+          <div className="space-y-3 pt-4 border-t">
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <Label htmlFor="quietHours" className="font-medium">
+                  Quiet Hours
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Pause notifications during specific hours
                 </p>
               </div>
+              <Switch
+                id="quietHours"
+                checked={settings.preferences.quietHours.enabled}
+                onCheckedChange={(checked) =>
+                  setSettings({
+                    ...settings,
+                    preferences: {
+                      ...settings.preferences,
+                      quietHours: {
+                        ...settings.preferences.quietHours,
+                        enabled: checked,
+                      },
+                    },
+                  })
+                }
+              />
             </div>
+
+            {settings.preferences.quietHours.enabled && (
+              <div className="grid grid-cols-2 gap-4 pl-6">
+                <div className="space-y-2">
+                  <Label htmlFor="quietStart">Start Time</Label>
+                  <Select
+                    value={settings.preferences.quietHours.start}
+                    onValueChange={(value) =>
+                      setSettings({
+                        ...settings,
+                        preferences: {
+                          ...settings.preferences,
+                          quietHours: {
+                            ...settings.preferences.quietHours,
+                            start: value,
+                          },
+                        },
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: 24 }, (_, i) => (
+                        <SelectItem
+                          key={i}
+                          value={`${i.toString().padStart(2, "0")}:00`}
+                        >
+                          {i.toString().padStart(2, "0")}:00
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="quietEnd">End Time</Label>
+                  <Select
+                    value={settings.preferences.quietHours.end}
+                    onValueChange={(value) =>
+                      setSettings({
+                        ...settings,
+                        preferences: {
+                          ...settings.preferences,
+                          quietHours: {
+                            ...settings.preferences.quietHours,
+                            end: value,
+                          },
+                        },
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: 24 }, (_, i) => (
+                        <SelectItem
+                          key={i}
+                          value={`${i.toString().padStart(2, "0")}:00`}
+                        >
+                          {i.toString().padStart(2, "0")}:00
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Notification History */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Notifications</CardTitle>
-          <CardDescription>Your recent notification activity</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-              <div className="flex items-center space-x-3">
-                <CheckCircle className="h-5 w-5 text-green-600" />
-                <div>
-                  <p className="font-medium text-green-900">Payout Processed</p>
-                  <p className="text-sm text-green-700">$450.00 payout completed successfully</p>
-                </div>
-              </div>
-              <span className="text-sm text-slate-500">2 hours ago</span>
-            </div>
-            
-            <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-              <div className="flex items-center space-x-3">
-                <DollarSign className="h-5 w-5 text-blue-600" />
-                <div>
-                  <p className="font-medium text-blue-900">Commission Approved</p>
-                  <p className="text-sm text-blue-700">$30.00 commission approved for Premium Plan</p>
-                </div>
-              </div>
-              <span className="text-sm text-slate-500">1 day ago</span>
-            </div>
-            
-            <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
-              <div className="flex items-center space-x-3">
-                <TrendingUp className="h-5 w-5 text-purple-600" />
-                <div>
-                  <p className="font-medium text-purple-900">Monthly Report</p>
-                  <p className="text-sm text-purple-700">Your January 2024 performance report is ready</p>
-                </div>
-              </div>
-              <span className="text-sm text-slate-500">3 days ago</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Save Button */}
+      <div className="flex justify-end">
+        <Button onClick={handleSave} disabled={isSaving}>
+          <Save className="w-4 h-4 mr-2" />
+          {isSaving ? "Saving..." : "Save Changes"}
+        </Button>
+      </div>
     </div>
-  )
+  );
 }
-
-

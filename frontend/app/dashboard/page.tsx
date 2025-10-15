@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@/contexts/AuthContext";
+import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -31,13 +32,115 @@ import {
   Clock,
   CheckCircle,
   AlertCircle,
+  RefreshCw,
 } from "lucide-react";
 import { getFullName } from "@/lib/auth-client";
+import { toast } from "sonner";
+import { config } from "@/config/config";
+
+interface DashboardOverview {
+  totalReferrals: number;
+  totalCommissions: number;
+  pendingCommissions: number;
+  conversionRate: number;
+  activeCodes: number;
+  totalCodes: number;
+  topLinks: Array<{
+    id: string;
+    name: string;
+    clicks: number;
+    conversions: number;
+    earnings: number;
+    status: string;
+  }>;
+  recentActivity: Array<{
+    id: string;
+    type: string;
+    description: string;
+    amount: string;
+    time: string;
+    status: string;
+  }>;
+  dailyStats: Array<{
+    date: string;
+    referrals: number;
+    commissions: number;
+  }>;
+}
+
+interface RealTimeStats {
+  activeUsers: number;
+  liveClicks: number;
+  liveConversions: number;
+  liveRevenue: number;
+  timestamp: string;
+}
 
 export default function DashboardPage() {
   const { user, isLoading } = useAuth();
+  const [dashboardData, setDashboardData] = useState<DashboardOverview | null>(
+    null
+  );
+  const [realTimeStats, setRealTimeStats] = useState<RealTimeStats | null>(
+    null
+  );
+  const [isDataLoading, setIsDataLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  if (isLoading) {
+  useEffect(() => {
+    if (user) {
+      fetchDashboardData();
+      fetchRealTimeStats();
+    }
+  }, [user]);
+
+  const fetchDashboardData = async () => {
+    try {
+      const response = await fetch(`${config.apiUrl}/dashboard/overview`, {
+        credentials: "include",
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setDashboardData(data);
+      } else {
+        console.error("Failed to fetch dashboard data:", response.status);
+        toast.error("Failed to load dashboard data");
+      }
+    } catch (error) {
+      console.error("Error fetching dashboard data:", error);
+      toast.error("Failed to load dashboard data");
+    } finally {
+      setIsDataLoading(false);
+    }
+  };
+
+  const fetchRealTimeStats = async () => {
+    try {
+      const response = await fetch(
+        `${config.apiUrl}/dashboard/real-time-stats`,
+        {
+          credentials: "include",
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setRealTimeStats(data);
+      }
+    } catch (error) {
+      console.error("Error fetching real-time stats:", error);
+    }
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await Promise.all([fetchDashboardData(), fetchRealTimeStats()]);
+    setIsRefreshing(false);
+    toast.success("Dashboard data refreshed");
+  };
+
+  if (isLoading || isDataLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
@@ -60,151 +163,69 @@ export default function DashboardPage() {
     );
   }
 
-  // Mock data - replace with real API calls
+  if (!dashboardData) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            No Data Available
+          </h2>
+          <p className="text-gray-600 mb-4">Unable to load dashboard data.</p>
+          <Button onClick={handleRefresh} disabled={isRefreshing}>
+            <RefreshCw
+              className={`w-4 h-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`}
+            />
+            Try Again
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Use real data from API
   const stats = {
-    totalClicks: 12450,
-    totalConversions: 342,
-    conversionRate: 2.75,
-    totalEarnings: 12840.5,
-    pendingEarnings: 2340.75,
-    activeLinks: 12,
-    thisMonthClicks: 3450,
-    thisMonthConversions: 89,
-    thisMonthEarnings: 3420.25,
+    totalClicks: dashboardData.totalReferrals,
+    totalConversions: dashboardData.totalReferrals,
+    conversionRate: dashboardData.conversionRate,
+    totalEarnings: dashboardData.totalCommissions,
+    pendingEarnings: dashboardData.pendingCommissions,
+    activeLinks: dashboardData.activeCodes,
+    thisMonthClicks: dashboardData.totalReferrals,
+    thisMonthConversions: dashboardData.totalReferrals,
+    thisMonthEarnings: dashboardData.totalCommissions,
   };
 
-  // Performance data for charts
-const performanceData = [
-    { date: "2024-01-01", clicks: 120, conversions: 8, earnings: 250 },
-    { date: "2024-01-02", clicks: 180, conversions: 12, earnings: 420 },
-    { date: "2024-01-03", clicks: 200, conversions: 18, earnings: 580 },
-    { date: "2024-01-04", clicks: 150, conversions: 15, earnings: 380 },
-    { date: "2024-01-05", clicks: 220, conversions: 22, earnings: 650 },
-    { date: "2024-01-06", clicks: 190, conversions: 16, earnings: 480 },
-    { date: "2024-01-07", clicks: 180, conversions: 14, earnings: 420 },
-  ];
+  // Use real performance data from API
+  const performanceData = dashboardData.dailyStats.map((day) => ({
+    date: day.date,
+    clicks: day.referrals,
+    conversions: day.referrals,
+    earnings: day.commissions,
+  }));
 
-  // Top performing links
-  const topLinks = [
-    {
-      id: 1,
-      name: "Product Launch Campaign",
-      clicks: 2450,
-      conversions: 67,
-      earnings: 1250.5,
-      status: "Active",
-    },
-    {
-      id: 2,
-      name: "Holiday Special Offer",
-      clicks: 1890,
-      conversions: 45,
-      earnings: 890.25,
-      status: "Active",
-    },
-    {
-      id: 3,
-      name: "Email Newsletter Link",
-      clicks: 1560,
-      conversions: 38,
-      earnings: 720.75,
-      status: "Active",
-    },
-    {
-      id: 4,
-      name: "Social Media Campaign",
-      clicks: 1340,
-      conversions: 32,
-      earnings: 610.0,
-      status: "Active",
-    },
-    {
-      id: 5,
-      name: "Blog Post CTA",
-      clicks: 980,
-      conversions: 28,
-      earnings: 450.5,
-      status: "Active",
-    },
-  ];
+  // Use real top links from API
+  const topLinks = dashboardData.topLinks;
 
-  // Recent activity data
-  const recentActivity = [
-    {
-      id: 1,
-      type: "conversion",
-      description: "New conversion recorded",
-      amount: "+$15.50",
-      time: "2 minutes ago",
-      status: "success",
-    },
-    {
-      id: 2,
-      type: "link",
-      description: "New affiliate link generated",
-      amount: "Product X",
-      time: "1 hour ago",
-      status: "info",
-    },
-    {
-      id: 3,
-      type: "payout",
-      description: "Payout processed successfully",
-      amount: "$250.00",
-      time: "2 hours ago",
-      status: "success",
-    },
-    {
-      id: 4,
-      type: "click",
-      description: "High traffic spike detected",
-      amount: "+150 clicks",
-      time: "3 hours ago",
-      status: "warning",
-    },
-    {
-      id: 5,
-      type: "conversion",
-      description: "Conversion rate improved",
-      amount: "+2.3%",
-      time: "5 hours ago",
-      status: "success",
-    },
-  ];
+  // Use real recent activity from API
+  const recentActivity = dashboardData.recentActivity;
 
-  // System notifications
+  // System notifications (mock for now - can be replaced with real notifications API)
   const notifications = [
     {
       id: 1,
       type: "success",
-      title: "Payment Processed",
-      description: "Your payout of $250.00 has been processed successfully.",
-      time: "2 hours ago",
-      color: "bg-green-100 border-green-200 text-green-800",
-    },
-    {
-      id: 2,
-      type: "info",
-      title: "New Campaign Available",
+      title: "Dashboard Updated",
       description:
-        "Check out the new product launch campaign with 15% commission.",
-      time: "4 hours ago",
-      color: "bg-blue-100 border-blue-200 text-blue-800",
-    },
-    {
-      id: 3,
-      type: "warning",
-      title: "Link Performance Alert",
-      description: "One of your links has low conversion rate this week.",
-      time: "6 hours ago",
-      color: "bg-yellow-100 border-yellow-200 text-yellow-800",
+        "Your dashboard data has been refreshed with the latest information.",
+      time: "Just now",
+      color: "bg-green-100 border-green-200 text-green-800",
     },
   ];
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="p-4 md:p-6 lg:p-8 space-y-6 lg:space-y-8">
-      {/* Welcome Banner */}
+        {/* Welcome Banner */}
         <div className="bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 rounded-xl lg:rounded-2xl p-6 md:p-8 text-white shadow-lg hover:shadow-xl transition-all duration-300">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex-1">
@@ -220,7 +241,14 @@ const performanceData = [
                   <span className="text-sm text-green-100">Account Active</span>
                 </div>
                 <div className="text-sm text-green-200">
-                  Last updated: {new Date().toLocaleTimeString()}
+                  {realTimeStats ? (
+                    <>
+                      Live: {realTimeStats.activeUsers} users,{" "}
+                      {realTimeStats.liveClicks} clicks
+                    </>
+                  ) : (
+                    `Last updated: ${new Date().toLocaleTimeString()}`
+                  )}
                 </div>
               </div>
             </div>
@@ -228,10 +256,16 @@ const performanceData = [
               <Button
                 variant="secondary"
                 size="sm"
+                onClick={handleRefresh}
+                disabled={isRefreshing}
                 className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm transition-all duration-200 hover:scale-105"
               >
-                <Calendar className="h-4 w-4 mr-2" />
-                Last 7 Days
+                <RefreshCw
+                  className={`h-4 w-4 mr-2 ${
+                    isRefreshing ? "animate-spin" : ""
+                  }`}
+                />
+                {isRefreshing ? "Refreshing..." : "Refresh Data"}
               </Button>
               <Button
                 variant="secondary"
@@ -304,7 +338,7 @@ const performanceData = [
           <div className="group">
             <Card className="h-full bg-white hover:bg-gradient-to-br hover:from-purple-50 hover:to-purple-100 transition-all duration-300 hover:shadow-lg hover:scale-105 border-0 shadow-md">
               <CardContent className="p-6">
-        <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between">
                   <div className="flex-1">
                     <p className="text-sm font-medium text-gray-600 mb-1">
                       Conversion Rate
@@ -381,7 +415,7 @@ const performanceData = [
                       <span>$350</span>
                       <span>$175</span>
                       <span>$0</span>
-      </div>
+                    </div>
 
                     {/* Chart Area */}
                     <div className="ml-12 h-full">
@@ -512,7 +546,7 @@ const performanceData = [
                 </div>
               </CardContent>
             </Card>
-      </div>
+          </div>
 
           <div className="group">
             <Card className="bg-white hover:shadow-xl transition-all duration-300 border-0 shadow-lg hover:scale-[1.02]">
@@ -524,7 +558,7 @@ const performanceData = [
                 <CardDescription className="text-gray-600">
                   Common affiliate tasks and tools
                 </CardDescription>
-          </CardHeader>
+              </CardHeader>
               <CardContent className="p-6 space-y-4">
                 <Button
                   variant="outline"
@@ -533,31 +567,31 @@ const performanceData = [
                   <LinkIcon className="h-5 w-5 mr-3 text-blue-600 group-hover:scale-110 transition-transform" />
                   <span className="font-medium">Create New Link</span>
                 </Button>
-            <Button
-              variant="outline"
+                <Button
+                  variant="outline"
                   className="w-full justify-start h-12 hover:bg-green-50 hover:border-green-300 hover:text-green-700 transition-all duration-200 group"
-            >
+                >
                   <BarChart3 className="h-5 w-5 mr-3 text-green-600 group-hover:scale-110 transition-transform" />
                   <span className="font-medium">View Analytics</span>
-            </Button>
-            <Button
-              variant="outline"
+                </Button>
+                <Button
+                  variant="outline"
                   className="w-full justify-start h-12 hover:bg-purple-50 hover:border-purple-300 hover:text-purple-700 transition-all duration-200 group"
-            >
+                >
                   <DollarSign className="h-5 w-5 mr-3 text-purple-600 group-hover:scale-110 transition-transform" />
                   <span className="font-medium">View Earnings</span>
-            </Button>
-            <Button
-              variant="outline"
+                </Button>
+                <Button
+                  variant="outline"
                   className="w-full justify-start h-12 hover:bg-orange-50 hover:border-orange-300 hover:text-orange-700 transition-all duration-200 group"
-            >
+                >
                   <Settings className="h-5 w-5 mr-3 text-orange-600 group-hover:scale-110 transition-transform" />
                   <span className="font-medium">Account Settings</span>
-            </Button>
-          </CardContent>
-        </Card>
+                </Button>
+              </CardContent>
+            </Card>
           </div>
-      </div>
+        </div>
 
         {/* Top Links and Recent Activity */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8">
@@ -567,11 +601,11 @@ const performanceData = [
                 <CardTitle className="text-xl font-semibold text-gray-800 flex items-center">
                   <div className="w-2 h-2 bg-indigo-500 rounded-full mr-3"></div>
                   Top Performing Links
-          </CardTitle>
+                </CardTitle>
                 <CardDescription className="text-gray-600">
                   Your best performing affiliate links
-          </CardDescription>
-        </CardHeader>
+                </CardDescription>
+              </CardHeader>
               <CardContent className="p-6">
                 <div className="space-y-4">
                   {topLinks.map((link) => (
@@ -582,7 +616,7 @@ const performanceData = [
                       <div className="flex items-center justify-between mb-2">
                         <h4 className="font-medium text-gray-900 group-hover:text-blue-700 transition-colors">
                           {link.name}
-              </h4>
+                        </h4>
                         <Badge
                           variant="secondary"
                           className="text-xs bg-green-100 text-green-800"
@@ -668,7 +702,7 @@ const performanceData = [
                       </Badge>
                     </div>
                   ))}
-            </div>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -694,7 +728,7 @@ const performanceData = [
                     className={`p-4 rounded-lg border-l-4 ${notification.color} hover:shadow-md transition-all duration-200 cursor-pointer group`}
                   >
                     <div className="flex items-start justify-between">
-            <div className="flex-1">
+                      <div className="flex-1">
                         <div className="flex items-center space-x-2 mb-1">
                           <Badge
                             variant="outline"
@@ -714,7 +748,7 @@ const performanceData = [
                         </div>
                         <h4 className="font-medium text-gray-900 mb-1 group-hover:text-gray-700 transition-colors">
                           {notification.title}
-              </h4>
+                        </h4>
                         <p className="text-sm text-gray-600 group-hover:text-gray-700 transition-colors">
                           {notification.description}
                         </p>
@@ -726,12 +760,12 @@ const performanceData = [
                       >
                         <ExternalLink className="h-4 w-4" />
                       </Button>
-            </div>
+                    </div>
                   </div>
                 ))}
-          </div>
-        </CardContent>
-      </Card>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

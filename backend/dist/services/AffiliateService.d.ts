@@ -261,14 +261,14 @@ export declare class AffiliateService {
             updatedAt: Date;
             clicks: number;
             conversions: number;
+            affiliateId: string;
+            expiresAt: Date | null;
+            isActive: boolean;
+            earnings: number;
             shortUrl: string;
             originalUrl: string;
-            affiliateId: string;
             offerId: string | null;
             customSlug: string | null;
-            earnings: number;
-            isActive: boolean;
-            expiresAt: Date | null;
         }[];
         pagination: {
             page: any;
@@ -283,14 +283,14 @@ export declare class AffiliateService {
         updatedAt: Date;
         clicks: number;
         conversions: number;
+        affiliateId: string;
+        expiresAt: Date | null;
+        isActive: boolean;
+        earnings: number;
         shortUrl: string;
         originalUrl: string;
-        affiliateId: string;
         offerId: string | null;
         customSlug: string | null;
-        earnings: number;
-        isActive: boolean;
-        expiresAt: Date | null;
     }>;
     updateAffiliateLink(linkId: string, data: UpdateLinkData): Promise<{
         id: string;
@@ -298,14 +298,14 @@ export declare class AffiliateService {
         updatedAt: Date;
         clicks: number;
         conversions: number;
+        affiliateId: string;
+        expiresAt: Date | null;
+        isActive: boolean;
+        earnings: number;
         shortUrl: string;
         originalUrl: string;
-        affiliateId: string;
         offerId: string | null;
         customSlug: string | null;
-        earnings: number;
-        isActive: boolean;
-        expiresAt: Date | null;
     }>;
     deleteAffiliateLink(linkId: string): Promise<void>;
     getCommissions(affiliateId: string, params: GetCommissionsParams): Promise<{
@@ -321,16 +321,16 @@ export declare class AffiliateService {
                     totalClicks: number;
                     totalConversions: number;
                     description: string;
-                    totalRevenue: number;
                     totalCommissions: number;
-                    accountId: string;
-                    category: string;
-                    categoryId: string | null;
                     startDate: Date;
                     endDate: Date | null;
+                    category: string;
+                    accountId: string;
+                    categoryId: string | null;
                     terms: string | null;
                     requirements: string | null;
                     tags: string[];
+                    totalRevenue: number;
                 };
             } & {
                 id: string;
@@ -338,24 +338,24 @@ export declare class AffiliateService {
                 createdAt: Date;
                 updatedAt: Date;
                 userId: string | null;
-                customerValue: number;
+                affiliateId: string;
                 orderValue: number;
                 commissionAmount: number;
-                affiliateId: string;
                 offerId: string;
                 clickId: string;
                 customerEmail: string | null;
+                customerValue: number;
             };
         } & {
             id: string;
             status: import(".prisma/client").$Enums.CommissionStatus;
             createdAt: Date;
             updatedAt: Date;
-            amount: number;
-            rate: number;
             affiliateId: string;
+            amount: number;
             conversionId: string;
             payoutId: string | null;
+            rate: number;
             payoutDate: Date | null;
         })[];
         pagination: {
@@ -372,11 +372,11 @@ export declare class AffiliateService {
                 status: import(".prisma/client").$Enums.CommissionStatus;
                 createdAt: Date;
                 updatedAt: Date;
-                amount: number;
-                rate: number;
                 affiliateId: string;
+                amount: number;
                 conversionId: string;
                 payoutId: string | null;
+                rate: number;
                 payoutDate: Date | null;
             }[];
         } & {
@@ -385,8 +385,8 @@ export declare class AffiliateService {
             status: import(".prisma/client").$Enums.PayoutStatus;
             createdAt: Date;
             updatedAt: Date;
-            amount: number;
             affiliateId: string;
+            amount: number;
             paymentMethodId: string | null;
             referenceId: string | null;
             processedAt: Date | null;
@@ -404,8 +404,8 @@ export declare class AffiliateService {
         status: import(".prisma/client").$Enums.PayoutStatus;
         createdAt: Date;
         updatedAt: Date;
-        amount: number;
         affiliateId: string;
+        amount: number;
         paymentMethodId: string | null;
         referenceId: string | null;
         processedAt: Date | null;

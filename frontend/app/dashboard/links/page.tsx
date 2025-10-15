@@ -1,193 +1,245 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { 
-  Copy, 
-  Download, 
-  ExternalLink, 
-  Link as LinkIcon, 
-  Image, 
+import { useState, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Copy,
+  Download,
+  ExternalLink,
+  Link as LinkIcon,
+  Image,
   FileText,
   Check,
   Plus,
-  Eye
-} from "lucide-react"
-import { toast } from "sonner"
+  Eye,
+  RefreshCw,
+  Sparkles,
+} from "lucide-react";
+import { toast } from "sonner";
+import { config } from "@/config/config";
 
-// Mock data for generated links
-const generatedLinks = [
-  {
-    id: "LINK-001",
-    originalUrl: "https://example.com/premium-plan",
-    affiliateUrl: "https://affiliate.example.com/ref/abc123/premium-plan",
-    shortUrl: "https://aff.link/abc123",
-    clicks: 45,
-    conversions: 8,
-    earnings: 240.00,
-    createdAt: "2024-01-07",
-    status: "active"
-  },
-  {
-    id: "LINK-002",
-    originalUrl: "https://example.com/basic-plan",
-    affiliateUrl: "https://affiliate.example.com/ref/abc123/basic-plan",
-    shortUrl: "https://aff.link/def456",
-    clicks: 32,
-    conversions: 5,
-    earnings: 75.00,
-    createdAt: "2024-01-06",
-    status: "active"
-  },
-  {
-    id: "LINK-003",
-    originalUrl: "https://example.com/enterprise",
-    affiliateUrl: "https://affiliate.example.com/ref/abc123/enterprise",
-    shortUrl: "https://aff.link/ghi789",
-    clicks: 18,
-    conversions: 3,
-    earnings: 900.00,
-    createdAt: "2024-01-05",
-    status: "active"
-  },
-]
+interface AffiliateLink {
+  id: string;
+  name: string;
+  url: string;
+  shortUrl: string;
+  trackingCode: string;
+  campaignName: string;
+  clicks: number;
+  conversions: number;
+  earnings: number;
+  status: string;
+  createdAt: Date;
+}
 
-// Mock data for marketing assets
-const marketingAssets = [
-  {
-    id: "ASSET-001",
-    name: "Premium Plan Banner - 728x90",
-    type: "Banner",
-    size: "728x90",
-    format: "PNG",
-    category: "Banners",
-    url: "/assets/banners/premium-728x90.png",
-    downloadUrl: "/download/banners/premium-728x90.png",
-    affiliateUrl: "https://affiliate.example.com/ref/abc123/premium-plan"
-  },
-  {
-    id: "ASSET-002",
-    name: "Social Media Post Template",
-    type: "Social Media",
-    size: "1080x1080",
-    format: "JPG",
-    category: "Social Media",
-    url: "/assets/social/premium-post.jpg",
-    downloadUrl: "/download/social/premium-post.jpg",
-    affiliateUrl: "https://affiliate.example.com/ref/abc123/premium-plan"
-  },
-  {
-    id: "ASSET-003",
-    name: "Email Signature Template",
-    type: "Email",
-    size: "600x200",
-    format: "PNG",
-    category: "Email Marketing",
-    url: "/assets/email/signature.png",
-    downloadUrl: "/download/email/signature.png",
-    affiliateUrl: "https://affiliate.example.com/ref/abc123"
-  },
-  {
-    id: "ASSET-004",
-    name: "Product Logo - White Background",
-    type: "Logo",
-    size: "500x500",
-    format: "PNG",
-    category: "Logos",
-    url: "/assets/logos/logo-white.png",
-    downloadUrl: "/download/logos/logo-white.png",
-    affiliateUrl: "https://affiliate.example.com/ref/abc123"
-  },
-]
+interface MarketingAsset {
+  id: string;
+  name: string;
+  category: string;
+  size: string;
+  format: string;
+  fileSize: string;
+  downloadUrl: string;
+  previewUrl: string;
+  downloads: number;
+  createdAt: Date;
+}
 
-// Mock data for coupon codes
-const couponCodes = [
-  {
-    id: "COUPON-001",
-    code: "AFFILIATE20",
-    description: "20% off for new customers",
-    discount: "20%",
-    validUntil: "2024-12-31",
-    usage: 45,
-    maxUsage: 100,
-    status: "active"
-  },
-  {
-    id: "COUPON-002",
-    code: "WELCOME10",
-    description: "$10 off first purchase",
-    discount: "$10",
-    validUntil: "2024-06-30",
-    usage: 23,
-    maxUsage: 50,
-    status: "active"
-  },
-  {
-    id: "COUPON-003",
-    code: "PREMIUM50",
-    description: "50% off premium plans",
-    discount: "50%",
-    validUntil: "2024-03-31",
-    usage: 12,
-    maxUsage: 25,
-    status: "active"
-  },
-]
+interface Coupon {
+  id: string;
+  code: string;
+  description: string;
+  discount: string;
+  type: string;
+  minPurchase: string;
+  validUntil: string;
+  uses: number;
+  maxUses: number;
+  commission: string;
+  status: string;
+}
 
 export default function LinksPage() {
-  const [urlInput, setUrlInput] = useState("")
-  const [selectedOffer, setSelectedOffer] = useState("")
-  const [copiedLink, setCopiedLink] = useState<string | null>(null)
+  const [urlInput, setUrlInput] = useState("");
+  const [campaignName, setCampaignName] = useState("");
+  const [customAlias, setCustomAlias] = useState("");
+  const [copiedLink, setCopiedLink] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const handleGenerateLink = () => {
-    if (!urlInput.trim()) {
-      toast.error("Please enter a valid URL")
-      return
+  const [myLinks, setMyLinks] = useState<AffiliateLink[]>([]);
+  const [marketingAssets, setMarketingAssets] = useState<MarketingAsset[]>([]);
+  const [coupons, setCoupons] = useState<Coupon[]>([]);
+
+  useEffect(() => {
+    fetchAllData();
+  }, []);
+
+  const fetchAllData = async () => {
+    setIsLoading(true);
+    await Promise.all([fetchMyLinks(), fetchMarketingAssets(), fetchCoupons()]);
+    setIsLoading(false);
+  };
+
+  const fetchMyLinks = async () => {
+    try {
+      const response = await fetch(`${config.apiUrl}/links/my-links`, {
+        credentials: "include",
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setMyLinks(data.links || []);
+      } else {
+        console.error("Failed to fetch links:", response.status);
+      }
+    } catch (error) {
+      console.error("Error fetching links:", error);
     }
-    
-    // Simulate link generation
-    const affiliateUrl = `https://affiliate.example.com/ref/abc123${urlInput.replace('https://example.com', '')}`
-    const shortUrl = `https://aff.link/${Math.random().toString(36).substr(2, 6)}`
-    
-    toast.success("Affiliate link generated successfully!")
-    console.log("Generated:", { originalUrl: urlInput, affiliateUrl, shortUrl })
-  }
+  };
+
+  const fetchMarketingAssets = async () => {
+    try {
+      const response = await fetch(`${config.apiUrl}/links/assets/banners`, {
+        credentials: "include",
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setMarketingAssets(data.banners || []);
+      } else {
+        console.error("Failed to fetch assets:", response.status);
+      }
+    } catch (error) {
+      console.error("Error fetching assets:", error);
+    }
+  };
+
+  const fetchCoupons = async () => {
+    try {
+      const response = await fetch(`${config.apiUrl}/links/coupons/available`, {
+        credentials: "include",
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setCoupons(data.coupons || []);
+      } else {
+        console.error("Failed to fetch coupons:", response.status);
+      }
+    } catch (error) {
+      console.error("Error fetching coupons:", error);
+    }
+  };
+
+  const handleGenerateLink = async () => {
+    if (!urlInput.trim()) {
+      toast.error("Please enter a valid URL");
+      return;
+    }
+
+    setIsGenerating(true);
+
+    try {
+      const response = await fetch(`${config.apiUrl}/links/generate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          url: urlInput,
+          campaignName: campaignName || undefined,
+          customAlias: customAlias || undefined,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        toast.success("Affiliate link generated successfully!");
+        setUrlInput("");
+        setCampaignName("");
+        setCustomAlias("");
+        fetchMyLinks(); // Refresh links list
+      } else {
+        const error = await response.json();
+        toast.error(error.error || "Failed to generate link");
+      }
+    } catch (error) {
+      console.error("Error generating link:", error);
+      toast.error("Failed to generate affiliate link");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const handleCopyLink = (link: string, linkId: string) => {
-    navigator.clipboard.writeText(link)
-    setCopiedLink(linkId)
-    toast.success("Link copied to clipboard!")
-    setTimeout(() => setCopiedLink(null), 2000)
-  }
+    navigator.clipboard.writeText(link);
+    setCopiedLink(linkId);
+    toast.success("Link copied to clipboard!");
+    setTimeout(() => setCopiedLink(null), 2000);
+  };
 
-  const handleDownloadAsset = (asset: any) => {
-    toast.success(`Downloading ${asset.name}...`)
-    // Simulate download
-    console.log("Downloading:", asset.downloadUrl)
+  const handleDownloadAsset = (asset: MarketingAsset) => {
+    toast.success(`Downloading ${asset.name}...`);
+    // In a real app, this would trigger a download
+    window.open(asset.downloadUrl, "_blank");
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await fetchAllData();
+    setIsRefreshing(false);
+    toast.success("Data refreshed successfully");
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 lg:p-8 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">My Links & Assets</h1>
-          <p className="text-slate-600">Generate affiliate links and access marketing materials</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">Links & Assets</h1>
+          <p className="text-muted-foreground">
+            Generate affiliate links and access marketing materials
+          </p>
         </div>
-        <Button>
-          <Plus className="h-4 w-4 mr-2" />
-          Generate New Link
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Button
+            variant="outline"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="w-full sm:w-auto"
+          >
+            <RefreshCw
+              className={`w-4 h-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`}
+            />
+            {isRefreshing ? "Refreshing..." : "Refresh"}
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="generator" className="space-y-6">
-        <TabsList>
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="generator">URL Generator</TabsTrigger>
           <TabsTrigger value="assets">Marketing Assets</TabsTrigger>
           <TabsTrigger value="coupons">Coupon Codes</TabsTrigger>
@@ -200,132 +252,161 @@ export default function LinksPage() {
             <CardHeader>
               <CardTitle>Generate Affiliate Link</CardTitle>
               <CardDescription>
-                Paste any product URL to create your unique affiliate link
+                Convert any URL into a trackable affiliate link
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="url">Destination URL *</Label>
+                  <Input
+                    id="url"
+                    placeholder="https://example.com/product"
+                    value={urlInput}
+                    onChange={(e) => setUrlInput(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="campaign">Campaign Name (Optional)</Label>
+                  <Input
+                    id="campaign"
+                    placeholder="Summer Sale 2024"
+                    value={campaignName}
+                    onChange={(e) => setCampaignName(e.target.value)}
+                  />
+                </div>
+              </div>
               <div className="space-y-2">
-                <Label htmlFor="url">Product URL</Label>
+                <Label htmlFor="alias">Custom Alias (Optional)</Label>
                 <Input
-                  id="url"
-                  placeholder="https://example.com/product"
-                  value={urlInput}
-                  onChange={(e) => setUrlInput(e.target.value)}
+                  id="alias"
+                  placeholder="summer-sale"
+                  value={customAlias}
+                  onChange={(e) => setCustomAlias(e.target.value)}
                 />
               </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="offer">Target Offer (Optional)</Label>
-                <Select value={selectedOffer} onValueChange={setSelectedOffer}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select an offer" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="premium">Premium Plan</SelectItem>
-                    <SelectItem value="basic">Basic Plan</SelectItem>
-                    <SelectItem value="enterprise">Enterprise</SelectItem>
-                    <SelectItem value="starter">Starter</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <Button onClick={handleGenerateLink} className="w-full">
-                <LinkIcon className="h-4 w-4 mr-2" />
-                Generate Affiliate Link
+              <Button
+                onClick={handleGenerateLink}
+                disabled={isGenerating}
+                className="w-full md:w-auto"
+              >
+                <Sparkles className="w-4 h-4 mr-2" />
+                {isGenerating ? "Generating..." : "Generate Affiliate Link"}
               </Button>
             </CardContent>
           </Card>
 
-          {/* Generated Links */}
+          {/* Generated Links List */}
           <Card>
             <CardHeader>
               <CardTitle>Your Generated Links</CardTitle>
               <CardDescription>
-                Track performance of your affiliate links
+                {myLinks.length} active affiliate links
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {generatedLinks.map((link) => (
-                  <div key={link.id} className="border rounded-lg p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <Badge variant="outline">{link.id}</Badge>
-                        <Badge variant={link.status === "active" ? "default" : "secondary"}>
+              {myLinks.length === 0 ? (
+                <div className="text-center py-8">
+                  <LinkIcon className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No Links Yet</h3>
+                  <p className="text-muted-foreground">
+                    Generate your first affiliate link to start earning
+                    commissions
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {myLinks.map((link) => (
+                    <div
+                      key={link.id}
+                      className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-lg">{link.name}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            {link.campaignName}
+                          </p>
+                        </div>
+                        <Badge
+                          variant={
+                            link.status === "Active" ? "default" : "secondary"
+                          }
+                        >
                           {link.status}
                         </Badge>
                       </div>
-                      <div className="text-sm text-slate-500">
-                        Created: {link.createdAt}
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <div>
-                        <Label className="text-xs text-slate-500">Original URL</Label>
-                        <p className="text-sm font-mono bg-slate-50 p-2 rounded">
-                          {link.originalUrl}
-                        </p>
-                      </div>
-                      
-                      <div>
-                        <Label className="text-xs text-slate-500">Affiliate URL</Label>
+
+                      <div className="space-y-2">
                         <div className="flex items-center space-x-2">
-                          <p className="text-sm font-mono bg-blue-50 p-2 rounded flex-1">
-                            {link.affiliateUrl}
-                          </p>
+                          <Input
+                            value={link.url}
+                            readOnly
+                            className="flex-1 text-sm"
+                          />
                           <Button
-                            size="sm"
                             variant="outline"
-                            onClick={() => handleCopyLink(link.affiliateUrl, link.id)}
+                            size="sm"
+                            onClick={() => handleCopyLink(link.url, link.id)}
                           >
                             {copiedLink === link.id ? (
-                              <Check className="h-4 w-4" />
+                              <Check className="w-4 h-4" />
                             ) : (
-                              <Copy className="h-4 w-4" />
+                              <Copy className="w-4 h-4" />
                             )}
                           </Button>
                         </div>
-                      </div>
-                      
-                      <div>
-                        <Label className="text-xs text-slate-500">Short URL</Label>
+
                         <div className="flex items-center space-x-2">
-                          <p className="text-sm font-mono bg-green-50 p-2 rounded flex-1">
-                            {link.shortUrl}
-                          </p>
+                          <Input
+                            value={link.shortUrl}
+                            readOnly
+                            className="flex-1 text-sm"
+                          />
                           <Button
-                            size="sm"
                             variant="outline"
-                            onClick={() => handleCopyLink(link.shortUrl, link.id + "-short")}
+                            size="sm"
+                            onClick={() =>
+                              handleCopyLink(link.shortUrl, `short-${link.id}`)
+                            }
                           >
-                            {copiedLink === link.id + "-short" ? (
-                              <Check className="h-4 w-4" />
+                            {copiedLink === `short-${link.id}` ? (
+                              <Check className="w-4 h-4" />
                             ) : (
-                              <Copy className="h-4 w-4" />
+                              <Copy className="w-4 h-4" />
                             )}
                           </Button>
                         </div>
                       </div>
+
+                      <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t">
+                        <div>
+                          <p className="text-sm text-muted-foreground">
+                            Clicks
+                          </p>
+                          <p className="text-lg font-semibold">{link.clicks}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">
+                            Conversions
+                          </p>
+                          <p className="text-lg font-semibold">
+                            {link.conversions}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">
+                            Earnings
+                          </p>
+                          <p className="text-lg font-semibold text-green-600">
+                            ${link.earnings.toFixed(2)}
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                    
-                    <div className="grid grid-cols-3 gap-4 pt-2 border-t">
-                      <div className="text-center">
-                        <div className="text-lg font-semibold text-blue-600">{link.clicks}</div>
-                        <div className="text-xs text-slate-500">Clicks</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-lg font-semibold text-green-600">{link.conversions}</div>
-                        <div className="text-xs text-slate-500">Conversions</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-lg font-semibold text-emerald-600">${link.earnings}</div>
-                        <div className="text-xs text-slate-500">Earnings</div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -336,73 +417,60 @@ export default function LinksPage() {
             <CardHeader>
               <CardTitle>Marketing Assets</CardTitle>
               <CardDescription>
-                Download banners, logos, and other marketing materials
+                Download banners, logos, and promotional materials
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {marketingAssets.map((asset) => (
-                  <div key={asset.id} className="border rounded-lg p-4 space-y-3">
-                    <div className="aspect-video bg-slate-100 rounded-lg flex items-center justify-center">
-                      {asset.type === "Banner" ? (
-                        <Image className="h-8 w-8 text-slate-400" />
-                      ) : asset.type === "Logo" ? (
-                        <FileText className="h-8 w-8 text-slate-400" />
-                      ) : (
-                        <ExternalLink className="h-8 w-8 text-slate-400" />
-                      )}
-                    </div>
-                    
-                    <div>
-                      <h3 className="font-medium text-sm">{asset.name}</h3>
-                      <p className="text-xs text-slate-500">{asset.size} • {asset.format}</p>
-                      <Badge variant="outline" className="text-xs mt-1">
-                        {asset.category}
-                      </Badge>
-                    </div>
-                    
-                    <div className="flex space-x-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="flex-1"
-                        onClick={() => handleDownloadAsset(asset)}
-                      >
-                        <Download className="h-3 w-3 mr-1" />
-                        Download
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => window.open(asset.url, '_blank')}
-                      >
-                        <Eye className="h-3 w-3" />
-                      </Button>
-                    </div>
-                    
-                    <div className="pt-2 border-t">
-                      <Label className="text-xs text-slate-500">Affiliate URL</Label>
-                      <div className="flex items-center space-x-1 mt-1">
-                        <p className="text-xs font-mono bg-slate-50 p-1 rounded flex-1 truncate">
-                          {asset.affiliateUrl}
-                        </p>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-6 w-6 p-0"
-                          onClick={() => handleCopyLink(asset.affiliateUrl, asset.id)}
-                        >
-                          {copiedLink === asset.id ? (
-                            <Check className="h-3 w-3" />
-                          ) : (
-                            <Copy className="h-3 w-3" />
-                          )}
-                        </Button>
+              {marketingAssets.length === 0 ? (
+                <div className="text-center py-8">
+                  <Image className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">
+                    No Assets Available
+                  </h3>
+                  <p className="text-muted-foreground">
+                    Marketing assets will be available soon
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {marketingAssets.map((asset) => (
+                    <div
+                      key={asset.id}
+                      className="border rounded-lg overflow-hidden hover:shadow-md transition-shadow"
+                    >
+                      <div className="aspect-video bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center">
+                        <Image className="w-12 h-12 text-blue-600" />
+                      </div>
+                      <div className="p-4">
+                        <h3 className="font-semibold mb-2">{asset.name}</h3>
+                        <div className="flex flex-wrap gap-2 mb-3">
+                          <Badge variant="outline">{asset.category}</Badge>
+                          <Badge variant="outline">{asset.size}</Badge>
+                          <Badge variant="outline">{asset.format}</Badge>
+                        </div>
+                        <div className="flex items-center justify-between text-sm text-muted-foreground mb-3">
+                          <span>{asset.fileSize}</span>
+                          <span>{asset.downloads} downloads</span>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1"
+                            onClick={() => handleDownloadAsset(asset)}
+                          >
+                            <Download className="w-4 h-4 mr-1" />
+                            Download
+                          </Button>
+                          <Button variant="outline" size="sm">
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -411,77 +479,100 @@ export default function LinksPage() {
         <TabsContent value="coupons" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Coupon Codes</CardTitle>
+              <CardTitle>Available Coupon Codes</CardTitle>
               <CardDescription>
-                Use these exclusive coupon codes to boost conversions
+                Share these discount codes to boost conversions
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {couponCodes.map((coupon) => (
-                  <div key={coupon.id} className="border rounded-lg p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <Badge variant="outline" className="font-mono">
-                          {coupon.code}
-                        </Badge>
-                        <Badge 
-                          variant={coupon.status === "active" ? "default" : "secondary"}
+              {coupons.length === 0 ? (
+                <div className="text-center py-8">
+                  <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">
+                    No Coupons Available
+                  </h3>
+                  <p className="text-muted-foreground">
+                    Coupon codes will be available soon
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {coupons.map((coupon) => (
+                    <div
+                      key={coupon.id}
+                      className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2 mb-1">
+                            <h3 className="font-semibold text-lg font-mono">
+                              {coupon.code}
+                            </h3>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() =>
+                                handleCopyLink(coupon.code, coupon.id)
+                              }
+                            >
+                              {copiedLink === coupon.id ? (
+                                <Check className="w-4 h-4 text-green-600" />
+                              ) : (
+                                <Copy className="w-4 h-4" />
+                              )}
+                            </Button>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {coupon.description}
+                          </p>
+                        </div>
+                        <Badge
+                          variant={
+                            coupon.status === "Active" ? "default" : "secondary"
+                          }
                         >
                           {coupon.status}
                         </Badge>
                       </div>
-                      <div className="text-sm text-slate-500">
-                        Valid until: {coupon.validUntil}
+
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-3 border-t">
+                        <div>
+                          <p className="text-sm text-muted-foreground">
+                            Discount
+                          </p>
+                          <p className="font-semibold text-green-600">
+                            {coupon.discount}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">
+                            Commission
+                          </p>
+                          <p className="font-semibold text-blue-600">
+                            {coupon.commission}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Usage</p>
+                          <p className="font-semibold">
+                            {coupon.uses}/{coupon.maxUses}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">
+                            Valid Until
+                          </p>
+                          <p className="font-semibold">{coupon.validUntil}</p>
+                        </div>
                       </div>
                     </div>
-                    
-                    <div>
-                      <h3 className="font-medium">{coupon.description}</h3>
-                      <p className="text-sm text-slate-600">
-                        Discount: <span className="font-semibold text-green-600">{coupon.discount}</span>
-                      </p>
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="text-sm text-slate-500">
-                        Usage: {coupon.usage}/{coupon.maxUsage}
-                      </div>
-                      <div className="w-24 bg-slate-200 rounded-full h-2">
-                        <div 
-                          className="bg-blue-600 h-2 rounded-full" 
-                          style={{ width: `${(coupon.usage / coupon.maxUsage) * 100}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                    
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleCopyLink(coupon.code, coupon.id)}
-                      className="w-full"
-                    >
-                      {copiedLink === coupon.id ? (
-                        <>
-                          <Check className="h-4 w-4 mr-2" />
-                          Copied!
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="h-4 w-4 mr-2" />
-                          Copy Code
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
     </div>
-  )
+  );
 }
-
-

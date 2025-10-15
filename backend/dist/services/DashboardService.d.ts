@@ -64,8 +64,8 @@ export declare class DashboardService {
             userId: string;
             message: string;
             type: import(".prisma/client").$Enums.NotificationType;
-            title: string;
             read: boolean;
+            title: string;
         }[];
         pagination: {
             page: number;

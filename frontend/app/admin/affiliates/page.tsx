@@ -1,540 +1,582 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { DataTable } from "@/components/dashboard/data-table"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ViewModal, EditModal, CreateModal, DeleteConfirmationModal } from "@/components/modals"
-import { exportToCSV } from "@/lib/export-utils"
-import { 
-  Users, 
-  UserPlus, 
-  Search, 
+import { useState, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import {
+  Users,
+  UserPlus,
+  Search,
   Filter,
-  MoreHorizontal,
   CheckCircle,
   XCircle,
   Clock,
   DollarSign,
-  TrendingUp
-} from "lucide-react"
+  TrendingUp,
+  RefreshCw,
+  MoreVertical,
+  Edit,
+  Trash2,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
+import { config } from "@/config/config";
 
-// Mock data for affiliates
-const affiliatesData = [
-  {
-    id: "AFF-001",
-    name: "John Doe",
-    email: "john@example.com",
-    joinDate: "2024-01-07",
-    status: "active",
-    tier: "Gold",
-    totalEarnings: 1250.00,
-    totalClicks: 127,
-    totalConversions: 23,
-    conversionRate: 18.1,
-    lastActivity: "2024-01-07 14:30",
-    paymentMethod: "PayPal",
-    country: "United States"
-  },
-  {
-    id: "AFF-002",
-    name: "Sarah Wilson",
-    email: "sarah@example.com",
-    joinDate: "2024-01-06",
-    status: "active",
-    tier: "Silver",
-    totalEarnings: 980.00,
-    totalClicks: 98,
-    totalConversions: 18,
-    conversionRate: 18.4,
-    lastActivity: "2024-01-07 12:15",
-    paymentMethod: "PayPal",
-    country: "Canada"
-  },
-  {
-    id: "AFF-003",
-    name: "Mike Johnson",
-    email: "mike@example.com",
-    joinDate: "2024-01-05",
-    status: "pending",
-    tier: "Bronze",
-    totalEarnings: 0.00,
-    totalClicks: 0,
-    totalConversions: 0,
-    conversionRate: 0,
-    lastActivity: "2024-01-05 16:45",
-    paymentMethod: "PayPal",
-    country: "United Kingdom"
-  },
-  {
-    id: "AFF-004",
-    name: "Lisa Brown",
-    email: "lisa@example.com",
-    joinDate: "2024-01-04",
-    status: "active",
-    tier: "Silver",
-    totalEarnings: 720.00,
-    totalClicks: 72,
-    totalConversions: 14,
-    conversionRate: 19.4,
-    lastActivity: "2024-01-07 09:20",
-    paymentMethod: "PayPal",
-    country: "Australia"
-  },
-  {
-    id: "AFF-005",
-    name: "David Lee",
-    email: "david@example.com",
-    joinDate: "2024-01-03",
-    status: "suspended",
-    tier: "Bronze",
-    totalEarnings: 680.00,
-    totalClicks: 68,
-    totalConversions: 12,
-    conversionRate: 17.6,
-    lastActivity: "2024-01-03 18:10",
-    paymentMethod: "PayPal",
-    country: "Germany"
-  },
-  {
-    id: "AFF-006",
-    name: "Emma Davis",
-    email: "emma@example.com",
-    joinDate: "2024-01-02",
-    status: "active",
-    tier: "Gold",
-    totalEarnings: 1100.00,
-    totalClicks: 110,
-    totalConversions: 20,
-    conversionRate: 18.2,
-    lastActivity: "2024-01-07 08:45",
-    paymentMethod: "PayPal",
-    country: "France"
-  },
-  {
-    id: "AFF-007",
-    name: "Alex Chen",
-    email: "alex@example.com",
-    joinDate: "2024-01-01",
-    status: "active",
-    tier: "Platinum",
-    totalEarnings: 2100.00,
-    totalClicks: 210,
-    totalConversions: 38,
-    conversionRate: 18.1,
-    lastActivity: "2024-01-07 16:20",
-    paymentMethod: "PayPal",
-    country: "Japan"
-  },
-  {
-    id: "AFF-008",
-    name: "Sophia Martinez",
-    email: "sophia@example.com",
-    joinDate: "2023-12-30",
-    status: "inactive",
-    tier: "Bronze",
-    totalEarnings: 450.00,
-    totalClicks: 45,
-    totalConversions: 8,
-    conversionRate: 17.8,
-    lastActivity: "2023-12-30 14:30",
-    paymentMethod: "PayPal",
-    country: "Brazil"
-  }
-]
+interface Affiliate {
+  id: string;
+  name: string;
+  email: string;
+  joinDate: string;
+  status: string;
+  tier: string;
+  totalEarnings: number;
+  totalClicks: number;
+  totalConversions: number;
+  conversionRate: number;
+  lastActivity: string;
+  paymentMethod: string;
+  country: string;
+}
 
-const affiliateColumns = [
-  { key: "id", label: "ID", sortable: true },
-  { key: "name", label: "Name", sortable: true },
-  { key: "email", label: "Email", sortable: true },
-  { key: "joinDate", label: "Join Date", sortable: true },
-  { 
-    key: "status", 
-    label: "Status", 
-    sortable: true,
-    render: (value: string) => {
-      const statusConfig = {
-        active: { icon: CheckCircle, variant: "default" as const, color: "text-green-600" },
-        pending: { icon: Clock, variant: "secondary" as const, color: "text-yellow-600" },
-        suspended: { icon: XCircle, variant: "destructive" as const, color: "text-red-600" },
-        inactive: { icon: Clock, variant: "outline" as const, color: "text-slate-600" }
+export default function AffiliatesManagementPage() {
+  const [affiliates, setAffiliates] = useState<Affiliate[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [tierFilter, setTierFilter] = useState("all");
+
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [selectedAffiliate, setSelectedAffiliate] = useState<Affiliate | null>(
+    null
+  );
+  const [editForm, setEditForm] = useState({
+    status: "",
+    tier: "",
+    commissionRate: 5,
+  });
+
+  useEffect(() => {
+    fetchAffiliates();
+  }, [statusFilter, tierFilter]);
+
+  const fetchAffiliates = async () => {
+    setIsLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (statusFilter !== "all")
+        params.append("status", statusFilter.toUpperCase());
+      if (tierFilter !== "all") params.append("tier", tierFilter.toUpperCase());
+
+      const response = await fetch(
+        `${config.apiUrl}/admin/affiliates?${params.toString()}`,
+        {
+          credentials: "include",
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setAffiliates(data.data || []);
+      } else {
+        console.error("Failed to fetch affiliates:", response.status);
+        toast.error("Failed to load affiliates");
       }
-      const config = statusConfig[value as keyof typeof statusConfig] || statusConfig.pending
-      const Icon = config.icon
-      
-      return (
-        <Badge variant={config.variant} className="flex items-center space-x-1">
-          <Icon className="h-3 w-3" />
-          <span>{value.charAt(0).toUpperCase() + value.slice(1)}</span>
-        </Badge>
-      )
+    } catch (error) {
+      console.error("Error fetching affiliates:", error);
+      toast.error("Failed to load affiliates");
+    } finally {
+      setIsLoading(false);
     }
-  },
-  { key: "tier", label: "Tier", sortable: true },
-  { 
-    key: "totalEarnings", 
-    label: "Total Earnings", 
-    sortable: true,
-    render: (value: number) => `$${value.toFixed(2)}`
-  },
-  { key: "totalClicks", label: "Clicks", sortable: true },
-  { key: "totalConversions", label: "Conversions", sortable: true },
-  { 
-    key: "conversionRate", 
-    label: "Conversion Rate", 
-    sortable: true,
-    render: (value: number) => `${value.toFixed(1)}%`
-  },
-  { key: "lastActivity", label: "Last Activity", sortable: true },
-]
+  };
 
-export default function ManageAffiliatesPage() {
-  const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
-  const [viewModalOpen, setViewModalOpen] = useState(false)
-  const [editModalOpen, setEditModalOpen] = useState(false)
-  const [createModalOpen, setCreateModalOpen] = useState(false)
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
-  const [selectedAffiliate, setSelectedAffiliate] = useState<any>(null)
-  const [affiliates, setAffiliates] = useState(affiliatesData)
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await fetchAffiliates();
+    setIsRefreshing(false);
+    toast.success("Affiliates data refreshed");
+  };
 
-  const filteredAffiliates = affiliates.filter(affiliate => {
-    const matchesSearch = affiliate.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         affiliate.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         affiliate.id.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = statusFilter === "all" || affiliate.status === statusFilter
-    return matchesSearch && matchesStatus
-  })
+  const handleEditAffiliate = (affiliate: Affiliate) => {
+    setSelectedAffiliate(affiliate);
+    setEditForm({
+      status: affiliate.status.toUpperCase(),
+      tier: affiliate.tier.toUpperCase(),
+      commissionRate: 5,
+    });
+    setEditDialogOpen(true);
+  };
 
-  const handleView = (affiliate: any) => {
-    setSelectedAffiliate(affiliate)
-    setViewModalOpen(true)
-  }
+  const handleSaveChanges = async () => {
+    if (!selectedAffiliate) return;
 
-  const handleEdit = (affiliate: any) => {
-    setSelectedAffiliate(affiliate)
-    setEditModalOpen(true)
-  }
+    try {
+      // Update status
+      if (editForm.status !== selectedAffiliate.status.toUpperCase()) {
+        const statusResponse = await fetch(
+          `${config.apiUrl}/admin/affiliates/${selectedAffiliate.id}/status`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ status: editForm.status }),
+          }
+        );
 
-  const handleDelete = (affiliate: any) => {
-    setSelectedAffiliate(affiliate)
-    setDeleteModalOpen(true)
-  }
+        if (!statusResponse.ok) {
+          throw new Error("Failed to update status");
+        }
+      }
 
-  const handleCreate = () => {
-    setCreateModalOpen(true)
-  }
+      // Update tier and commission rate
+      if (
+        editForm.tier !== selectedAffiliate.tier.toUpperCase() ||
+        editForm.commissionRate !== 5
+      ) {
+        const tierResponse = await fetch(
+          `${config.apiUrl}/admin/affiliates/${selectedAffiliate.id}/tier`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({
+              tier: editForm.tier,
+              commissionRate: editForm.commissionRate,
+            }),
+          }
+        );
 
-  const handleSaveEdit = (data: any) => {
-    setAffiliates(prev => prev.map(affiliate => 
-      affiliate.id === selectedAffiliate.id ? { ...affiliate, ...data } : affiliate
-    ))
-    setSelectedAffiliate(null)
-  }
+        if (!tierResponse.ok) {
+          throw new Error("Failed to update tier");
+        }
+      }
 
-  const handleConfirmDelete = () => {
-    setAffiliates(prev => prev.filter(affiliate => affiliate.id !== selectedAffiliate.id))
-    setSelectedAffiliate(null)
-    setDeleteModalOpen(false)
-  }
-
-  const handleCreateNew = (data: any) => {
-    const newAffiliate = {
-      ...data,
-      id: `AFF-${Date.now()}`,
-      joinDate: new Date().toISOString().split('T')[0],
-      totalEarnings: 0,
-      conversionRate: 0,
-      lastActivity: "Today"
+      toast.success("Affiliate updated successfully");
+      setEditDialogOpen(false);
+      fetchAffiliates();
+    } catch (error) {
+      console.error("Error updating affiliate:", error);
+      toast.error("Failed to update affiliate");
     }
-    setAffiliates(prev => [...prev, newAffiliate])
-  }
+  };
 
-  const handleExport = () => {
-    exportToCSV(filteredAffiliates, "affiliates")
-  }
+  const handleDeleteAffiliate = async (affiliateId: string) => {
+    if (!confirm("Are you sure you want to delete this affiliate?")) return;
 
-  const activeAffiliates = affiliates.filter(a => a.status === "active")
-  const pendingAffiliates = affiliates.filter(a => a.status === "pending")
-  const totalEarnings = affiliates.reduce((sum, a) => sum + a.totalEarnings, 0)
-  const totalClicks = affiliates.reduce((sum, a) => sum + a.totalClicks, 0)
+    try {
+      const response = await fetch(
+        `${config.apiUrl}/admin/affiliates/${affiliateId}`,
+        {
+          method: "DELETE",
+          credentials: "include",
+        }
+      );
+
+      if (response.ok) {
+        toast.success("Affiliate deleted successfully");
+        fetchAffiliates();
+      } else {
+        toast.error("Failed to delete affiliate");
+      }
+    } catch (error) {
+      console.error("Error deleting affiliate:", error);
+      toast.error("Failed to delete affiliate");
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    const statusLower = status.toLowerCase();
+    const variants = {
+      active: "default",
+      pending: "secondary",
+      suspended: "destructive",
+      inactive: "outline",
+    } as const;
+
+    const icons = {
+      active: CheckCircle,
+      pending: Clock,
+      suspended: XCircle,
+      inactive: Clock,
+    };
+
+    const Icon = icons[statusLower as keyof typeof icons];
+
+    return (
+      <Badge variant={variants[statusLower as keyof typeof variants]}>
+        {Icon && <Icon className="w-3 h-3 mr-1" />}
+        {status}
+      </Badge>
+    );
+  };
+
+  const filteredAffiliates = affiliates.filter(
+    (aff) =>
+      aff.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      aff.email.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 lg:p-8 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Manage Affiliates</h1>
-          <p className="text-slate-600">View and manage your affiliate partners</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">Manage Affiliates</h1>
+          <p className="text-muted-foreground">
+            View and manage all affiliate accounts
+          </p>
         </div>
-        <div className="flex items-center space-x-3">
-          <Button variant="outline" size="sm" onClick={handleExport}>
-            <Filter className="h-4 w-4 mr-2" />
-            Export
-          </Button>
-          <Button onClick={handleCreate}>
-            <UserPlus className="h-4 w-4 mr-2" />
-            Add New Affiliate
-          </Button>
-        </div>
+        <Button
+          variant="outline"
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          className="w-full sm:w-auto"
+        >
+          <RefreshCw
+            className={`w-4 h-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`}
+          />
+          {isRefreshing ? "Refreshing..." : "Refresh"}
+        </Button>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Affiliates</CardTitle>
-            <Users className="h-4 w-4 text-blue-600" />
+            <CardTitle className="text-sm font-medium">
+              Total Affiliates
+            </CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{affiliatesData.length}</div>
-            <p className="text-xs text-slate-500">
-              {activeAffiliates.length} active
+            <div className="text-2xl font-bold">{affiliates.length}</div>
+            <p className="text-xs text-muted-foreground">
+              Registered affiliates
             </p>
           </CardContent>
         </Card>
-        
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Approval</CardTitle>
-            <Clock className="h-4 w-4 text-yellow-600" />
+            <CardTitle className="text-sm font-medium">Active</CardTitle>
+            <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{pendingAffiliates.length}</div>
-            <p className="text-xs text-slate-500">
-              Awaiting review
-            </p>
+            <div className="text-2xl font-bold">
+              {
+                affiliates.filter((a) => a.status.toLowerCase() === "active")
+                  .length
+              }
+            </div>
+            <p className="text-xs text-muted-foreground">Active accounts</p>
           </CardContent>
         </Card>
-        
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Earnings</CardTitle>
-            <DollarSign className="h-4 w-4 text-green-600" />
+            <CardTitle className="text-sm font-medium">Pending</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${totalEarnings.toFixed(2)}</div>
-            <p className="text-xs text-green-600">
-              +15.3% this month
-            </p>
+            <div className="text-2xl font-bold">
+              {
+                affiliates.filter((a) => a.status.toLowerCase() === "pending")
+                  .length
+              }
+            </div>
+            <p className="text-xs text-muted-foreground">Awaiting approval</p>
           </CardContent>
         </Card>
-        
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Clicks</CardTitle>
-            <TrendingUp className="h-4 w-4 text-purple-600" />
+            <CardTitle className="text-sm font-medium">
+              Total Earnings
+            </CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalClicks}</div>
-            <p className="text-xs text-green-600">
-              +12.5% this month
+            <div className="text-2xl font-bold">
+              $
+              {affiliates
+                .reduce((sum, a) => sum + a.totalEarnings, 0)
+                .toFixed(2)}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              All-time commissions
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Search and Filters */}
-      <div className="flex items-center space-x-4">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-          <Input
-            placeholder="Search affiliates..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-40">
-            <Filter className="h-4 w-4 mr-2" />
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="suspended">Suspended</SelectItem>
-            <SelectItem value="inactive">Inactive</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      {/* Filters */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search affiliates..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="suspended">Suspended</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={tierFilter} onValueChange={setTierFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="All Tiers" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Tiers</SelectItem>
+                <SelectItem value="bronze">Bronze</SelectItem>
+                <SelectItem value="silver">Silver</SelectItem>
+                <SelectItem value="gold">Gold</SelectItem>
+                <SelectItem value="platinum">Platinum</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Affiliates Table */}
-      <DataTable
-        title="Affiliate Partners"
-        description="Complete list of your affiliate partners"
-        columns={affiliateColumns}
-        data={filteredAffiliates}
-        searchable={true}
-        filterable={true}
-        exportable={true}
-        pagination={true}
-        pageSize={10}
-        onView={handleView}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-        exportFilename="affiliates"
-      />
+      <Card>
+        <CardHeader>
+          <CardTitle>Affiliates List</CardTitle>
+          <CardDescription>
+            {filteredAffiliates.length} affiliates found
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="rounded-md border overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Affiliate</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Tier</TableHead>
+                  <TableHead>Earnings</TableHead>
+                  <TableHead>Conversions</TableHead>
+                  <TableHead>Last Activity</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredAffiliates.length === 0 ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={7}
+                      className="text-center py-8 text-muted-foreground"
+                    >
+                      No affiliates found.{" "}
+                      {statusFilter !== "all" || tierFilter !== "all"
+                        ? "Try adjusting your filters."
+                        : ""}
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredAffiliates.map((affiliate) => (
+                    <TableRow key={affiliate.id}>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{affiliate.name}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {affiliate.email}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>{getStatusBadge(affiliate.status)}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{affiliate.tier}</Badge>
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        ${affiliate.totalEarnings.toFixed(2)}
+                      </TableCell>
+                      <TableCell>{affiliate.totalConversions}</TableCell>
+                      <TableCell className="text-sm">
+                        {affiliate.lastActivity}
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <MoreVertical className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => handleEditAffiliate(affiliate)}
+                            >
+                              <Edit className="w-4 h-4 mr-2" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                handleDeleteAffiliate(affiliate.id)
+                              }
+                              className="text-red-600"
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* Affiliate Insights */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Top Performing Affiliates</CardTitle>
-            <CardDescription>Best performing affiliates this month</CardDescription>
-          </CardHeader>
-          <CardContent>
+      {/* Edit Affiliate Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Affiliate</DialogTitle>
+            <DialogDescription>
+              Update affiliate status, tier, and commission rate
+            </DialogDescription>
+          </DialogHeader>
+          {selectedAffiliate && (
             <div className="space-y-4">
-              {affiliates
-                .filter(a => a.status === "active")
-                .sort((a, b) => b.totalEarnings - a.totalEarnings)
-                .slice(0, 5)
-                .map((affiliate, index) => (
-                  <div key={affiliate.id} className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-6 h-6 bg-slate-100 rounded-full flex items-center justify-center text-xs font-medium">
-                        {index + 1}
-                      </div>
-                      <div>
-                        <p className="font-medium text-sm">{affiliate.name}</p>
-                        <p className="text-xs text-slate-500">{affiliate.tier} Tier</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-sm">${affiliate.totalEarnings.toFixed(2)}</p>
-                      <p className="text-xs text-slate-500">{affiliate.conversionRate.toFixed(1)}% conversion</p>
-                    </div>
-                  </div>
-                ))}
+              <div>
+                <Label>Affiliate</Label>
+                <p className="text-sm font-medium">{selectedAffiliate.name}</p>
+                <p className="text-sm text-muted-foreground">
+                  {selectedAffiliate.email}
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="status">Status</Label>
+                <Select
+                  value={editForm.status}
+                  onValueChange={(value) =>
+                    setEditForm({ ...editForm, status: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ACTIVE">Active</SelectItem>
+                    <SelectItem value="PENDING">Pending</SelectItem>
+                    <SelectItem value="SUSPENDED">Suspended</SelectItem>
+                    <SelectItem value="REJECTED">Rejected</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="tier">Tier</Label>
+                <Select
+                  value={editForm.tier}
+                  onValueChange={(value) =>
+                    setEditForm({ ...editForm, tier: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="BRONZE">
+                      Bronze (5% commission)
+                    </SelectItem>
+                    <SelectItem value="SILVER">
+                      Silver (10% commission)
+                    </SelectItem>
+                    <SelectItem value="GOLD">Gold (15% commission)</SelectItem>
+                    <SelectItem value="PLATINUM">
+                      Platinum (20% commission)
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="commissionRate">
+                  Custom Commission Rate (%)
+                </Label>
+                <Input
+                  id="commissionRate"
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={editForm.commissionRate}
+                  onChange={(e) =>
+                    setEditForm({
+                      ...editForm,
+                      commissionRate: parseFloat(e.target.value),
+                    })
+                  }
+                />
+                <p className="text-xs text-muted-foreground">
+                  Leave at tier default or set custom rate
+                </p>
+              </div>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Affiliate Status Distribution</CardTitle>
-            <CardDescription>Breakdown of affiliate statuses</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                  <span className="text-sm">Active</span>
-                </div>
-                <span className="font-medium">{activeAffiliates.length} ({((activeAffiliates.length / affiliatesData.length) * 100).toFixed(1)}%)</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                  <span className="text-sm">Pending</span>
-                </div>
-                <span className="font-medium">{pendingAffiliates.length} ({((pendingAffiliates.length / affiliates.length) * 100).toFixed(1)}%)</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                  <span className="text-sm">Suspended</span>
-                </div>
-                <span className="font-medium">{affiliates.filter(a => a.status === "suspended").length} ({((affiliates.filter(a => a.status === "suspended").length / affiliates.length) * 100).toFixed(1)}%)</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-slate-500 rounded-full"></div>
-                  <span className="text-sm">Inactive</span>
-                </div>
-                <span className="font-medium">{affiliates.filter(a => a.status === "inactive").length} ({((affiliates.filter(a => a.status === "inactive").length / affiliates.length) * 100).toFixed(1)}%)</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Modals */}
-      <ViewModal
-        isOpen={viewModalOpen}
-        onClose={() => setViewModalOpen(false)}
-        title="Affiliate Details"
-        data={selectedAffiliate || {}}
-        fields={[
-          { key: "id", label: "ID", type: "text" },
-          { key: "name", label: "Name", type: "text" },
-          { key: "email", label: "Email", type: "text" },
-          { key: "status", label: "Status", type: "status" },
-          { key: "joinDate", label: "Join Date", type: "date" },
-          { key: "totalEarnings", label: "Total Earnings", type: "currency" },
-          { key: "totalClicks", label: "Total Clicks", type: "text" },
-          { key: "conversionRate", label: "Conversion Rate", type: "text" },
-          { key: "lastActivity", label: "Last Activity", type: "text" }
-        ]}
-      />
-
-      <EditModal
-        isOpen={editModalOpen}
-        onClose={() => setEditModalOpen(false)}
-        onSave={handleSaveEdit}
-        title="Edit Affiliate"
-        data={selectedAffiliate || {}}
-        fields={[
-          { key: "name", label: "Name", type: "text", required: true },
-          { key: "email", label: "Email", type: "email", required: true },
-          { 
-            key: "status", 
-            label: "Status", 
-            type: "select", 
-            options: [
-              { value: "active", label: "Active" },
-              { value: "pending", label: "Pending" },
-              { value: "suspended", label: "Suspended" },
-              { value: "inactive", label: "Inactive" }
-            ]
-          }
-        ]}
-      />
-
-      <CreateModal
-        isOpen={createModalOpen}
-        onClose={() => setCreateModalOpen(false)}
-        onCreate={handleCreateNew}
-        title="Add New Affiliate"
-        fields={[
-          { key: "name", label: "Name", type: "text", required: true },
-          { key: "email", label: "Email", type: "email", required: true },
-          { 
-            key: "status", 
-            label: "Status", 
-            type: "select", 
-            options: [
-              { value: "active", label: "Active" },
-              { value: "pending", label: "Pending" },
-              { value: "suspended", label: "Suspended" },
-              { value: "inactive", label: "Inactive" }
-            ],
-            defaultValue: "pending"
-          }
-        ]}
-      />
-
-      <DeleteConfirmationModal
-        isOpen={deleteModalOpen}
-        onClose={() => setDeleteModalOpen(false)}
-        onConfirm={handleConfirmDelete}
-        title="Delete Affiliate"
-        message="Are you sure you want to delete this affiliate? This action cannot be undone."
-        itemName={selectedAffiliate?.name}
-      />
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveChanges}>Save Changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
-  )
+  );
 }

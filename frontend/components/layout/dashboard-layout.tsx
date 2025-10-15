@@ -59,21 +59,11 @@ const affiliateNavItems = [
     title: "Statistics",
     href: "/dashboard/statistics",
     icon: BarChart3,
-    subItems: [
-      { title: "Real-Time Clicks", href: "/dashboard/statistics/clicks" },
-      { title: "Conversions Log", href: "/dashboard/statistics/conversions" },
-      { title: "Traffic Analysis", href: "/dashboard/statistics/traffic" },
-    ],
   },
   {
     title: "My Links & Assets",
     href: "/dashboard/links",
     icon: LinkIcon,
-    subItems: [
-      { title: "URL Generator", href: "/dashboard/links/generator" },
-      { title: "Banners & Logos", href: "/dashboard/links/banners" },
-      { title: "Coupon Codes", href: "/dashboard/links/coupons" },
-    ],
   },
   {
     title: "Referral System",
@@ -89,11 +79,6 @@ const affiliateNavItems = [
     title: "Commissions & Payouts",
     href: "/dashboard/commissions",
     icon: DollarSign,
-    subItems: [
-      { title: "Pending Commissions", href: "/dashboard/commissions/pending" },
-      { title: "Payout History", href: "/dashboard/commissions/history" },
-      { title: "Payout Settings", href: "/dashboard/commissions/settings" },
-    ],
   },
   {
     title: "Resources & Support",
@@ -101,7 +86,6 @@ const affiliateNavItems = [
     icon: BookOpen,
     subItems: [
       { title: "FAQ/Knowledge Base", href: "/dashboard/resources/faq" },
-      { title: "Program Terms", href: "/dashboard/resources/terms" },
       { title: "Contact Support", href: "/dashboard/resources/support" },
     ],
   },
@@ -192,21 +176,14 @@ const adminNavItems = [
     icon: BarChart3,
   },
   {
-    title: "Reports",
-    href: "/admin/reports",
-    icon: BarChart3,
-    subItems: [
-      { title: "Daily report", href: "/admin/reports/daily" },
-      { title: "Overview reports", href: "/admin/reports/overview" },
-      { title: "Report builder", href: "/admin/reports/builder" },
-      { title: "Clicks", href: "/admin/reports/clicks" },
-      { title: "Conversions", href: "/admin/reports/conversions" },
-    ],
-  },
-  {
     title: "Manage Affiliates",
     href: "/admin/affiliates",
     icon: User,
+  },
+  {
+    title: "Commission Management",
+    href: "/admin/commissions",
+    icon: DollarSign,
   },
   {
     title: "Payout Queue",
@@ -214,35 +191,9 @@ const adminNavItems = [
     icon: CreditCard,
   },
   {
-    title: "Commission Management",
-    href: "/admin/commissions",
-    icon: DollarSign,
-    subItems: [
-      { title: "All Commissions", href: "/admin/commissions" },
-      { title: "Commission Analytics", href: "/admin/commissions/analytics" },
-      { title: "Rate Management", href: "/admin/commissions/rates" },
-    ],
-  },
-  {
     title: "Offers & Creatives",
     href: "/admin/offers",
     icon: LinkIcon,
-  },
-  {
-    title: "Alerts",
-    href: "/admin/alerts",
-    icon: Bell,
-  },
-  {
-    title: "Tools",
-    href: "/admin/tools",
-    icon: Wrench,
-    subItems: [
-      { title: "Payout builder", href: "/admin/tools/payout-builder" },
-      { title: "Traffic control", href: "/admin/tools/traffic-control" },
-      { title: "Webhooks", href: "/admin/tools/webhooks" },
-      { title: "System logs", href: "/admin/tools/logs" },
-    ],
   },
   {
     title: "System Settings",
@@ -359,7 +310,8 @@ export default function DashboardLayout({
       {/* Navigation */}
       <nav className="flex-1 space-y-1 p-4">
         {navItems.map((item) => {
-          const hasSubItems = item.subItems && item.subItems.length > 0;
+          const hasSubItems =
+            (item as any).subItems && (item as any).subItems.length > 0;
           const isExpanded = expandedItems.includes(item.title);
           const isItemActive = isActive(item.href);
 
@@ -402,7 +354,7 @@ export default function DashboardLayout({
               {/* Sub Items */}
               {hasSubItems && isExpanded && (
                 <div className="ml-6 mt-1 space-y-1">
-                  {item.subItems?.map((subItem) => (
+                  {(item as any).subItems?.map((subItem: any) => (
                     <Button
                       key={subItem.title}
                       variant="ghost"

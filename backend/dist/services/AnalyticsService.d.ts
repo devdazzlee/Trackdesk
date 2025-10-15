@@ -89,16 +89,16 @@ export declare class AnalyticsService {
                         totalClicks: number;
                         totalConversions: number;
                         description: string;
-                        totalRevenue: number;
                         totalCommissions: number;
-                        accountId: string;
-                        category: string;
-                        categoryId: string | null;
                         startDate: Date;
                         endDate: Date | null;
+                        category: string;
+                        accountId: string;
+                        categoryId: string | null;
                         terms: string | null;
                         requirements: string | null;
                         tags: string[];
+                        totalRevenue: number;
                     };
                 } & {
                     id: string;
@@ -106,14 +106,14 @@ export declare class AnalyticsService {
                     updatedAt: Date;
                     clicks: number;
                     conversions: number;
+                    affiliateId: string;
+                    expiresAt: Date | null;
+                    isActive: boolean;
+                    earnings: number;
                     shortUrl: string;
                     originalUrl: string;
-                    affiliateId: string;
                     offerId: string | null;
                     customSlug: string | null;
-                    earnings: number;
-                    isActive: boolean;
-                    expiresAt: Date | null;
                 };
             } & {
                 id: string;
@@ -122,9 +122,9 @@ export declare class AnalyticsService {
                 userAgent: string;
                 userId: string | null;
                 affiliateId: string;
+                referrer: string | null;
                 conversionId: string | null;
                 linkId: string;
-                referrer: string | null;
                 country: string | null;
                 city: string | null;
                 device: string | null;
@@ -140,13 +140,13 @@ export declare class AnalyticsService {
             createdAt: Date;
             updatedAt: Date;
             userId: string | null;
-            customerValue: number;
+            affiliateId: string;
             orderValue: number;
             commissionAmount: number;
-            affiliateId: string;
             offerId: string;
             clickId: string;
             customerEmail: string | null;
+            customerValue: number;
         };
         attributionClicks: ({
             link: {
@@ -160,16 +160,16 @@ export declare class AnalyticsService {
                     totalClicks: number;
                     totalConversions: number;
                     description: string;
-                    totalRevenue: number;
                     totalCommissions: number;
-                    accountId: string;
-                    category: string;
-                    categoryId: string | null;
                     startDate: Date;
                     endDate: Date | null;
+                    category: string;
+                    accountId: string;
+                    categoryId: string | null;
                     terms: string | null;
                     requirements: string | null;
                     tags: string[];
+                    totalRevenue: number;
                 };
             } & {
                 id: string;
@@ -177,14 +177,14 @@ export declare class AnalyticsService {
                 updatedAt: Date;
                 clicks: number;
                 conversions: number;
+                affiliateId: string;
+                expiresAt: Date | null;
+                isActive: boolean;
+                earnings: number;
                 shortUrl: string;
                 originalUrl: string;
-                affiliateId: string;
                 offerId: string | null;
                 customSlug: string | null;
-                earnings: number;
-                isActive: boolean;
-                expiresAt: Date | null;
             };
         } & {
             id: string;
@@ -193,9 +193,9 @@ export declare class AnalyticsService {
             userAgent: string;
             userId: string | null;
             affiliateId: string;
+            referrer: string | null;
             conversionId: string | null;
             linkId: string;
-            referrer: string | null;
             country: string | null;
             city: string | null;
             device: string | null;
@@ -217,16 +217,16 @@ export declare class AnalyticsService {
                     totalClicks: number;
                     totalConversions: number;
                     description: string;
-                    totalRevenue: number;
                     totalCommissions: number;
-                    accountId: string;
-                    category: string;
-                    categoryId: string | null;
                     startDate: Date;
                     endDate: Date | null;
+                    category: string;
+                    accountId: string;
+                    categoryId: string | null;
                     terms: string | null;
                     requirements: string | null;
                     tags: string[];
+                    totalRevenue: number;
                 };
             } & {
                 id: string;
@@ -234,14 +234,14 @@ export declare class AnalyticsService {
                 updatedAt: Date;
                 clicks: number;
                 conversions: number;
+                affiliateId: string;
+                expiresAt: Date | null;
+                isActive: boolean;
+                earnings: number;
                 shortUrl: string;
                 originalUrl: string;
-                affiliateId: string;
                 offerId: string | null;
                 customSlug: string | null;
-                earnings: number;
-                isActive: boolean;
-                expiresAt: Date | null;
             };
         } & {
             id: string;
@@ -250,9 +250,9 @@ export declare class AnalyticsService {
             userAgent: string;
             userId: string | null;
             affiliateId: string;
+            referrer: string | null;
             conversionId: string | null;
             linkId: string;
-            referrer: string | null;
             country: string | null;
             city: string | null;
             device: string | null;
@@ -274,16 +274,16 @@ export declare class AnalyticsService {
                     totalClicks: number;
                     totalConversions: number;
                     description: string;
-                    totalRevenue: number;
                     totalCommissions: number;
-                    accountId: string;
-                    category: string;
-                    categoryId: string | null;
                     startDate: Date;
                     endDate: Date | null;
+                    category: string;
+                    accountId: string;
+                    categoryId: string | null;
                     terms: string | null;
                     requirements: string | null;
                     tags: string[];
+                    totalRevenue: number;
                 };
             } & {
                 id: string;
@@ -291,14 +291,14 @@ export declare class AnalyticsService {
                 updatedAt: Date;
                 clicks: number;
                 conversions: number;
+                affiliateId: string;
+                expiresAt: Date | null;
+                isActive: boolean;
+                earnings: number;
                 shortUrl: string;
                 originalUrl: string;
-                affiliateId: string;
                 offerId: string | null;
                 customSlug: string | null;
-                earnings: number;
-                isActive: boolean;
-                expiresAt: Date | null;
             };
         } & {
             id: string;
@@ -307,9 +307,9 @@ export declare class AnalyticsService {
             userAgent: string;
             userId: string | null;
             affiliateId: string;
+            referrer: string | null;
             conversionId: string | null;
             linkId: string;
-            referrer: string | null;
             country: string | null;
             city: string | null;
             device: string | null;
