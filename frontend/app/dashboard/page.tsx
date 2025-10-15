@@ -74,7 +74,7 @@ export default function DashboardPage() {
   };
 
   // Performance data for charts
-  const performanceData = [
+const performanceData = [
     { date: "2024-01-01", clicks: 120, conversions: 8, earnings: 250 },
     { date: "2024-01-02", clicks: 180, conversions: 12, earnings: 420 },
     { date: "2024-01-03", clicks: 200, conversions: 18, earnings: 580 },
@@ -204,7 +204,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="p-4 md:p-6 lg:p-8 space-y-6 lg:space-y-8">
-        {/* Welcome Banner */}
+      {/* Welcome Banner */}
         <div className="bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 rounded-xl lg:rounded-2xl p-6 md:p-8 text-white shadow-lg hover:shadow-xl transition-all duration-300">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex-1">
@@ -304,7 +304,7 @@ export default function DashboardPage() {
           <div className="group">
             <Card className="h-full bg-white hover:bg-gradient-to-br hover:from-purple-50 hover:to-purple-100 transition-all duration-300 hover:shadow-lg hover:scale-105 border-0 shadow-md">
               <CardContent className="p-6">
-                <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between">
                   <div className="flex-1">
                     <p className="text-sm font-medium text-gray-600 mb-1">
                       Conversion Rate
@@ -381,7 +381,7 @@ export default function DashboardPage() {
                       <span>$350</span>
                       <span>$175</span>
                       <span>$0</span>
-                    </div>
+      </div>
 
                     {/* Chart Area */}
                     <div className="ml-12 h-full">
@@ -512,7 +512,7 @@ export default function DashboardPage() {
                 </div>
               </CardContent>
             </Card>
-          </div>
+      </div>
 
           <div className="group">
             <Card className="bg-white hover:shadow-xl transition-all duration-300 border-0 shadow-lg hover:scale-[1.02]">
@@ -524,7 +524,7 @@ export default function DashboardPage() {
                 <CardDescription className="text-gray-600">
                   Common affiliate tasks and tools
                 </CardDescription>
-              </CardHeader>
+          </CardHeader>
               <CardContent className="p-6 space-y-4">
                 <Button
                   variant="outline"
@@ -533,31 +533,31 @@ export default function DashboardPage() {
                   <LinkIcon className="h-5 w-5 mr-3 text-blue-600 group-hover:scale-110 transition-transform" />
                   <span className="font-medium">Create New Link</span>
                 </Button>
-                <Button
-                  variant="outline"
+            <Button
+              variant="outline"
                   className="w-full justify-start h-12 hover:bg-green-50 hover:border-green-300 hover:text-green-700 transition-all duration-200 group"
-                >
+            >
                   <BarChart3 className="h-5 w-5 mr-3 text-green-600 group-hover:scale-110 transition-transform" />
                   <span className="font-medium">View Analytics</span>
-                </Button>
-                <Button
-                  variant="outline"
+            </Button>
+            <Button
+              variant="outline"
                   className="w-full justify-start h-12 hover:bg-purple-50 hover:border-purple-300 hover:text-purple-700 transition-all duration-200 group"
-                >
+            >
                   <DollarSign className="h-5 w-5 mr-3 text-purple-600 group-hover:scale-110 transition-transform" />
                   <span className="font-medium">View Earnings</span>
-                </Button>
-                <Button
-                  variant="outline"
+            </Button>
+            <Button
+              variant="outline"
                   className="w-full justify-start h-12 hover:bg-orange-50 hover:border-orange-300 hover:text-orange-700 transition-all duration-200 group"
-                >
+            >
                   <Settings className="h-5 w-5 mr-3 text-orange-600 group-hover:scale-110 transition-transform" />
                   <span className="font-medium">Account Settings</span>
-                </Button>
-              </CardContent>
-            </Card>
+            </Button>
+          </CardContent>
+        </Card>
           </div>
-        </div>
+      </div>
 
         {/* Top Links and Recent Activity */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8">
@@ -567,11 +567,11 @@ export default function DashboardPage() {
                 <CardTitle className="text-xl font-semibold text-gray-800 flex items-center">
                   <div className="w-2 h-2 bg-indigo-500 rounded-full mr-3"></div>
                   Top Performing Links
-                </CardTitle>
+          </CardTitle>
                 <CardDescription className="text-gray-600">
                   Your best performing affiliate links
-                </CardDescription>
-              </CardHeader>
+          </CardDescription>
+        </CardHeader>
               <CardContent className="p-6">
                 <div className="space-y-4">
                   {topLinks.map((link) => (
@@ -582,7 +582,7 @@ export default function DashboardPage() {
                       <div className="flex items-center justify-between mb-2">
                         <h4 className="font-medium text-gray-900 group-hover:text-blue-700 transition-colors">
                           {link.name}
-                        </h4>
+              </h4>
                         <Badge
                           variant="secondary"
                           className="text-xs bg-green-100 text-green-800"
@@ -668,7 +668,7 @@ export default function DashboardPage() {
                       </Badge>
                     </div>
                   ))}
-                </div>
+            </div>
               </CardContent>
             </Card>
           </div>
@@ -694,7 +694,7 @@ export default function DashboardPage() {
                     className={`p-4 rounded-lg border-l-4 ${notification.color} hover:shadow-md transition-all duration-200 cursor-pointer group`}
                   >
                     <div className="flex items-start justify-between">
-                      <div className="flex-1">
+            <div className="flex-1">
                         <div className="flex items-center space-x-2 mb-1">
                           <Badge
                             variant="outline"
@@ -714,7 +714,7 @@ export default function DashboardPage() {
                         </div>
                         <h4 className="font-medium text-gray-900 mb-1 group-hover:text-gray-700 transition-colors">
                           {notification.title}
-                        </h4>
+              </h4>
                         <p className="text-sm text-gray-600 group-hover:text-gray-700 transition-colors">
                           {notification.description}
                         </p>
@@ -726,12 +726,12 @@ export default function DashboardPage() {
                       >
                         <ExternalLink className="h-4 w-4" />
                       </Button>
-                    </div>
+            </div>
                   </div>
                 ))}
-              </div>
-            </CardContent>
-          </Card>
+          </div>
+        </CardContent>
+      </Card>
         </div>
       </div>
     </div>

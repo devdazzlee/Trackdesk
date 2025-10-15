@@ -20,7 +20,7 @@ const COOKIE_NAMES = {
 // Server-side authentication utilities
 export async function getServerUser(): Promise<User | null> {
   try {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const userData = cookieStore.get(COOKIE_NAMES.USER_DATA);
 
     if (!userData) {
@@ -36,7 +36,7 @@ export async function getServerUser(): Promise<User | null> {
 
 export async function getServerToken(): Promise<string | null> {
   try {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const token = cookieStore.get(COOKIE_NAMES.ACCESS_TOKEN);
 
     return token?.value || null;

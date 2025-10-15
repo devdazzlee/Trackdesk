@@ -76,6 +76,16 @@ const affiliateNavItems = [
     ],
   },
   {
+    title: "Referral System",
+    href: "/dashboard/referrals",
+    icon: Users,
+    subItems: [
+      { title: "My Referral Codes", href: "/dashboard/referrals" },
+      { title: "Referral Analytics", href: "/dashboard/referrals/analytics" },
+      { title: "Shareable Links", href: "/dashboard/referrals/share" },
+    ],
+  },
+  {
     title: "Commissions & Payouts",
     href: "/dashboard/commissions",
     icon: DollarSign,
@@ -202,6 +212,16 @@ const adminNavItems = [
     title: "Payout Queue",
     href: "/admin/payouts",
     icon: CreditCard,
+  },
+  {
+    title: "Commission Management",
+    href: "/admin/commissions",
+    icon: DollarSign,
+    subItems: [
+      { title: "All Commissions", href: "/admin/commissions" },
+      { title: "Commission Analytics", href: "/admin/commissions/analytics" },
+      { title: "Rate Management", href: "/admin/commissions/rates" },
+    ],
   },
   {
     title: "Offers & Creatives",

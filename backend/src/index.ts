@@ -34,6 +34,8 @@ import couponsRoutes from "./routes/coupons"; // Newly added
 import notificationsRoutes from "./routes/notifications"; // Newly added
 import programUpdatesRoutes from "./routes/program-updates"; // Newly added
 import trackingRoutes from "./routes/tracking"; // CDN tracking routes
+import referralRoutes from "./routes/referral"; // Referral system routes
+import commissionManagementRoutes from "./routes/commission-management"; // Commission management routes
 
 // Load environment variables
 dotenv.config();
@@ -62,8 +64,14 @@ const server = createServer(app);
 // Initialize Socket.IO
 const io = new Server(server, {
   cors: {
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: [
+      process.env.FRONTEND_URL || "http://localhost:3001",
+      "http://localhost:3000",
+      "http://localhost:3001",
+      "null", // Allow file:// origins for testing
+    ],
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    credentials: true,
   },
 });
 
@@ -71,8 +79,15 @@ const io = new Server(server, {
 app.use(helmet());
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: [
+      process.env.FRONTEND_URL || "http://localhost:3001",
+      "http://localhost:3000",
+      "http://localhost:3001",
+      "null", // Allow file:// origins for testing
+    ],
     credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
   })
 );
 app.use(cookieParser());
@@ -113,6 +128,8 @@ app.use("/api/coupons", couponsRoutes); // Newly added
 app.use("/api/notifications", notificationsRoutes); // Newly added
 app.use("/api/program-updates", programUpdatesRoutes); // Newly added
 app.use("/api/tracking", trackingRoutes); // CDN tracking routes
+app.use("/api/referral", referralRoutes); // Referral system routes
+app.use("/api/commission-management", commissionManagementRoutes); // Commission management routes
 
 // WebSocket connection handling
 io.on("connection", (socket) => {

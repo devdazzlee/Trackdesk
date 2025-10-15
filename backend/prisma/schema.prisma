@@ -39,6 +39,7 @@ model User {
   sessions         Session[]
   notifications    Notification[]
   activities       Activity[]
+  referralUsages   ReferralUsage[]
 
   @@map("users")
 }
@@ -94,6 +95,9 @@ model AffiliateProfile {
   coupons         Coupon[]
   applications    OfferApplication[]
   fraudEvents     FraudEvent[]
+  referralCodes   ReferralCode[]
+  affiliateClicks AffiliateClick[]
+  affiliateOrders AffiliateOrder[]
 
   @@map("affiliate_profiles")
 }
@@ -307,6 +311,111 @@ model Commission {
   @@map("commissions")
 }
 
+// Referral Code Management
+model ReferralCode {
+  id             String       @id @default(cuid())
+  affiliateId    String
+  code           String       @unique
+  type           ReferralType @default(BOTH)
+  commissionRate Float
+  productId      String?
+  maxUses        Int?
+  currentUses    Int          @default(0)
+  expiresAt      DateTime?
+  isActive       Boolean      @default(true)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  affiliate AffiliateProfile @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+  usages    ReferralUsage[]
+
+  @@map("referral_codes")
+}
+
+// Referral Usage Tracking
+model ReferralUsage {
+  id               String         @id @default(cuid())
+  referralCodeId   String
+  userId           String
+  type             ReferralType
+  productId        String?
+  orderValue       Float?
+  commissionAmount Float
+  status           ReferralStatus @default(PENDING)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+
+  // Relations
+  referralCode ReferralCode @relation(fields: [referralCodeId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("referral_usages")
+}
+
+// Affiliate Click Tracking
+model AffiliateClick {
+  id           String  @id @default(cuid())
+  affiliateId  String
+  referralCode String
+  storeId      String
+  url          String
+  referrer     String?
+  userAgent    String?
+  utmSource    String?
+  utmMedium    String?
+  utmCampaign  String?
+  ipAddress    String?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+
+  // Relations
+  affiliate AffiliateProfile @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+
+  @@index([affiliateId])
+  @@index([referralCode])
+  @@index([createdAt])
+  @@map("affiliate_clicks")
+}
+
+// Affiliate Order Tracking
+model AffiliateOrder {
+  id               String  @id @default(cuid())
+  affiliateId      String
+  referralCode     String
+  storeId          String
+  orderId          String  @unique
+  orderValue       Float
+  currency         String  @default("USD")
+  customerEmail    String?
+  commissionAmount Float
+  commissionRate   Float
+  status           String  @default("PENDING") // PENDING, APPROVED, PAID, CANCELLED
+  items            Json?
+  utmSource        String?
+  utmMedium        String?
+  utmCampaign      String?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  affiliate AffiliateProfile @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+
+  @@index([affiliateId])
+  @@index([referralCode])
+  @@index([storeId])
+  @@index([orderId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("affiliate_orders")
+}
+
 // Payout Management
 model Payout {
   id              String  @id @default(cuid())
@@ -504,6 +613,19 @@ enum CommissionStatus {
   APPROVED
   PAID
   CANCELLED
+}
+
+enum ReferralType {
+  SIGNUP
+  PRODUCT
+  BOTH
+}
+
+enum ReferralStatus {
+  PENDING
+  APPROVED
+  PAID
+  REJECTED
 }
 
 enum PayoutStatus {
@@ -1720,16 +1842,16 @@ enum AttributionType {
 
 // Fraud Prevention Models
 model FraudRule {
-  id          String   @id @default(cuid())
+  id          String        @id @default(cuid())
   name        String
   description String
   type        FraudType
-  conditions  Json     @default("[]")
-  actions     Json     @default("[]")
+  conditions  Json          @default("[]")
+  actions     Json          @default("[]")
   severity    FraudSeverity
-  status      String   @default("ACTIVE")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  status      String        @default("ACTIVE")
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
 
   // Relations
   events FraudEvent[]
@@ -1738,25 +1860,25 @@ model FraudRule {
 }
 
 model FraudEvent {
-  id           String   @id @default(cuid())
+  id           String    @id @default(cuid())
   ruleId       String
   type         String
   severity     String
-  data         Json     @default("{}")
+  data         Json      @default("{}")
   score        Float
-  status       String   @default("DETECTED")
+  status       String    @default("DETECTED")
   action       String
   ipAddress    String
   userAgent    String
   affiliateId  String?
   clickId      String?
   conversionId String?
-  createdAt    DateTime @default(now())
+  createdAt    DateTime  @default(now())
   reviewedAt   DateTime?
   resolvedAt   DateTime?
 
   // Relations
-  rule     FraudRule       @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  rule      FraudRule         @relation(fields: [ruleId], references: [id], onDelete: Cascade)
   affiliate AffiliateProfile? @relation(fields: [affiliateId], references: [id], onDelete: SetNull)
 
   @@map("fraud_events")

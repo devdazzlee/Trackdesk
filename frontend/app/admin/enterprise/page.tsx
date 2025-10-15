@@ -1,22 +1,40 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { 
-  Building2, 
-  Settings, 
-  Palette, 
-  Globe, 
-  Users, 
-  Shield, 
+import { useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Building2,
+  Settings,
+  Palette,
+  Globe,
+  Users,
+  Shield,
   Crown,
   Plus,
   Edit,
@@ -31,9 +49,9 @@ import {
   AlertTriangle,
   ExternalLink,
   Lock,
-  Unlock
-} from "lucide-react"
-import { toast } from "sonner"
+  Unlock,
+} from "lucide-react";
+import { toast } from "sonner";
 
 // Mock data for white-label settings
 const whiteLabelSettings = {
@@ -49,8 +67,8 @@ const whiteLabelSettings = {
   removeBranding: true,
   customFooter: "© 2024 Trackdesk Pro. All rights reserved.",
   customTermsUrl: "https://trackdesk.com/terms",
-  customPrivacyUrl: "https://trackdesk.com/privacy"
-}
+  customPrivacyUrl: "https://trackdesk.com/privacy",
+};
 
 // Mock data for tenants
 const tenants = [
@@ -68,8 +86,8 @@ const tenants = [
       branding: true,
       customDomain: true,
       apiAccess: true,
-      whiteLabel: true
-    }
+      whiteLabel: true,
+    },
   },
   {
     id: "TENANT-002",
@@ -85,8 +103,8 @@ const tenants = [
       branding: false,
       customDomain: true,
       apiAccess: true,
-      whiteLabel: false
-    }
+      whiteLabel: false,
+    },
   },
   {
     id: "TENANT-003",
@@ -102,10 +120,10 @@ const tenants = [
       branding: true,
       customDomain: true,
       apiAccess: false,
-      whiteLabel: true
-    }
-  }
-]
+      whiteLabel: true,
+    },
+  },
+];
 
 // Mock data for enterprise features
 const enterpriseFeatures = [
@@ -115,7 +133,7 @@ const enterpriseFeatures = [
     description: "Customize the platform with your own branding",
     status: "enabled",
     usage: "95%",
-    cost: 500
+    cost: 500,
   },
   {
     id: "FEAT-002",
@@ -123,7 +141,7 @@ const enterpriseFeatures = [
     description: "Use your own domain for the affiliate portal",
     status: "enabled",
     usage: "87%",
-    cost: 200
+    cost: 200,
   },
   {
     id: "FEAT-003",
@@ -131,7 +149,7 @@ const enterpriseFeatures = [
     description: "Full API access for custom integrations",
     status: "enabled",
     usage: "78%",
-    cost: 300
+    cost: 300,
   },
   {
     id: "FEAT-004",
@@ -139,7 +157,7 @@ const enterpriseFeatures = [
     description: "Support for multiple organizations",
     status: "enabled",
     usage: "92%",
-    cost: 1000
+    cost: 1000,
   },
   {
     id: "FEAT-005",
@@ -147,7 +165,7 @@ const enterpriseFeatures = [
     description: "Custom analytics and reporting",
     status: "enabled",
     usage: "83%",
-    cost: 400
+    cost: 400,
   },
   {
     id: "FEAT-006",
@@ -155,68 +173,80 @@ const enterpriseFeatures = [
     description: "24/7 priority support",
     status: "enabled",
     usage: "100%",
-    cost: 600
-  }
-]
+    cost: 600,
+  },
+];
 
 export default function EnterprisePage() {
-  const [selectedTab, setSelectedTab] = useState("white-label")
-  const [isEditing, setIsEditing] = useState(false)
-  const [settings, setSettings] = useState(whiteLabelSettings)
+  const [selectedTab, setSelectedTab] = useState("white-label");
+  const [isEditing, setIsEditing] = useState(false);
+  const [settings, setSettings] = useState(whiteLabelSettings);
 
   const handleSaveSettings = () => {
-    toast.success("Settings saved successfully!")
-    setIsEditing(false)
-  }
+    toast.success("Settings saved successfully!");
+    setIsEditing(false);
+  };
 
   const handleCreateTenant = () => {
-    toast.success("Tenant created successfully!")
-  }
+    toast.success("Tenant created successfully!");
+  };
 
   const handleSuspendTenant = (tenantId: string) => {
-    toast.success(`Tenant ${tenantId} suspended`)
-  }
+    toast.success(`Tenant ${tenantId} suspended`);
+  };
 
   const handleActivateTenant = (tenantId: string) => {
-    toast.success(`Tenant ${tenantId} activated`)
-  }
+    toast.success(`Tenant ${tenantId} activated`);
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "active":
-        return <Badge variant="default" className="bg-green-100 text-green-800">Active</Badge>
+        return (
+          <Badge variant="default" className="bg-green-100 text-green-800">
+            Active
+          </Badge>
+        );
       case "suspended":
-        return <Badge variant="destructive">Suspended</Badge>
+        return <Badge variant="destructive">Suspended</Badge>;
       case "pending":
-        return <Badge variant="secondary">Pending</Badge>
+        return <Badge variant="secondary">Pending</Badge>;
       default:
-        return <Badge variant="secondary">Unknown</Badge>
+        return <Badge variant="secondary">Unknown</Badge>;
     }
-  }
+  };
 
   const getPlanBadge = (plan: string) => {
     switch (plan) {
       case "enterprise":
-        return <Badge variant="default" className="bg-purple-100 text-purple-800">Enterprise</Badge>
+        return (
+          <Badge variant="default" className="bg-purple-100 text-purple-800">
+            Enterprise
+          </Badge>
+        );
       case "professional":
-        return <Badge variant="default" className="bg-blue-100 text-blue-800">Professional</Badge>
+        return (
+          <Badge variant="default" className="bg-blue-100 text-blue-800">
+            Professional
+          </Badge>
+        );
       case "basic":
-        return <Badge variant="outline">Basic</Badge>
+        return <Badge variant="outline">Basic</Badge>;
       default:
-        return <Badge variant="secondary">{plan}</Badge>
+        return <Badge variant="secondary">{plan}</Badge>;
     }
-  }
+  };
 
   const getFeatureStatusIcon = (status: string) => {
     switch (status) {
       case "enabled":
-        return <CheckCircle className="h-4 w-4 text-green-600" />
+        return <CheckCircle className="h-4 w-4 text-green-600" />;
       case "disabled":
-        return <XCircle className="h-4 w-4 text-red-600" />
+        return <XCircle className="h-4 w-4 text-red-600" />;
       default:
-        return <AlertTriangle className="h-4 w-4 text-yellow-600" />
+        return <AlertTriangle className="h-4 w-4 text-yellow-600" />;
     }
-  }
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -227,7 +257,9 @@ export default function EnterprisePage() {
             <Crown className="h-6 w-6 mr-2 text-purple-600" />
             Enterprise Features
           </h1>
-          <p className="text-slate-600">White-labeling, multi-tenancy, and enterprise settings</p>
+          <p className="text-slate-600">
+            White-labeling, multi-tenancy, and enterprise settings
+          </p>
         </div>
         <div className="flex items-center space-x-3">
           <Button variant="outline" size="sm">
@@ -242,7 +274,11 @@ export default function EnterprisePage() {
       </div>
 
       {/* Enterprise Tabs */}
-      <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">
+      <Tabs
+        value={selectedTab}
+        onValueChange={setSelectedTab}
+        className="space-y-6"
+      >
         <TabsList>
           <TabsTrigger value="white-label">White-Label</TabsTrigger>
           <TabsTrigger value="tenants">Multi-Tenancy</TabsTrigger>
@@ -254,14 +290,20 @@ export default function EnterprisePage() {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl font-semibold">White-Label Branding</h2>
-              <p className="text-slate-600">Customize the platform with your own branding</p>
+              <p className="text-slate-600">
+                Customize the platform with your own branding
+              </p>
             </div>
             <div className="flex items-center space-x-2">
               <Button variant="outline" size="sm">
                 <Eye className="h-4 w-4 mr-2" />
                 Preview
               </Button>
-              <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsEditing(true)}
+              >
                 <Edit className="h-4 w-4 mr-2" />
                 Edit
               </Button>
@@ -276,26 +318,32 @@ export default function EnterprisePage() {
                   <Palette className="h-5 w-5 mr-2" />
                   Branding Settings
                 </CardTitle>
-                <CardDescription>Configure your brand appearance</CardDescription>
+                <CardDescription>
+                  Configure your brand appearance
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
                   <Label htmlFor="companyName">Company Name</Label>
-                  <Input 
-                    id="companyName" 
+                  <Input
+                    id="companyName"
                     value={settings.companyName}
-                    onChange={(e) => setSettings({...settings, companyName: e.target.value})}
+                    onChange={(e) =>
+                      setSettings({ ...settings, companyName: e.target.value })
+                    }
                     disabled={!isEditing}
                   />
                 </div>
-                
+
                 <div>
                   <Label htmlFor="logo">Logo URL</Label>
                   <div className="flex items-center space-x-2">
-                    <Input 
-                      id="logo" 
+                    <Input
+                      id="logo"
                       value={settings.logo}
-                      onChange={(e) => setSettings({...settings, logo: e.target.value})}
+                      onChange={(e) =>
+                        setSettings({ ...settings, logo: e.target.value })
+                      }
                       disabled={!isEditing}
                     />
                     <Button variant="outline" size="sm" disabled={!isEditing}>
@@ -307,10 +355,12 @@ export default function EnterprisePage() {
                 <div>
                   <Label htmlFor="favicon">Favicon URL</Label>
                   <div className="flex items-center space-x-2">
-                    <Input 
-                      id="favicon" 
+                    <Input
+                      id="favicon"
                       value={settings.favicon}
-                      onChange={(e) => setSettings({...settings, favicon: e.target.value})}
+                      onChange={(e) =>
+                        setSettings({ ...settings, favicon: e.target.value })
+                      }
                       disabled={!isEditing}
                     />
                     <Button variant="outline" size="sm" disabled={!isEditing}>
@@ -322,31 +372,46 @@ export default function EnterprisePage() {
                 <div className="grid grid-cols-3 gap-4">
                   <div>
                     <Label htmlFor="primaryColor">Primary Color</Label>
-                    <Input 
-                      id="primaryColor" 
+                    <Input
+                      id="primaryColor"
                       type="color"
                       value={settings.primaryColor}
-                      onChange={(e) => setSettings({...settings, primaryColor: e.target.value})}
+                      onChange={(e) =>
+                        setSettings({
+                          ...settings,
+                          primaryColor: e.target.value,
+                        })
+                      }
                       disabled={!isEditing}
                     />
                   </div>
                   <div>
                     <Label htmlFor="secondaryColor">Secondary Color</Label>
-                    <Input 
-                      id="secondaryColor" 
+                    <Input
+                      id="secondaryColor"
                       type="color"
                       value={settings.secondaryColor}
-                      onChange={(e) => setSettings({...settings, secondaryColor: e.target.value})}
+                      onChange={(e) =>
+                        setSettings({
+                          ...settings,
+                          secondaryColor: e.target.value,
+                        })
+                      }
                       disabled={!isEditing}
                     />
                   </div>
                   <div>
                     <Label htmlFor="accentColor">Accent Color</Label>
-                    <Input 
-                      id="accentColor" 
+                    <Input
+                      id="accentColor"
                       type="color"
                       value={settings.accentColor}
-                      onChange={(e) => setSettings({...settings, accentColor: e.target.value})}
+                      onChange={(e) =>
+                        setSettings({
+                          ...settings,
+                          accentColor: e.target.value,
+                        })
+                      }
                       disabled={!isEditing}
                     />
                   </div>
@@ -361,15 +426,19 @@ export default function EnterprisePage() {
                   <Globe className="h-5 w-5 mr-2" />
                   Domain Settings
                 </CardTitle>
-                <CardDescription>Configure custom domains and URLs</CardDescription>
+                <CardDescription>
+                  Configure custom domains and URLs
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
                   <Label htmlFor="customDomain">Custom Domain</Label>
-                  <Input 
-                    id="customDomain" 
+                  <Input
+                    id="customDomain"
                     value={settings.customDomain}
-                    onChange={(e) => setSettings({...settings, customDomain: e.target.value})}
+                    onChange={(e) =>
+                      setSettings({ ...settings, customDomain: e.target.value })
+                    }
                     disabled={!isEditing}
                     placeholder="affiliate.yourcompany.com"
                   />
@@ -377,10 +446,12 @@ export default function EnterprisePage() {
 
                 <div>
                   <Label htmlFor="customEmail">Support Email</Label>
-                  <Input 
-                    id="customEmail" 
+                  <Input
+                    id="customEmail"
                     value={settings.customEmail}
-                    onChange={(e) => setSettings({...settings, customEmail: e.target.value})}
+                    onChange={(e) =>
+                      setSettings({ ...settings, customEmail: e.target.value })
+                    }
                     disabled={!isEditing}
                     placeholder="support@yourcompany.com"
                   />
@@ -388,10 +459,15 @@ export default function EnterprisePage() {
 
                 <div>
                   <Label htmlFor="customSupportUrl">Support URL</Label>
-                  <Input 
-                    id="customSupportUrl" 
+                  <Input
+                    id="customSupportUrl"
                     value={settings.customSupportUrl}
-                    onChange={(e) => setSettings({...settings, customSupportUrl: e.target.value})}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        customSupportUrl: e.target.value,
+                      })
+                    }
                     disabled={!isEditing}
                     placeholder="https://support.yourcompany.com"
                   />
@@ -399,10 +475,12 @@ export default function EnterprisePage() {
 
                 <div>
                   <Label htmlFor="customFooter">Footer Text</Label>
-                  <Input 
-                    id="customFooter" 
+                  <Input
+                    id="customFooter"
                     value={settings.customFooter}
-                    onChange={(e) => setSettings({...settings, customFooter: e.target.value})}
+                    onChange={(e) =>
+                      setSettings({ ...settings, customFooter: e.target.value })
+                    }
                     disabled={!isEditing}
                     placeholder="© 2024 Your Company. All rights reserved."
                   />
@@ -411,7 +489,9 @@ export default function EnterprisePage() {
                 <div className="flex items-center space-x-2">
                   <Switch
                     checked={settings.removeBranding}
-                    onCheckedChange={(checked) => setSettings({...settings, removeBranding: checked})}
+                    onCheckedChange={(checked) =>
+                      setSettings({ ...settings, removeBranding: checked })
+                    }
                     disabled={!isEditing}
                   />
                   <Label>Remove Trackdesk Branding</Label>
@@ -427,26 +507,38 @@ export default function EnterprisePage() {
                 <Shield className="h-5 w-5 mr-2" />
                 Legal Pages
               </CardTitle>
-              <CardDescription>Configure terms of service and privacy policy</CardDescription>
+              <CardDescription>
+                Configure terms of service and privacy policy
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="customTermsUrl">Terms of Service URL</Label>
-                  <Input 
-                    id="customTermsUrl" 
+                  <Input
+                    id="customTermsUrl"
                     value={settings.customTermsUrl}
-                    onChange={(e) => setSettings({...settings, customTermsUrl: e.target.value})}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        customTermsUrl: e.target.value,
+                      })
+                    }
                     disabled={!isEditing}
                     placeholder="https://yourcompany.com/terms"
                   />
                 </div>
                 <div>
                   <Label htmlFor="customPrivacyUrl">Privacy Policy URL</Label>
-                  <Input 
-                    id="customPrivacyUrl" 
+                  <Input
+                    id="customPrivacyUrl"
                     value={settings.customPrivacyUrl}
-                    onChange={(e) => setSettings({...settings, customPrivacyUrl: e.target.value})}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        customPrivacyUrl: e.target.value,
+                      })
+                    }
                     disabled={!isEditing}
                     placeholder="https://yourcompany.com/privacy"
                   />
@@ -474,7 +566,9 @@ export default function EnterprisePage() {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl font-semibold">Multi-Tenancy</h2>
-              <p className="text-slate-600">Manage multiple organizations and tenants</p>
+              <p className="text-slate-600">
+                Manage multiple organizations and tenants
+              </p>
             </div>
             <Button onClick={handleCreateTenant}>
               <Plus className="h-4 w-4 mr-2" />
@@ -508,12 +602,20 @@ export default function EnterprisePage() {
                         Edit
                       </Button>
                       {tenant.status === "active" ? (
-                        <Button variant="outline" size="sm" onClick={() => handleSuspendTenant(tenant.id)}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleSuspendTenant(tenant.id)}
+                        >
                           <Lock className="h-4 w-4 mr-2" />
                           Suspend
                         </Button>
                       ) : (
-                        <Button variant="outline" size="sm" onClick={() => handleActivateTenant(tenant.id)}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleActivateTenant(tenant.id)}
+                        >
                           <Unlock className="h-4 w-4 mr-2" />
                           Activate
                         </Button>
@@ -525,19 +627,27 @@ export default function EnterprisePage() {
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       <div className="text-center">
-                        <div className="text-lg font-semibold text-blue-600">{tenant.users}</div>
+                        <div className="text-lg font-semibold text-blue-600">
+                          {tenant.users}
+                        </div>
                         <div className="text-xs text-slate-500">Users</div>
                       </div>
                       <div className="text-center">
-                        <div className="text-lg font-semibold text-green-600">{tenant.affiliates}</div>
+                        <div className="text-lg font-semibold text-green-600">
+                          {tenant.affiliates}
+                        </div>
                         <div className="text-xs text-slate-500">Affiliates</div>
                       </div>
                       <div className="text-center">
-                        <div className="text-lg font-semibold text-purple-600">${tenant.revenue.toLocaleString()}</div>
+                        <div className="text-lg font-semibold text-purple-600">
+                          ${tenant.revenue.toLocaleString()}
+                        </div>
                         <div className="text-xs text-slate-500">Revenue</div>
                       </div>
                       <div className="text-center">
-                        <div className="text-lg font-semibold text-orange-600">{tenant.plan}</div>
+                        <div className="text-lg font-semibold text-orange-600">
+                          {tenant.plan}
+                        </div>
                         <div className="text-xs text-slate-500">Plan</div>
                       </div>
                     </div>
@@ -546,19 +656,35 @@ export default function EnterprisePage() {
                       <Label className="text-sm font-medium">Features</Label>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">
                         <div className="flex items-center space-x-2">
-                          {settings.branding ? <CheckCircle className="h-4 w-4 text-green-600" /> : <XCircle className="h-4 w-4 text-red-600" />}
+                          {tenant.settings.branding ? (
+                            <CheckCircle className="h-4 w-4 text-green-600" />
+                          ) : (
+                            <XCircle className="h-4 w-4 text-red-600" />
+                          )}
                           <span className="text-sm">Branding</span>
                         </div>
                         <div className="flex items-center space-x-2">
-                          {settings.customDomain ? <CheckCircle className="h-4 w-4 text-green-600" /> : <XCircle className="h-4 w-4 text-red-600" />}
+                          {tenant.settings.customDomain ? (
+                            <CheckCircle className="h-4 w-4 text-green-600" />
+                          ) : (
+                            <XCircle className="h-4 w-4 text-red-600" />
+                          )}
                           <span className="text-sm">Custom Domain</span>
                         </div>
                         <div className="flex items-center space-x-2">
-                          {settings.apiAccess ? <CheckCircle className="h-4 w-4 text-green-600" /> : <XCircle className="h-4 w-4 text-red-600" />}
+                          {tenant.settings.apiAccess ? (
+                            <CheckCircle className="h-4 w-4 text-green-600" />
+                          ) : (
+                            <XCircle className="h-4 w-4 text-red-600" />
+                          )}
                           <span className="text-sm">API Access</span>
                         </div>
                         <div className="flex items-center space-x-2">
-                          {settings.whiteLabel ? <CheckCircle className="h-4 w-4 text-green-600" /> : <XCircle className="h-4 w-4 text-red-600" />}
+                          {tenant.settings.whiteLabel ? (
+                            <CheckCircle className="h-4 w-4 text-green-600" />
+                          ) : (
+                            <XCircle className="h-4 w-4 text-red-600" />
+                          )}
                           <span className="text-sm">White Label</span>
                         </div>
                       </div>
@@ -575,7 +701,9 @@ export default function EnterprisePage() {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl font-semibold">Enterprise Features</h2>
-              <p className="text-slate-600">Manage enterprise-level features and capabilities</p>
+              <p className="text-slate-600">
+                Manage enterprise-level features and capabilities
+              </p>
             </div>
           </div>
 
@@ -619,7 +747,9 @@ export default function EnterprisePage() {
           <Card>
             <CardHeader>
               <CardTitle>Enterprise Feature Summary</CardTitle>
-              <CardDescription>Overview of enterprise capabilities</CardDescription>
+              <CardDescription>
+                Overview of enterprise capabilities
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -636,7 +766,9 @@ export default function EnterprisePage() {
                   <div className="text-sm text-slate-500">Avg. Usage</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-orange-600">$3,000</div>
+                  <div className="text-2xl font-bold text-orange-600">
+                    $3,000
+                  </div>
                   <div className="text-sm text-slate-500">Monthly Cost</div>
                 </div>
               </div>
@@ -645,7 +777,5 @@ export default function EnterprisePage() {
         </TabsContent>
       </Tabs>
     </div>
-  )
+  );
 }
-
-
