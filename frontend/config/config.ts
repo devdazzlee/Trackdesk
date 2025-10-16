@@ -1,8 +1,8 @@
 // Development  URL
-export const API_URL = "http://localhost:3003/api";
+// export const API_URL = "http://localhost:3003/api";
 
 // Production URL
-// export const API_URL = "https://trackdesk.com/api";
+export const API_URL = "https://trackdesk.com/api";
 
 // Configuration object
 export const config = {
