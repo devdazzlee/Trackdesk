@@ -11,9 +11,12 @@ router.post("/click", async (req, res) => {
       referralCode: z.string(),
       storeId: z.string(),
       url: z.string(),
-      referrer: z.string().optional(),
-      userAgent: z.string().optional(),
-      timestamp: z.string(),
+      referrer: z.string().optional().nullable(),
+      userAgent: z.string().optional().nullable(),
+      timestamp: z.string().optional().nullable(),
+      utmSource: z.string().optional().nullable(),
+      utmMedium: z.string().optional().nullable(),
+      utmCampaign: z.string().optional().nullable(),
       utm: z
         .object({
           utm_source: z.string().nullable().optional(),
@@ -22,10 +25,14 @@ router.post("/click", async (req, res) => {
           utm_term: z.string().nullable().optional(),
           utm_content: z.string().nullable().optional(),
         })
-        .optional(),
+        .optional()
+        .nullable(),
     });
 
     const data = schema.parse(req.body);
+
+    // Auto-generate timestamp if not provided
+    const timestamp = data.timestamp || new Date().toISOString();
 
     // Find the referral code
     const referralCode = await prisma.referralCode.findFirst({
@@ -40,7 +47,7 @@ router.post("/click", async (req, res) => {
     }
 
     // Track the click
-    await prisma.affiliateClick.create({
+    const click = await prisma.affiliateClick.create({
       data: {
         affiliateId: referralCode.affiliateId,
         referralCode: data.referralCode,
@@ -48,9 +55,9 @@ router.post("/click", async (req, res) => {
         url: data.url,
         referrer: data.referrer,
         userAgent: data.userAgent,
-        utmSource: data.utm?.utm_source,
-        utmMedium: data.utm?.utm_medium,
-        utmCampaign: data.utm?.utm_campaign,
+        utmSource: data.utmSource || data.utm?.utm_source,
+        utmMedium: data.utmMedium || data.utm?.utm_medium,
+        utmCampaign: data.utmCampaign || data.utm?.utm_campaign,
       },
     });
 
@@ -60,10 +67,79 @@ router.post("/click", async (req, res) => {
       data: { totalClicks: { increment: 1 } },
     });
 
-    res.json({ success: true, message: "Click tracked" });
+    res.json({
+      success: true,
+      message: "Click tracked",
+      clickId: click.id,
+      affiliateId: referralCode.affiliateId,
+    });
   } catch (error) {
     console.error("Error tracking click:", error);
     res.status(500).json({ error: "Failed to track click" });
+  }
+});
+
+// Track multiple events (used by trackdesk.js CDN script)
+router.post("/events", async (req, res) => {
+  try {
+    const schema = z.object({
+      events: z.array(
+        z.object({
+          id: z.string(),
+          event: z.string(),
+          data: z.any(),
+          timestamp: z.string(),
+          sessionId: z.string(),
+          userId: z.string().optional().nullable(),
+          websiteId: z.string(),
+          page: z.object({
+            url: z.string(),
+            title: z.string(),
+            referrer: z.string().optional().nullable(),
+            path: z.string(),
+            search: z.string(),
+            hash: z.string(),
+          }),
+          device: z.object({
+            userAgent: z.string(),
+            language: z.string(),
+            platform: z.string(),
+            screenWidth: z.number(),
+            screenHeight: z.number(),
+            viewportWidth: z.number(),
+            viewportHeight: z.number(),
+            colorDepth: z.number(),
+            timezone: z.string(),
+          }),
+          browser: z.object({
+            browser: z.string(),
+            version: z.string(),
+          }),
+        })
+      ),
+      websiteId: z.string(),
+      sessionId: z.string(),
+      timestamp: z.string(),
+    });
+
+    const data = schema.parse(req.body);
+
+    // Store events (you can process them as needed)
+    console.log(
+      `📊 Received ${data.events.length} tracking events from session ${data.sessionId}`
+    );
+
+    // For now, just acknowledge receipt
+    // In production, you'd store these in TrackingEvent table
+
+    res.json({
+      success: true,
+      processed: data.events.length,
+      message: "Events received",
+    });
+  } catch (error) {
+    console.error("Error tracking events:", error);
+    res.status(500).json({ error: "Failed to track events" });
   }
 });
 
@@ -110,18 +186,19 @@ router.post("/order", async (req, res) => {
       orderId: z.string(),
       orderValue: z.number(),
       currency: z.string().default("USD"),
-      customerEmail: z.string().optional(),
+      customerEmail: z.string().optional().nullable(),
       items: z
         .array(
           z.object({
-            id: z.string(),
+            id: z.string().optional().nullable(),
+            productId: z.string().optional().nullable(),
             name: z.string(),
             price: z.number(),
             quantity: z.number(),
           })
         )
         .optional(),
-      timestamp: z.string(),
+      timestamp: z.string().optional().nullable(),
       utm: z
         .object({
           utm_source: z.string().nullable().optional(),
@@ -130,10 +207,14 @@ router.post("/order", async (req, res) => {
           utm_term: z.string().nullable().optional(),
           utm_content: z.string().nullable().optional(),
         })
-        .optional(),
+        .optional()
+        .nullable(),
     });
 
     const data = schema.parse(req.body);
+
+    // Auto-generate timestamp if not provided
+    const timestamp = data.timestamp || new Date().toISOString();
 
     // Find the referral code
     const referralCode = await prisma.referralCode.findFirst({

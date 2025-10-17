@@ -70,13 +70,13 @@ export declare class LinksService {
             createdAt: Date;
             ipAddress: string | null;
             userAgent: string | null;
-            referralCode: string;
             affiliateId: string;
+            referralCode: string;
             storeId: string;
-            referrer: string | null;
             utmSource: string | null;
             utmMedium: string | null;
             utmCampaign: string | null;
+            referrer: string | null;
         }[];
         totalClicks: number;
         totalConversions: number;
@@ -92,13 +92,13 @@ export declare class LinksService {
             createdAt: Date;
             ipAddress: string | null;
             userAgent: string | null;
-            referralCode: string;
             affiliateId: string;
+            referralCode: string;
             storeId: string;
-            referrer: string | null;
             utmSource: string | null;
             utmMedium: string | null;
             utmCampaign: string | null;
+            referrer: string | null;
         };
     }>;
     updateLinkStatus(userId: string, linkId: string, isActive: boolean): Promise<{

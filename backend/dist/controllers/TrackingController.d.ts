@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Request, Response } from "express";
 export declare class TrackingController {
     trackEvents(req: Request, res: Response): Promise<Response<any, Record<string, any>>>;
     getTrackingStats(req: Request, res: Response): Promise<void>;

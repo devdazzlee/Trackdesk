@@ -53,7 +53,7 @@ const trackEventsSchema = zod_1.z.object({
             referrer: zod_1.z.string().optional(),
             path: zod_1.z.string(),
             search: zod_1.z.string(),
-            hash: zod_1.z.string()
+            hash: zod_1.z.string(),
         }),
         device: zod_1.z.object({
             userAgent: zod_1.z.string(),
@@ -64,51 +64,55 @@ const trackEventsSchema = zod_1.z.object({
             viewportWidth: zod_1.z.number(),
             viewportHeight: zod_1.z.number(),
             colorDepth: zod_1.z.number(),
-            timezone: zod_1.z.string()
+            timezone: zod_1.z.string(),
         }),
         browser: zod_1.z.object({
             browser: zod_1.z.string(),
-            version: zod_1.z.string()
-        })
+            version: zod_1.z.string(),
+        }),
     })),
     websiteId: zod_1.z.string(),
     sessionId: zod_1.z.string(),
-    timestamp: zod_1.z.string()
+    timestamp: zod_1.z.string(),
 });
 const createWebsiteSchema = zod_1.z.object({
     name: zod_1.z.string().min(1),
     domain: zod_1.z.string().min(1),
     description: zod_1.z.string().optional(),
-    settings: zod_1.z.object({
+    settings: zod_1.z
+        .object({
         trackClicks: zod_1.z.boolean().default(true),
         trackScrolls: zod_1.z.boolean().default(true),
         trackForms: zod_1.z.boolean().default(true),
         trackPageViews: zod_1.z.boolean().default(true),
         trackConversions: zod_1.z.boolean().default(true),
         respectDoNotTrack: zod_1.z.boolean().default(true),
-        anonymizeIP: zod_1.z.boolean().default(false)
-    }).optional()
+        anonymizeIP: zod_1.z.boolean().default(false),
+    })
+        .optional(),
 });
 const updateWebsiteSchema = zod_1.z.object({
     name: zod_1.z.string().min(1).optional(),
     domain: zod_1.z.string().min(1).optional(),
     description: zod_1.z.string().optional(),
-    settings: zod_1.z.object({
+    settings: zod_1.z
+        .object({
         trackClicks: zod_1.z.boolean(),
         trackScrolls: zod_1.z.boolean(),
         trackForms: zod_1.z.boolean(),
         trackPageViews: zod_1.z.boolean(),
         trackConversions: zod_1.z.boolean(),
         respectDoNotTrack: zod_1.z.boolean(),
-        anonymizeIP: zod_1.z.boolean()
-    }).optional()
+        anonymizeIP: zod_1.z.boolean(),
+    })
+        .optional(),
 });
 class TrackingController {
     async trackEvents(req, res) {
         try {
             const data = trackEventsSchema.parse(req.body);
             const processData = {
-                events: data.events.map(event => ({
+                events: data.events.map((event) => ({
                     id: event.id || crypto.randomUUID(),
                     event: event.event,
                     data: event.data,
@@ -117,66 +121,66 @@ class TrackingController {
                     userId: event.userId,
                     websiteId: event.websiteId,
                     page: {
-                        url: event.page?.url || '',
-                        title: event.page?.title || '',
+                        url: event.page?.url || "",
+                        title: event.page?.title || "",
                         referrer: event.page?.referrer,
-                        path: event.page?.path || '',
-                        search: event.page?.search || '',
-                        hash: event.page?.hash || ''
+                        path: event.page?.path || "",
+                        search: event.page?.search || "",
+                        hash: event.page?.hash || "",
                     },
                     device: {
-                        userAgent: event.device?.userAgent || '',
-                        language: event.device?.language || 'en',
-                        platform: event.device?.platform || 'unknown',
+                        userAgent: event.device?.userAgent || "",
+                        language: event.device?.language || "en",
+                        platform: event.device?.platform || "unknown",
                         screenWidth: event.device?.screenWidth || 1920,
                         screenHeight: event.device?.screenHeight || 1080,
                         viewportWidth: event.device?.viewportWidth || 1920,
                         viewportHeight: event.device?.viewportHeight || 1080,
                         colorDepth: event.device?.colorDepth || 24,
-                        timezone: event.device?.timezone || 'UTC'
+                        timezone: event.device?.timezone || "UTC",
                     },
                     browser: {
-                        browser: event.browser?.browser || 'unknown',
-                        version: event.browser?.version || '1.0'
+                        browser: event.browser?.browser || "unknown",
+                        version: event.browser?.version || "1.0",
                     },
                     eventType: event.event,
-                    trackingCodeId: 'default',
-                    ipAddress: '',
-                    userAgent: '',
-                    referrer: ''
+                    trackingCodeId: "default",
+                    ipAddress: "",
+                    userAgent: "",
+                    referrer: "",
                 })),
-                websiteId: data.events[0]?.websiteId || '',
-                sessionId: data.events[0]?.sessionId || '',
-                timestamp: data.events[0]?.timestamp || new Date().toISOString()
+                websiteId: data.events[0]?.websiteId || "",
+                sessionId: data.events[0]?.sessionId || "",
+                timestamp: data.events[0]?.timestamp || new Date().toISOString(),
             };
             const result = await trackingService.processEvents(processData);
             res.json({
                 success: true,
                 processed: result.processed,
                 failed: result.failed,
-                message: 'Events processed successfully'
+                message: "Events processed successfully",
             });
         }
         catch (error) {
-            if (error.name === 'ZodError') {
+            if (error.name === "ZodError") {
                 return res.status(400).json({
-                    error: 'Invalid event data',
-                    details: error.errors
+                    error: "Invalid event data",
+                    details: error.errors,
                 });
             }
-            console.error('Tracking error:', error);
-            res.status(500).json({ error: 'Failed to process events' });
+            console.error("Tracking error:", error);
+            res.status(500).json({ error: "Failed to process events" });
         }
     }
     async getTrackingStats(req, res) {
         try {
             const { websiteId } = req.params;
-            const { startDate, endDate, groupBy = 'day', timezone = 'UTC' } = req.query;
+            const { startDate, endDate, groupBy = "day", timezone = "UTC", } = req.query;
             const stats = await trackingService.getTrackingStats(websiteId, {
                 startDate: startDate,
                 endDate: endDate,
                 groupBy: groupBy,
-                timezone: timezone
+                timezone: timezone,
             });
             res.json(stats);
         }
@@ -197,13 +201,13 @@ class TrackingController {
     async getPageAnalytics(req, res) {
         try {
             const { websiteId } = req.params;
-            const { startDate, endDate, limit = 50, sortBy = 'views', sortOrder = 'desc' } = req.query;
+            const { startDate, endDate, limit = 50, sortBy = "views", sortOrder = "desc", } = req.query;
             const analytics = await trackingService.getPageAnalytics(websiteId, {
                 startDate: startDate,
                 endDate: endDate,
                 limit: parseInt(limit),
                 sortBy: sortBy,
-                sortOrder: sortOrder
+                sortOrder: sortOrder,
             });
             res.json(analytics);
         }
@@ -214,11 +218,11 @@ class TrackingController {
     async getDeviceAnalytics(req, res) {
         try {
             const { websiteId } = req.params;
-            const { startDate, endDate, groupBy = 'browser' } = req.query;
+            const { startDate, endDate, groupBy = "browser" } = req.query;
             const analytics = await trackingService.getDeviceAnalytics(websiteId, {
                 startDate: startDate,
                 endDate: endDate,
-                groupBy: groupBy
+                groupBy: groupBy,
             });
             res.json(analytics);
         }
@@ -229,11 +233,11 @@ class TrackingController {
     async getGeographicAnalytics(req, res) {
         try {
             const { websiteId } = req.params;
-            const { startDate, endDate, groupBy = 'country' } = req.query;
+            const { startDate, endDate, groupBy = "country" } = req.query;
             const analytics = await trackingService.getGeographicAnalytics(websiteId, {
                 startDate: startDate,
                 endDate: endDate,
-                groupBy: groupBy
+                groupBy: groupBy,
             });
             res.json(analytics);
         }
@@ -248,7 +252,7 @@ class TrackingController {
             const analytics = await trackingService.getConversionAnalytics(websiteId, {
                 startDate: startDate,
                 endDate: endDate,
-                conversionType: conversionType
+                conversionType: conversionType,
             });
             res.json(analytics);
         }
@@ -264,7 +268,7 @@ class TrackingController {
                 sessionId: sessionId,
                 userId: userId,
                 startDate: startDate,
-                endDate: endDate
+                endDate: endDate,
             });
             res.json(journey);
         }
@@ -279,7 +283,7 @@ class TrackingController {
             const heatmap = await trackingService.getHeatmapData(websiteId, {
                 page: page,
                 startDate: startDate,
-                endDate: endDate
+                endDate: endDate,
             });
             res.json(heatmap);
         }
@@ -294,7 +298,7 @@ class TrackingController {
             const funnel = await trackingService.getFunnelAnalysis(websiteId, {
                 steps: steps,
                 startDate: startDate,
-                endDate: endDate
+                endDate: endDate,
             });
             res.json(funnel);
         }
@@ -305,16 +309,16 @@ class TrackingController {
     async exportTrackingData(req, res) {
         try {
             const { websiteId } = req.params;
-            const { startDate, endDate, format = 'csv', eventTypes } = req.query;
+            const { startDate, endDate, format = "csv", eventTypes } = req.query;
             const exportData = await trackingService.exportTrackingData(websiteId, {
                 startDate: startDate,
                 endDate: endDate,
                 format: format,
-                eventTypes: eventTypes
+                eventTypes: eventTypes,
             });
             const filename = `tracking-data-${websiteId}-${Date.now()}.${format}`;
-            res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-            res.setHeader('Content-Type', format === 'csv' ? 'text/csv' : 'application/json');
+            res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+            res.setHeader("Content-Type", format === "csv" ? "text/csv" : "application/json");
             res.send(exportData);
         }
         catch (error) {

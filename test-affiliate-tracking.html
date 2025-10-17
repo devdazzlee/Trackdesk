@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trackdesk Affiliate Test - Demo Store</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 20px 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #667eea;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .tracking-info {
+            background: #f7fafc;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            border-left: 4px solid #667eea;
+        }
+
+        .tracking-info p {
+            color: #4a5568;
+            font-size: 14px;
+            margin: 5px 0;
+        }
+
+        .tracking-info strong {
+            color: #2d3748;
+        }
+
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .product-card {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            cursor: pointer;
+        }
+
+        .product-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        }
+
+        .product-image {
+            width: 100%;
+            height: 200px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 48px;
+            font-weight: bold;
+        }
+
+        .product-info {
+            padding: 20px;
+        }
+
+        .product-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 10px;
+        }
+
+        .product-description {
+            font-size: 14px;
+            color: #718096;
+            margin-bottom: 15px;
+        }
+
+        .product-price {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+
+        .btn:hover {
+            background: #5a67d8;
+            transform: scale(1.05);
+        }
+
+        .btn-success {
+            background: #48bb78;
+        }
+
+        .btn-success:hover {
+            background: #38a169;
+        }
+
+        .cart-section {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+        }
+
+        .cart-section h2 {
+            color: #2d3748;
+            margin-bottom: 20px;
+        }
+
+        .cart-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            background: #f7fafc;
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+
+        .cart-item-info {
+            flex: 1;
+        }
+
+        .cart-item-name {
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        .cart-item-price {
+            color: #667eea;
+            font-weight: bold;
+            margin-left: 20px;
+        }
+
+        .cart-total {
+            background: #667eea;
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            text-align: right;
+        }
+
+        .cart-total h3 {
+            font-size: 24px;
+        }
+
+        .checkout-form {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            color: #2d3748;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border 0.3s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .events-log {
+            background: #1a202c;
+            color: #48bb78;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .events-log h3 {
+            color: white;
+            margin-bottom: 15px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto;
+        }
+
+        .event-entry {
+            margin-bottom: 10px;
+            padding: 10px;
+            background: rgba(72, 187, 120, 0.1);
+            border-radius: 5px;
+            border-left: 3px solid #48bb78;
+        }
+
+        .event-time {
+            color: #90cdf4;
+        }
+
+        .event-name {
+            color: #fbd38d;
+            font-weight: bold;
+        }
+
+        .success-message {
+            background: #48bb78;
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin: 20px 0;
+            font-size: 18px;
+            font-weight: 600;
+            display: none;
+        }
+
+        .success-message.show {
+            display: block;
+            animation: slideIn 0.5s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            background: #fbd38d;
+            color: #744210;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        .referral-banner {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🎯 Trackdesk Affiliate Test Store</h1>
+            <p style="color: #718096; margin-top: 10px;">
+                This demo page tests your affiliate tracking system with real-time click and conversion tracking
+            </p>
+            
+            <div class="tracking-info">
+                <p><strong>🔗 Referral Code:</strong> <span id="referral-code">Not detected</span> <span class="badge" id="referral-status">No Affiliate</span></p>
+                <p><strong>👤 Session ID:</strong> <span id="session-id">Loading...</span></p>
+                <p><strong>📊 Website ID:</strong> <span id="website-id">Loading...</span></p>
+                <p><strong>📍 API Endpoint:</strong> <span id="api-endpoint">http://localhost:3003</span></p>
+            </div>
+        </div>
+
+        <!-- Referral Banner (shows if affiliate link detected) -->
+        <div class="referral-banner" id="referral-banner" style="display: none;">
+            🎉 Welcome! You're shopping through an affiliate link. Your referrer will earn commission on your purchase!
+        </div>
+
+        <!-- Products -->
+        <div class="products-grid">
+            <div class="product-card" data-product-id="prod_001" data-product-name="Premium Package" data-product-price="99.00">
+                <div class="product-image">📦</div>
+                <div class="product-info">
+                    <div class="product-name">Premium Package</div>
+                    <div class="product-description">Full access to all features with priority support</div>
+                    <div class="product-price">$99.00</div>
+                    <button class="btn add-to-cart" onclick="addToCart('prod_001', 'Premium Package', 99.00)">
+                        Add to Cart
+                    </button>
+                </div>
+            </div>
+
+            <div class="product-card" data-product-id="prod_002" data-product-name="Starter Plan" data-product-price="49.00">
+                <div class="product-image">🚀</div>
+                <div class="product-info">
+                    <div class="product-name">Starter Plan</div>
+                    <div class="product-description">Perfect for small businesses getting started</div>
+                    <div class="product-price">$49.00</div>
+                    <button class="btn add-to-cart" onclick="addToCart('prod_002', 'Starter Plan', 49.00)">
+                        Add to Cart
+                    </button>
+                </div>
+            </div>
+
+            <div class="product-card" data-product-id="prod_003" data-product-name="Enterprise Suite" data-product-price="299.00">
+                <div class="product-image">💼</div>
+                <div class="product-info">
+                    <div class="product-name">Enterprise Suite</div>
+                    <div class="product-description">Advanced features for large organizations</div>
+                    <div class="product-price">$299.00</div>
+                    <button class="btn add-to-cart" onclick="addToCart('prod_003', 'Enterprise Suite', 299.00)">
+                        Add to Cart
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cart Section -->
+        <div class="cart-section" id="cart-section" style="display: none;">
+            <h2>🛒 Your Cart</h2>
+            <div id="cart-items"></div>
+            <div class="cart-total">
+                <h3>Total: $<span id="cart-total">0.00</span></h3>
+                <button class="btn btn-success" onclick="proceedToCheckout()" style="margin-top: 15px;">
+                    Proceed to Checkout
+                </button>
+            </div>
+        </div>
+
+        <!-- Checkout Form -->
+        <div class="checkout-form" id="checkout-form" style="display: none;">
+            <h2>💳 Checkout</h2>
+            <form id="payment-form" onsubmit="processCheckout(event)">
+                <div class="form-group">
+                    <label for="customer-name">Full Name:</label>
+                    <input type="text" id="customer-name" name="name" required placeholder="John Doe">
+                </div>
+                <div class="form-group">
+                    <label for="customer-email">Email:</label>
+                    <input type="email" id="customer-email" name="email" required placeholder="john@example.com">
+                </div>
+                <div class="form-group">
+                    <label for="card-number">Card Number:</label>
+                    <input type="text" id="card-number" name="card" required placeholder="4242 4242 4242 4242" maxlength="19">
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="form-group">
+                        <label for="expiry">Expiry (MM/YY):</label>
+                        <input type="text" id="expiry" name="expiry" required placeholder="12/25" maxlength="5">
+                    </div>
+                    <div class="form-group">
+                        <label for="cvv">CVV:</label>
+                        <input type="text" id="cvv" name="cvv" required placeholder="123" maxlength="3">
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-success" style="width: 100%; padding: 15px; font-size: 16px;">
+                    💳 Complete Purchase - $<span id="checkout-total">0.00</span>
+                </button>
+            </form>
+        </div>
+
+        <!-- Success Message -->
+        <div class="success-message" id="success-message">
+            ✅ Purchase Successful! Conversion tracked. Check your Trackdesk dashboard!
+        </div>
+
+        <!-- Events Log -->
+        <div class="events-log">
+            <h3>📊 Real-Time Event Tracking Log</h3>
+            <div id="events-container">
+                <div class="event-entry">
+                    <span class="event-time">[Waiting for events...]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Trackdesk CDN Script -->
+    <script src="http://localhost:3000/trackdesk.js" 
+            data-website-id="test-website-001" 
+            data-auto-init="true">
+    </script>
+
+    <script>
+        // Configuration
+        const API_URL = 'http://localhost:3003/api';
+        let cart = [];
+        let referralCode = null;
+        let affiliateId = null;
+
+        // Get referral code from URL
+        function getReferralCode() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('ref') || urlParams.get('referral') || urlParams.get('aff');
+        }
+
+        // Log event to UI
+        function logEvent(eventName, data = {}) {
+            const container = document.getElementById('events-container');
+            const time = new Date().toLocaleTimeString();
+            const eventHtml = `
+                <div class="event-entry">
+                    <span class="event-time">[${time}]</span>
+                    <span class="event-name">${eventName}</span>
+                    ${Object.keys(data).length > 0 ? `<div style="margin-top: 5px; color: #cbd5e0;">${JSON.stringify(data, null, 2)}</div>` : ''}
+                </div>
+            `;
+            container.innerHTML = eventHtml + container.innerHTML;
+        }
+
+        // Initialize tracking
+        window.addEventListener('load', function() {
+            // Get referral code from URL
+            referralCode = getReferralCode();
+            
+            if (referralCode) {
+                document.getElementById('referral-code').textContent = referralCode;
+                document.getElementById('referral-status').textContent = 'Affiliate Link Active ✅';
+                document.getElementById('referral-status').style.background = '#48bb78';
+                document.getElementById('referral-status').style.color = 'white';
+                document.getElementById('referral-banner').style.display = 'block';
+                
+                logEvent('AFFILIATE_LINK_CLICKED', { referralCode });
+
+                // Track affiliate click
+                trackAffiliateClick(referralCode);
+            }
+
+            // Display session info
+            if (window.Trackdesk) {
+                setTimeout(() => {
+                    document.getElementById('session-id').textContent = window.Trackdesk.config.sessionId || 'N/A';
+                    document.getElementById('website-id').textContent = 'test-website-001';
+                    logEvent('TRACKING_INITIALIZED', { 
+                        sessionId: window.Trackdesk.config.sessionId,
+                        websiteId: 'test-website-001'
+                    });
+                }, 500);
+            }
+        });
+
+        // Track affiliate click
+        async function trackAffiliateClick(refCode) {
+            try {
+                const response = await fetch(`${API_URL}/tracking/click`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        referralCode: refCode,
+                        storeId: 'test-store-001',
+                        url: window.location.href,
+                        referrer: document.referrer,
+                        userAgent: navigator.userAgent,
+                        utmSource: new URLSearchParams(window.location.search).get('utm_source'),
+                        utmMedium: new URLSearchParams(window.location.search).get('utm_medium'),
+                        utmCampaign: new URLSearchParams(window.location.search).get('utm_campaign')
+                    })
+                });
+
+                const data = await response.json();
+                logEvent('CLICK_TRACKED_TO_API', { success: data.success, clickId: data.clickId });
+                console.log('✅ Affiliate click tracked:', data);
+            } catch (error) {
+                logEvent('CLICK_TRACKING_FAILED', { error: error.message });
+                console.error('❌ Failed to track click:', error);
+            }
+        }
+
+        // Add to cart
+        function addToCart(productId, productName, price) {
+            cart.push({ id: productId, name: productName, price: price });
+            
+            // Track event
+            if (window.Trackdesk) {
+                window.Trackdesk.track('add_to_cart', {
+                    product: { id: productId, name: productName, price: price },
+                    cartTotal: cart.reduce((sum, item) => sum + item.price, 0)
+                });
+            }
+
+            logEvent('ADD_TO_CART', { productId, productName, price });
+            
+            updateCart();
+        }
+
+        // Update cart display
+        function updateCart() {
+            const cartSection = document.getElementById('cart-section');
+            const cartItems = document.getElementById('cart-items');
+            const cartTotal = document.getElementById('cart-total');
+            
+            if (cart.length === 0) {
+                cartSection.style.display = 'none';
+                return;
+            }
+
+            cartSection.style.display = 'block';
+            
+            cartItems.innerHTML = cart.map((item, index) => `
+                <div class="cart-item">
+                    <div class="cart-item-info">
+                        <div class="cart-item-name">${item.name}</div>
+                    </div>
+                    <div class="cart-item-price">$${item.price.toFixed(2)}</div>
+                    <button class="btn" onclick="removeFromCart(${index})" style="padding: 8px 16px; background: #fc8181;">
+                        Remove
+                    </button>
+                </div>
+            `).join('');
+
+            const total = cart.reduce((sum, item) => sum + item.price, 0);
+            cartTotal.textContent = total.toFixed(2);
+        }
+
+        // Remove from cart
+        function removeFromCart(index) {
+            const removed = cart.splice(index, 1)[0];
+            logEvent('REMOVE_FROM_CART', { product: removed.name });
+            updateCart();
+        }
+
+        // Proceed to checkout
+        function proceedToCheckout() {
+            document.getElementById('checkout-form').style.display = 'block';
+            document.getElementById('checkout-total').textContent = cart.reduce((sum, item) => sum + item.price, 0).toFixed(2);
+            
+            // Track checkout initiation
+            if (window.Trackdesk) {
+                window.Trackdesk.track('checkout_initiated', {
+                    cartItems: cart,
+                    total: cart.reduce((sum, item) => sum + item.price, 0)
+                });
+            }
+
+            logEvent('CHECKOUT_INITIATED', { itemCount: cart.length, total: cart.reduce((sum, item) => sum + item.price, 0) });
+            
+            // Scroll to checkout form
+            document.getElementById('checkout-form').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Process checkout (CONVERSION!)
+        async function processCheckout(event) {
+            event.preventDefault();
+            
+            const customerName = document.getElementById('customer-name').value;
+            const customerEmail = document.getElementById('customer-email').value;
+            const total = cart.reduce((sum, item) => sum + item.price, 0);
+
+            logEvent('PROCESSING_PAYMENT', { total, email: customerEmail });
+
+            // Simulate payment processing
+            setTimeout(async () => {
+                // Track conversion
+                if (window.Trackdesk) {
+                    window.Trackdesk.convert({
+                        orderId: 'ORD-' + Date.now(),
+                        orderValue: total,
+                        currency: 'USD',
+                        items: cart,
+                        customer: {
+                            name: customerName,
+                            email: customerEmail
+                        }
+                    });
+                }
+
+                logEvent('CONVERSION_TRACKED_TO_CDN', { 
+                    orderId: 'ORD-' + Date.now(), 
+                    value: total 
+                });
+
+                // Track order via API (this triggers commission calculation)
+                if (referralCode) {
+                    await trackOrder(customerEmail, total);
+                }
+
+                // Show success
+                document.getElementById('success-message').classList.add('show');
+                document.getElementById('checkout-form').style.display = 'none';
+                document.getElementById('cart-section').style.display = 'none';
+
+                logEvent('PURCHASE_COMPLETED', { 
+                    orderId: 'ORD-' + Date.now(), 
+                    total: total,
+                    referralCode: referralCode || 'None',
+                    commissionEarned: referralCode ? (total * 0.10).toFixed(2) : '0.00'
+                });
+
+                // Clear cart
+                cart = [];
+            }, 2000);
+        }
+
+        // Track order via API (triggers commission)
+        async function trackOrder(customerEmail, orderValue) {
+            try {
+                const response = await fetch(`${API_URL}/tracking/order`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        referralCode: referralCode,
+                        storeId: 'test-store-001',
+                        orderId: 'ORD-' + Date.now(),
+                        orderValue: orderValue,
+                        currency: 'USD',
+                        customerEmail: customerEmail,
+                        items: cart.map(item => ({
+                            productId: item.id,
+                            name: item.name,
+                            price: item.price,
+                            quantity: 1
+                        }))
+                    })
+                });
+
+                const data = await response.json();
+                logEvent('ORDER_TRACKED_TO_API', { 
+                    success: data.success, 
+                    commission: data.commission,
+                    conversionId: data.conversionId 
+                });
+                console.log('✅ Order tracked:', data);
+            } catch (error) {
+                logEvent('ORDER_TRACKING_FAILED', { error: error.message });
+                console.error('❌ Failed to track order:', error);
+            }
+        }
+
+        // Auto-format card number
+        document.addEventListener('DOMContentLoaded', function() {
+            const cardInput = document.getElementById('card-number');
+            if (cardInput) {
+                cardInput.addEventListener('input', function(e) {
+                    let value = e.target.value.replace(/\s/g, '');
+                    let formattedValue = value.match(/.{1,4}/g)?.join(' ') || value;
+                    e.target.value = formattedValue;
+                });
+            }
+
+            const expiryInput = document.getElementById('expiry');
+            if (expiryInput) {
+                expiryInput.addEventListener('input', function(e) {
+                    let value = e.target.value.replace(/\D/g, '');
+                    if (value.length >= 2) {
+                        value = value.slice(0, 2) + '/' + value.slice(2, 4);
+                    }
+                    e.target.value = value;
+                });
+            }
+        });
+
+        // Override Trackdesk config
+        if (window.Trackdesk) {
+            window.Trackdesk.config.apiUrl = API_URL;
+            window.Trackdesk.config.debug = true;
+        }
+    </script>
+</body>
+</html>
+

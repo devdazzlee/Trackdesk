@@ -77,6 +77,7 @@ const io = new Server(server, {
       process.env.FRONTEND_URL || "http://localhost:3001",
       "http://localhost:3000",
       "http://localhost:3001",
+      "http://localhost:8000",
       "null", // Allow file:// origins for testing
     ],
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
@@ -85,23 +86,65 @@ const io = new Server(server, {
 });
 
 // Middleware
-app.use(helmet());
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    contentSecurityPolicy: false,
+  })
+);
+
+// CORS configuration - must be before routes
 app.use(
   cors({
-    origin: [
-      process.env.FRONTEND_URL || "http://localhost:3001",
-      "http://localhost:3000",
-      "http://localhost:3001",
-      "null", // Allow file:// origins for testing
-    ],
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps, curl, postman)
+      if (!origin) return callback(null, true);
+
+      const allowedOrigins = [
+        process.env.FRONTEND_URL || "http://localhost:3001",
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://localhost:3002",
+        "http://localhost:8000",
+      ];
+
+      if (
+        allowedOrigins.indexOf(origin) !== -1 ||
+        origin.startsWith("http://localhost:")
+      ) {
+        callback(null, true);
+      } else {
+        callback(null, true); // Allow all origins in development
+      }
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "Cookie",
+      "X-Requested-With",
+      "X-Trackdesk-Version",
+      "X-Trackdesk-Website-Id",
+      "X-Trackdesk-Session-Id",
+    ],
+    exposedHeaders: ["Set-Cookie"],
+    maxAge: 86400, // 24 hours
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
   })
 );
 app.use(cookieParser());
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
+
+// Handle preflight requests
+app.options("*", cors());
+
+// Health check endpoint (before rate limiting)
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "OK", timestamp: new Date().toISOString() });
+});
 
 // Rate limiting
 const limiter = rateLimit({

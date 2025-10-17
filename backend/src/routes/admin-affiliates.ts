@@ -43,27 +43,26 @@ router.get(
 
       const total = await prisma.affiliateProfile.count({ where });
 
-      // Get performance data for each affiliate
+      // Get performance data for each affiliate using correct tables
       const affiliatesWithStats = await Promise.all(
         affiliates.map(async (affiliate) => {
-          const referralCodes = await prisma.referralCode.findMany({
-            where: { affiliateId: affiliate.id },
-          });
-
           const [earnings, conversions, clicks] = await Promise.all([
-            prisma.referralUsage.aggregate({
+            // Get earnings from AffiliateOrder table
+            prisma.affiliateOrder.aggregate({
               where: {
-                referralCodeId: { in: referralCodes.map((c) => c.id) },
+                affiliateId: affiliate.id,
               },
               _sum: { commissionAmount: true },
             }),
 
-            prisma.referralUsage.count({
+            // Get conversions from AffiliateOrder table
+            prisma.affiliateOrder.count({
               where: {
-                referralCodeId: { in: referralCodes.map((c) => c.id) },
+                affiliateId: affiliate.id,
               },
             }),
 
+            // Get clicks from AffiliateClick table
             prisma.affiliateClick.count({
               where: { affiliateId: affiliate.id },
             }),
@@ -137,24 +136,23 @@ router.get(
         return res.status(404).json({ error: "Affiliate not found" });
       }
 
-      const referralCodes = await prisma.referralCode.findMany({
-        where: { affiliateId: affiliate.id },
-      });
-
       const [earnings, conversions, clicks] = await Promise.all([
-        prisma.referralUsage.aggregate({
+        // Get earnings from AffiliateOrder table
+        prisma.affiliateOrder.aggregate({
           where: {
-            referralCodeId: { in: referralCodes.map((c) => c.id) },
+            affiliateId: affiliate.id,
           },
           _sum: { commissionAmount: true },
         }),
 
-        prisma.referralUsage.count({
+        // Get conversions from AffiliateOrder table
+        prisma.affiliateOrder.count({
           where: {
-            referralCodeId: { in: referralCodes.map((c) => c.id) },
+            affiliateId: affiliate.id,
           },
         }),
 
+        // Get clicks from AffiliateClick table
         prisma.affiliateClick.count({
           where: { affiliateId: affiliate.id },
         }),
@@ -170,7 +168,7 @@ router.get(
             totalClicks: clicks,
             conversionRate: clicks > 0 ? (conversions / clicks) * 100 : 0,
           },
-          referralCodes: referralCodes.length,
+          referralCodes: 0, // Will be updated when referral codes are properly tracked
         },
       });
     } catch (error) {
@@ -330,11 +328,8 @@ router.get(
           startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
       }
 
-      const referralCodes = await prisma.referralCode.findMany({
-        where: { affiliateId: id },
-      });
-
       const [clicks, conversions, revenue, commissions] = await Promise.all([
+        // Get clicks from AffiliateClick table
         prisma.affiliateClick.count({
           where: {
             affiliateId: id,
@@ -342,24 +337,27 @@ router.get(
           },
         }),
 
-        prisma.referralUsage.count({
+        // Get conversions from AffiliateOrder table
+        prisma.affiliateOrder.count({
           where: {
-            referralCodeId: { in: referralCodes.map((c) => c.id) },
+            affiliateId: id,
             createdAt: { gte: startDate },
           },
         }),
 
-        prisma.referralUsage.aggregate({
+        // Get revenue from AffiliateOrder table
+        prisma.affiliateOrder.aggregate({
           where: {
-            referralCodeId: { in: referralCodes.map((c) => c.id) },
+            affiliateId: id,
             createdAt: { gte: startDate },
           },
           _sum: { orderValue: true },
         }),
 
-        prisma.referralUsage.aggregate({
+        // Get commissions from AffiliateOrder table
+        prisma.affiliateOrder.aggregate({
           where: {
-            referralCodeId: { in: referralCodes.map((c) => c.id) },
+            affiliateId: id,
             createdAt: { gte: startDate },
           },
           _sum: { commissionAmount: true },

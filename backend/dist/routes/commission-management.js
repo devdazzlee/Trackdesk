@@ -449,7 +449,7 @@ router.patch("/affiliate/:affiliateId/rate", auth_1.authenticateToken, async (re
                     newRate: commissionRate,
                     reason,
                 },
-                userId: req.user.id
+                userId: req.user.id,
             },
         });
         res.json(affiliate);

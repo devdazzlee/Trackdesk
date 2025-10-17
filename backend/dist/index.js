@@ -68,27 +68,59 @@ const io = new socket_io_1.Server(server, {
             process.env.FRONTEND_URL || "http://localhost:3001",
             "http://localhost:3000",
             "http://localhost:3001",
+            "http://localhost:8000",
             "null",
         ],
         methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
         credentials: true,
     },
 });
-app.use((0, helmet_1.default)());
+app.use((0, helmet_1.default)({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    contentSecurityPolicy: false,
+}));
 app.use((0, cors_1.default)({
-    origin: [
-        process.env.FRONTEND_URL || "http://localhost:3001",
-        "http://localhost:3000",
-        "http://localhost:3001",
-        "null",
-    ],
+    origin: function (origin, callback) {
+        if (!origin)
+            return callback(null, true);
+        const allowedOrigins = [
+            process.env.FRONTEND_URL || "http://localhost:3001",
+            "http://localhost:3000",
+            "http://localhost:3001",
+            "http://localhost:3002",
+            "http://localhost:8000",
+        ];
+        if (allowedOrigins.indexOf(origin) !== -1 ||
+            origin.startsWith("http://localhost:")) {
+            callback(null, true);
+        }
+        else {
+            callback(null, true);
+        }
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
+    allowedHeaders: [
+        "Content-Type",
+        "Authorization",
+        "Cookie",
+        "X-Requested-With",
+        "X-Trackdesk-Version",
+        "X-Trackdesk-Website-Id",
+        "X-Trackdesk-Session-Id",
+    ],
+    exposedHeaders: ["Set-Cookie"],
+    maxAge: 86400,
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
 }));
 app.use((0, cookie_parser_1.default)());
 app.use(express_1.default.json({ limit: "10mb" }));
 app.use(express_1.default.urlencoded({ extended: true }));
+app.options("*", (0, cors_1.default)());
+app.get("/health", (req, res) => {
+    res.status(200).json({ status: "OK", timestamp: new Date().toISOString() });
+});
 const limiter = (0, express_rate_limit_1.default)({
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || "900000"),
     max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || "100"),

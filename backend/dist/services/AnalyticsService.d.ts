@@ -142,10 +142,10 @@ export declare class AnalyticsService {
             userId: string | null;
             affiliateId: string;
             orderValue: number;
+            customerEmail: string | null;
             commissionAmount: number;
             offerId: string;
             clickId: string;
-            customerEmail: string | null;
             customerValue: number;
         };
         attributionClicks: ({

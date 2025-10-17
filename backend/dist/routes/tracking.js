@@ -13,9 +13,12 @@ router.post("/click", async (req, res) => {
             referralCode: zod_1.z.string(),
             storeId: zod_1.z.string(),
             url: zod_1.z.string(),
-            referrer: zod_1.z.string().optional(),
-            userAgent: zod_1.z.string().optional(),
-            timestamp: zod_1.z.string(),
+            referrer: zod_1.z.string().optional().nullable(),
+            userAgent: zod_1.z.string().optional().nullable(),
+            timestamp: zod_1.z.string().optional().nullable(),
+            utmSource: zod_1.z.string().optional().nullable(),
+            utmMedium: zod_1.z.string().optional().nullable(),
+            utmCampaign: zod_1.z.string().optional().nullable(),
             utm: zod_1.z
                 .object({
                 utm_source: zod_1.z.string().nullable().optional(),
@@ -24,9 +27,11 @@ router.post("/click", async (req, res) => {
                 utm_term: zod_1.z.string().nullable().optional(),
                 utm_content: zod_1.z.string().nullable().optional(),
             })
-                .optional(),
+                .optional()
+                .nullable(),
         });
         const data = schema.parse(req.body);
+        const timestamp = data.timestamp || new Date().toISOString();
         const referralCode = await prisma_1.prisma.referralCode.findFirst({
             where: {
                 code: data.referralCode,
@@ -36,7 +41,7 @@ router.post("/click", async (req, res) => {
         if (!referralCode) {
             return res.status(404).json({ error: "Referral code not found" });
         }
-        await prisma_1.prisma.affiliateClick.create({
+        const click = await prisma_1.prisma.affiliateClick.create({
             data: {
                 affiliateId: referralCode.affiliateId,
                 referralCode: data.referralCode,
@@ -44,20 +49,77 @@ router.post("/click", async (req, res) => {
                 url: data.url,
                 referrer: data.referrer,
                 userAgent: data.userAgent,
-                utmSource: data.utm?.utm_source,
-                utmMedium: data.utm?.utm_medium,
-                utmCampaign: data.utm?.utm_campaign,
+                utmSource: data.utmSource || data.utm?.utm_source,
+                utmMedium: data.utmMedium || data.utm?.utm_medium,
+                utmCampaign: data.utmCampaign || data.utm?.utm_campaign,
             },
         });
         await prisma_1.prisma.affiliateProfile.update({
             where: { id: referralCode.affiliateId },
             data: { totalClicks: { increment: 1 } },
         });
-        res.json({ success: true, message: "Click tracked" });
+        res.json({
+            success: true,
+            message: "Click tracked",
+            clickId: click.id,
+            affiliateId: referralCode.affiliateId,
+        });
     }
     catch (error) {
         console.error("Error tracking click:", error);
         res.status(500).json({ error: "Failed to track click" });
+    }
+});
+router.post("/events", async (req, res) => {
+    try {
+        const schema = zod_1.z.object({
+            events: zod_1.z.array(zod_1.z.object({
+                id: zod_1.z.string(),
+                event: zod_1.z.string(),
+                data: zod_1.z.any(),
+                timestamp: zod_1.z.string(),
+                sessionId: zod_1.z.string(),
+                userId: zod_1.z.string().optional().nullable(),
+                websiteId: zod_1.z.string(),
+                page: zod_1.z.object({
+                    url: zod_1.z.string(),
+                    title: zod_1.z.string(),
+                    referrer: zod_1.z.string().optional().nullable(),
+                    path: zod_1.z.string(),
+                    search: zod_1.z.string(),
+                    hash: zod_1.z.string(),
+                }),
+                device: zod_1.z.object({
+                    userAgent: zod_1.z.string(),
+                    language: zod_1.z.string(),
+                    platform: zod_1.z.string(),
+                    screenWidth: zod_1.z.number(),
+                    screenHeight: zod_1.z.number(),
+                    viewportWidth: zod_1.z.number(),
+                    viewportHeight: zod_1.z.number(),
+                    colorDepth: zod_1.z.number(),
+                    timezone: zod_1.z.string(),
+                }),
+                browser: zod_1.z.object({
+                    browser: zod_1.z.string(),
+                    version: zod_1.z.string(),
+                }),
+            })),
+            websiteId: zod_1.z.string(),
+            sessionId: zod_1.z.string(),
+            timestamp: zod_1.z.string(),
+        });
+        const data = schema.parse(req.body);
+        console.log(`📊 Received ${data.events.length} tracking events from session ${data.sessionId}`);
+        res.json({
+            success: true,
+            processed: data.events.length,
+            message: "Events received",
+        });
+    }
+    catch (error) {
+        console.error("Error tracking events:", error);
+        res.status(500).json({ error: "Failed to track events" });
     }
 });
 router.post("/pageview", async (req, res) => {
@@ -93,16 +155,17 @@ router.post("/order", async (req, res) => {
             orderId: zod_1.z.string(),
             orderValue: zod_1.z.number(),
             currency: zod_1.z.string().default("USD"),
-            customerEmail: zod_1.z.string().optional(),
+            customerEmail: zod_1.z.string().optional().nullable(),
             items: zod_1.z
                 .array(zod_1.z.object({
-                id: zod_1.z.string(),
+                id: zod_1.z.string().optional().nullable(),
+                productId: zod_1.z.string().optional().nullable(),
                 name: zod_1.z.string(),
                 price: zod_1.z.number(),
                 quantity: zod_1.z.number(),
             }))
                 .optional(),
-            timestamp: zod_1.z.string(),
+            timestamp: zod_1.z.string().optional().nullable(),
             utm: zod_1.z
                 .object({
                 utm_source: zod_1.z.string().nullable().optional(),
@@ -111,9 +174,11 @@ router.post("/order", async (req, res) => {
                 utm_term: zod_1.z.string().nullable().optional(),
                 utm_content: zod_1.z.string().nullable().optional(),
             })
-                .optional(),
+                .optional()
+                .nullable(),
         });
         const data = schema.parse(req.body);
+        const timestamp = data.timestamp || new Date().toISOString();
         const referralCode = await prisma_1.prisma.referralCode.findFirst({
             where: {
                 code: data.referralCode,
@@ -210,22 +275,22 @@ router.post("/webhook/:storeId", async (req, res) => {
             customerEmail: data.customerEmail,
             items: data.items,
             timestamp: new Date().toISOString(),
-            url: req.headers.referer || '',
-            referrer: req.headers.referer || '',
-            userAgent: req.headers['user-agent'] || '',
-            utmSource: req.query.utm_source || '',
-            utmMedium: req.query.utm_medium || '',
-            utmCampaign: req.query.utm_campaign || '',
-            ipAddress: req.ip || req.connection.remoteAddress || ''
+            url: req.headers.referer || "",
+            referrer: req.headers.referer || "",
+            userAgent: req.headers["user-agent"] || "",
+            utmSource: req.query.utm_source || "",
+            utmMedium: req.query.utm_medium || "",
+            utmCampaign: req.query.utm_campaign || "",
+            ipAddress: req.ip || req.connection.remoteAddress || "",
         };
         const affiliate = await prisma_1.prisma.affiliateProfile.findFirst({
             where: {
                 referralCodes: {
                     some: {
-                        code: trackingData.referralCode
-                    }
-                }
-            }
+                        code: trackingData.referralCode,
+                    },
+                },
+            },
         });
         if (!affiliate) {
             return res.status(404).json({ error: "Affiliate not found" });
@@ -234,13 +299,13 @@ router.post("/webhook/:storeId", async (req, res) => {
             affiliateId: affiliate.id,
             referralCode: trackingData.referralCode,
             storeId: trackingData.storeId,
-            url: trackingData.url || '',
-            referrer: trackingData.referrer || '',
-            userAgent: trackingData.userAgent || '',
-            utmSource: trackingData.utmSource || '',
-            utmMedium: trackingData.utmMedium || '',
-            utmCampaign: trackingData.utmCampaign || '',
-            ipAddress: trackingData.ipAddress || ''
+            url: trackingData.url || "",
+            referrer: trackingData.referrer || "",
+            userAgent: trackingData.userAgent || "",
+            utmSource: trackingData.utmSource || "",
+            utmMedium: trackingData.utmMedium || "",
+            utmCampaign: trackingData.utmCampaign || "",
+            ipAddress: trackingData.ipAddress || "",
         };
         const affiliateClick = await prisma_1.prisma.affiliateClick.create({
             data: clickData,

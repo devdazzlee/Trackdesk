@@ -233,14 +233,14 @@ router.get("/admin/stats", auth_1.authenticateToken, async (req, res) => {
                             code: true,
                             affiliate: {
                                 select: {
-                                    companyName: true
-                                }
-                            }
-                        }
-                    }
+                                    companyName: true,
+                                },
+                            },
+                        },
+                    },
                 },
-                orderBy: { commissionAmount: 'desc' },
-                take: 10
+                orderBy: { commissionAmount: "desc" },
+                take: 10,
             }),
         ]);
         res.json({

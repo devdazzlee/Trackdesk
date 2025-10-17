@@ -14,14 +14,14 @@ class TrackingService {
                 processed++;
             }
             catch (error) {
-                console.error('Failed to process event:', error);
+                console.error("Failed to process event:", error);
                 failed++;
             }
         }
         return { processed, failed };
     }
     async processEvent(event) {
-        const { id, event: eventType, data, timestamp, sessionId, userId, websiteId, page, device, browser } = event;
+        const { id, event: eventType, data, timestamp, sessionId, userId, websiteId, page, device, browser, } = event;
         await this.upsertSession({
             id: sessionId,
             websiteId,
@@ -29,9 +29,9 @@ class TrackingService {
             startTime: timestamp,
             lastActivity: timestamp,
             userAgent: device.userAgent,
-            ipAddress: '',
-            country: 'Unknown',
-            city: 'Unknown'
+            ipAddress: "",
+            country: "Unknown",
+            city: "Unknown",
         });
         await this.storeEvent({
             id,
@@ -45,10 +45,10 @@ class TrackingService {
             device,
             browser,
             event: eventType,
-            trackingCodeId: 'default',
-            ipAddress: '',
-            userAgent: '',
-            referrer: ''
+            trackingCodeId: "default",
+            ipAddress: "",
+            userAgent: "",
+            referrer: "",
         });
         await this.updateWebsiteStats(websiteId, eventType, timestamp);
     }
@@ -60,7 +60,7 @@ class TrackingService {
                 ipAddress: sessionData.ipAddress,
                 country: sessionData.country,
                 city: sessionData.city,
-                updatedAt: new Date()
+                updatedAt: new Date(),
             },
             create: {
                 sessionId: sessionData.id,
@@ -70,14 +70,14 @@ class TrackingService {
                 userAgent: sessionData.userAgent,
                 ipAddress: sessionData.ipAddress,
                 country: sessionData.country,
-                city: sessionData.city
-            }
+                city: sessionData.city,
+            },
         });
     }
     async storeEvent(eventData) {
         await prisma.trackingEvent.create({
             data: {
-                trackingCodeId: eventData.trackingCodeId || 'default',
+                trackingCodeId: eventData.trackingCodeId || "default",
                 eventType: eventData.eventType,
                 event: eventData.event,
                 data: eventData.data,
@@ -86,41 +86,43 @@ class TrackingService {
                 websiteId: eventData.websiteId,
                 ipAddress: eventData.ipAddress,
                 userAgent: eventData.userAgent,
-                referrer: eventData.referrer
-            }
+                referrer: eventData.referrer,
+            },
         });
     }
     async updateWebsiteStats(websiteId, eventType, timestamp) {
         const date = new Date(timestamp);
-        const dateStr = date.toISOString().split('T')[0];
+        const dateStr = date.toISOString().split("T")[0];
         await prisma.trackingStats.upsert({
             where: {
                 websiteId_date: {
                     websiteId,
-                    date: new Date(dateStr)
-                }
+                    date: new Date(dateStr),
+                },
             },
             update: {
-                pageViews: eventType === 'page_view' ? { increment: 1 } : undefined,
-                events: eventType === 'click' || eventType === 'conversion' ? { increment: 1 } : undefined,
-                conversions: eventType === 'conversion' ? { increment: 1 } : undefined
+                pageViews: eventType === "page_view" ? { increment: 1 } : undefined,
+                events: eventType === "click" || eventType === "conversion"
+                    ? { increment: 1 }
+                    : undefined,
+                conversions: eventType === "conversion" ? { increment: 1 } : undefined,
             },
             create: {
                 websiteId,
                 date: new Date(dateStr),
-                pageViews: eventType === 'page_view' ? 1 : 0,
+                pageViews: eventType === "page_view" ? 1 : 0,
                 uniqueVisitors: 0,
                 sessions: 0,
-                events: eventType === 'click' || eventType === 'conversion' ? 1 : 0,
-                conversions: eventType === 'conversion' ? 1 : 0,
+                events: eventType === "click" || eventType === "conversion" ? 1 : 0,
+                conversions: eventType === "conversion" ? 1 : 0,
                 revenue: 0,
                 bounceRate: 0,
-                avgSessionDuration: 0
-            }
+                avgSessionDuration: 0,
+            },
         });
     }
     async getTrackingStats(websiteId, options) {
-        const { startDate, endDate, groupBy = 'day' } = options;
+        const { startDate, endDate, groupBy = "day" } = options;
         let whereClause = { websiteId };
         if (startDate || endDate) {
             whereClause.date = {};
@@ -131,14 +133,14 @@ class TrackingService {
         }
         const stats = await prisma.trackingStats.findMany({
             where: whereClause,
-            orderBy: { date: 'asc' }
+            orderBy: { date: "asc" },
         });
         const groupedStats = this.groupStatsByPeriod(stats, groupBy);
         return {
             websiteId,
             period: { startDate, endDate, groupBy },
             stats: groupedStats,
-            summary: this.calculateSummary(stats)
+            summary: this.calculateSummary(stats),
         };
     }
     async getRealtimeAnalytics(websiteId) {
@@ -148,53 +150,53 @@ class TrackingService {
             prisma.trackingSession.count({
                 where: {
                     websiteId,
-                    updatedAt: { gte: oneHourAgo }
-                }
-            }),
-            prisma.trackingEvent.findMany({
-                where: {
-                    websiteId,
-                    timestamp: { gte: oneHourAgo }
+                    updatedAt: { gte: oneHourAgo },
                 },
-                orderBy: { timestamp: 'desc' },
-                take: 50
             }),
             prisma.trackingEvent.findMany({
                 where: {
                     websiteId,
-                    eventType: 'page_view',
-                    timestamp: { gte: oneHourAgo }
+                    timestamp: { gte: oneHourAgo },
+                },
+                orderBy: { timestamp: "desc" },
+                take: 50,
+            }),
+            prisma.trackingEvent.findMany({
+                where: {
+                    websiteId,
+                    eventType: "page_view",
+                    timestamp: { gte: oneHourAgo },
                 },
                 select: {
                     data: true,
-                    timestamp: true
+                    timestamp: true,
                 },
-                orderBy: { timestamp: 'desc' },
-                take: 100
-            })
+                orderBy: { timestamp: "desc" },
+                take: 100,
+            }),
         ]);
         return {
             websiteId,
             timestamp: now.toISOString(),
             activeSessions,
-            recentEvents: recentEvents.map(event => ({
+            recentEvents: recentEvents.map((event) => ({
                 id: event.id,
                 eventType: event.eventType,
                 timestamp: event.timestamp,
                 page: event.data?.page || null,
-                data: event.data
+                data: event.data,
             })),
-            topPages: topPages.map(page => ({
+            topPages: topPages.map((page) => ({
                 page: page.data?.page || null,
-                views: 1
-            }))
+                views: 1,
+            })),
         };
     }
     async getPageAnalytics(websiteId, options) {
-        const { startDate, endDate, limit = 50, sortBy = 'views', sortOrder = 'desc' } = options;
+        const { startDate, endDate, limit = 50, sortBy = "views", sortOrder = "desc", } = options;
         let whereClause = {
             websiteId,
-            eventType: 'page_view'
+            eventType: "page_view",
         };
         if (startDate || endDate) {
             whereClause.timestamp = {};
@@ -207,33 +209,35 @@ class TrackingService {
             where: whereClause,
             select: {
                 data: true,
-                timestamp: true
+                timestamp: true,
             },
             orderBy: { timestamp: sortOrder },
-            take: limit
+            take: limit,
         });
         const pageGroups = {};
-        pageStats.forEach(event => {
-            const pageUrl = event.data?.page?.url || 'unknown';
+        pageStats.forEach((event) => {
+            const pageUrl = event.data?.page?.url || "unknown";
             if (!pageGroups[pageUrl]) {
                 pageGroups[pageUrl] = { views: 0, avgTime: 0 };
             }
             pageGroups[pageUrl].views++;
         });
-        const result = Object.entries(pageGroups).map(([page, stats]) => ({
+        const result = Object.entries(pageGroups)
+            .map(([page, stats]) => ({
             page,
             views: stats.views,
-            avgTime: stats.avgTime
-        })).sort((a, b) => {
-            if (sortBy === 'views') {
-                return sortOrder === 'desc' ? b.views - a.views : a.views - b.views;
+            avgTime: stats.avgTime,
+        }))
+            .sort((a, b) => {
+            if (sortBy === "views") {
+                return sortOrder === "desc" ? b.views - a.views : a.views - b.views;
             }
             return 0;
         });
         return result;
     }
     async getDeviceAnalytics(websiteId, options) {
-        const { startDate, endDate, groupBy = 'browser' } = options;
+        const { startDate, endDate, groupBy = "browser" } = options;
         let whereClause = { websiteId };
         if (startDate || endDate) {
             whereClause.timestamp = {};
@@ -246,22 +250,22 @@ class TrackingService {
             where: whereClause,
             select: {
                 data: true,
-                timestamp: true
+                timestamp: true,
             },
-            take: 1000
+            take: 1000,
         });
         const deviceGroups = {};
-        deviceStats.forEach(event => {
-            const deviceType = event.data?.device?.platform || 'unknown';
+        deviceStats.forEach((event) => {
+            const deviceType = event.data?.device?.platform || "unknown";
             deviceGroups[deviceType] = (deviceGroups[deviceType] || 0) + 1;
         });
         return Object.entries(deviceGroups).map(([device, count]) => ({
             [groupBy]: device,
-            count
+            count,
         }));
     }
     async getGeographicAnalytics(websiteId, options) {
-        const { startDate, endDate, groupBy = 'country' } = options;
+        const { startDate, endDate, groupBy = "country" } = options;
         let whereClause = { websiteId };
         if (startDate || endDate) {
             whereClause.timestamp = {};
@@ -273,18 +277,18 @@ class TrackingService {
         const geoStats = await prisma.trackingSession.groupBy({
             by: [groupBy],
             where: whereClause,
-            _count: { id: true }
+            _count: { id: true },
         });
-        return geoStats.map(stat => ({
+        return geoStats.map((stat) => ({
             [groupBy]: stat[groupBy],
-            count: stat._count.id
+            count: stat._count.id,
         }));
     }
     async getConversionAnalytics(websiteId, options) {
         const { startDate, endDate, conversionType } = options;
         let whereClause = {
             websiteId,
-            eventType: 'conversion'
+            eventType: "conversion",
         };
         if (startDate || endDate) {
             whereClause.timestamp = {};
@@ -295,13 +299,13 @@ class TrackingService {
         }
         const conversions = await prisma.trackingEvent.findMany({
             where: whereClause,
-            orderBy: { timestamp: 'desc' }
+            orderBy: { timestamp: "desc" },
         });
-        return conversions.map(conversion => ({
+        return conversions.map((conversion) => ({
             id: conversion.id,
             timestamp: conversion.timestamp,
             data: conversion.data,
-            page: conversion.data?.page || null
+            page: conversion.data?.page || null,
         }));
     }
     async getUserJourney(websiteId, options) {
@@ -320,21 +324,21 @@ class TrackingService {
         }
         const events = await prisma.trackingEvent.findMany({
             where: whereClause,
-            orderBy: { timestamp: 'asc' }
+            orderBy: { timestamp: "asc" },
         });
-        return events.map(event => ({
+        return events.map((event) => ({
             id: event.id,
             eventType: event.eventType,
             timestamp: event.timestamp,
             page: event.data?.page || null,
-            data: event.data
+            data: event.data,
         }));
     }
     async getHeatmapData(websiteId, options) {
         const { page, startDate, endDate } = options;
         let whereClause = {
             websiteId,
-            eventType: 'click'
+            eventType: "click",
         };
         if (page)
             whereClause.page = { path: page };
@@ -347,23 +351,27 @@ class TrackingService {
         }
         const clicks = await prisma.trackingEvent.findMany({
             where: whereClause,
-            select: { data: true }
+            select: { data: true },
         });
         const heatmapData = clicks
-            .filter(click => click.data && typeof click.data === 'object' && 'position' in click.data)
-            .map(click => ({
+            .filter((click) => click.data &&
+            typeof click.data === "object" &&
+            "position" in click.data)
+            .map((click) => ({
             x: click.data.position?.x || 0,
-            y: click.data.position?.y || 0
+            y: click.data.position?.y || 0,
         }));
         return {
             page,
             clicks: heatmapData,
-            totalClicks: heatmapData.length
+            totalClicks: heatmapData.length,
         };
     }
     async getFunnelAnalysis(websiteId, options) {
         const { steps, startDate, endDate } = options;
-        const stepList = steps ? steps.split(',') : ['page_view', 'click', 'conversion'];
+        const stepList = steps
+            ? steps.split(",")
+            : ["page_view", "click", "conversion"];
         let whereClause = { websiteId };
         if (startDate || endDate) {
             whereClause.timestamp = {};
@@ -376,14 +384,14 @@ class TrackingService {
             const count = await prisma.trackingEvent.count({
                 where: {
                     ...whereClause,
-                    eventType: step
-                }
+                    eventType: step,
+                },
             });
             return {
                 step: index + 1,
                 eventType: step,
                 count,
-                conversionRate: index === 0 ? 100 : 0
+                conversionRate: index === 0 ? 100 : 0,
             };
         }));
         const firstStepCount = funnelData[0]?.count || 0;
@@ -394,11 +402,11 @@ class TrackingService {
         });
         return {
             steps: funnelData,
-            totalSteps: stepList.length
+            totalSteps: stepList.length,
         };
     }
     async exportTrackingData(websiteId, options) {
-        const { startDate, endDate, format = 'csv', eventTypes } = options;
+        const { startDate, endDate, format = "csv", eventTypes } = options;
         let whereClause = { websiteId };
         if (startDate || endDate) {
             whereClause.timestamp = {};
@@ -408,14 +416,14 @@ class TrackingService {
                 whereClause.timestamp.lte = new Date(endDate);
         }
         if (eventTypes) {
-            const types = eventTypes.split(',');
+            const types = eventTypes.split(",");
             whereClause.eventType = { in: types };
         }
         const events = await prisma.trackingEvent.findMany({
             where: whereClause,
-            orderBy: { timestamp: 'desc' }
+            orderBy: { timestamp: "desc" },
         });
-        if (format === 'csv') {
+        if (format === "csv") {
             return this.convertToCSV(events);
         }
         else {
@@ -430,20 +438,28 @@ class TrackingService {
             totalPageViews: stats.reduce((sum, stat) => sum + stat.pageViews, 0),
             totalClicks: stats.reduce((sum, stat) => sum + stat.clicks, 0),
             totalConversions: stats.reduce((sum, stat) => sum + stat.conversions, 0),
-            totalEvents: stats.reduce((sum, stat) => sum + stat.otherEvents, 0)
+            totalEvents: stats.reduce((sum, stat) => sum + stat.otherEvents, 0),
         };
     }
     convertToCSV(events) {
-        const headers = ['id', 'eventType', 'timestamp', 'sessionId', 'userId', 'page', 'data'];
-        const csvRows = [headers.join(',')];
-        events.forEach(event => {
-            const row = headers.map(header => {
+        const headers = [
+            "id",
+            "eventType",
+            "timestamp",
+            "sessionId",
+            "userId",
+            "page",
+            "data",
+        ];
+        const csvRows = [headers.join(",")];
+        events.forEach((event) => {
+            const row = headers.map((header) => {
                 const value = event[header];
-                return typeof value === 'object' ? JSON.stringify(value) : value;
+                return typeof value === "object" ? JSON.stringify(value) : value;
             });
-            csvRows.push(row.join(','));
+            csvRows.push(row.join(","));
         });
-        return csvRows.join('\n');
+        return csvRows.join("\n");
     }
 }
 exports.TrackingService = TrackingService;

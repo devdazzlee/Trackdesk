@@ -11,9 +11,9 @@
 
   // Configuration
   const TRACKDESK_CONFIG = {
-    apiUrl: 'https://api.trackdesk.com', // Change to your API URL
+    apiUrl: 'http://localhost:3003/api', // Change to your API URL
     version: '1.0.0',
-    debug: false,
+    debug: true, // Enable debug for testing
     batchSize: 10,
     flushInterval: 5000, // 5 seconds
     maxRetries: 3,

@@ -18,13 +18,7 @@ router.get("/overview", auth_1.authenticateToken, (0, auth_1.requireRole)(["ADMI
                 user: true,
             },
         });
-        const allReferralCodes = await prisma.referralCode.findMany();
-        const allReferralUsages = await prisma.referralUsage.findMany({
-            where: {
-                createdAt: { gte: thirtyDaysAgo },
-            },
-        });
-        const [totalAffiliates, activeAffiliates, pendingAffiliates, totalRevenue, totalCommissions,] = await Promise.all([
+        const [totalAffiliates, activeAffiliates, pendingAffiliates, totalClicks, totalConversions, totalRevenue, totalCommissions,] = await Promise.all([
             prisma.affiliateProfile.count(),
             prisma.affiliateProfile.count({
                 where: { status: "ACTIVE" },
@@ -32,11 +26,17 @@ router.get("/overview", auth_1.authenticateToken, (0, auth_1.requireRole)(["ADMI
             prisma.affiliateProfile.count({
                 where: { status: "PENDING" },
             }),
-            prisma.referralUsage.aggregate({
+            prisma.affiliateClick.count({
+                where: { createdAt: { gte: thirtyDaysAgo } },
+            }),
+            prisma.affiliateOrder.count({
+                where: { createdAt: { gte: thirtyDaysAgo } },
+            }),
+            prisma.affiliateOrder.aggregate({
                 where: { createdAt: { gte: thirtyDaysAgo } },
                 _sum: { orderValue: true },
             }),
-            prisma.referralUsage.aggregate({
+            prisma.affiliateOrder.aggregate({
                 where: { createdAt: { gte: thirtyDaysAgo } },
                 _sum: { commissionAmount: true },
             }),
@@ -52,12 +52,12 @@ router.get("/overview", auth_1.authenticateToken, (0, auth_1.requireRole)(["ADMI
                         createdAt: { gte: startOfDay, lte: endOfDay },
                     },
                 }),
-                prisma.referralUsage.count({
+                prisma.affiliateOrder.count({
                     where: {
                         createdAt: { gte: startOfDay, lte: endOfDay },
                     },
                 }),
-                prisma.referralUsage.aggregate({
+                prisma.affiliateOrder.aggregate({
                     where: {
                         createdAt: { gte: startOfDay, lte: endOfDay },
                     },
@@ -72,19 +72,22 @@ router.get("/overview", auth_1.authenticateToken, (0, auth_1.requireRole)(["ADMI
             });
         }
         const topAffiliates = await Promise.all(affiliates.slice(0, 10).map(async (affiliate) => {
-            const codes = await prisma.referralCode.findMany({
-                where: { affiliateId: affiliate.id },
-            });
-            const earnings = await prisma.referralUsage.aggregate({
+            const earnings = await prisma.affiliateOrder.aggregate({
                 where: {
-                    referralCodeId: { in: codes.map((c) => c.id) },
+                    affiliateId: affiliate.id,
                     createdAt: { gte: thirtyDaysAgo },
                 },
                 _sum: { commissionAmount: true },
             });
-            const conversions = await prisma.referralUsage.count({
+            const conversions = await prisma.affiliateOrder.count({
                 where: {
-                    referralCodeId: { in: codes.map((c) => c.id) },
+                    affiliateId: affiliate.id,
+                    createdAt: { gte: thirtyDaysAgo },
+                },
+            });
+            const clicks = await prisma.affiliateClick.count({
+                where: {
+                    affiliateId: affiliate.id,
                     createdAt: { gte: thirtyDaysAgo },
                 },
             });
@@ -97,6 +100,7 @@ router.get("/overview", auth_1.authenticateToken, (0, auth_1.requireRole)(["ADMI
                 tier: affiliate.tier,
                 totalEarnings: earnings._sum.commissionAmount || 0,
                 totalConversions: conversions,
+                totalClicks: clicks,
                 lastActivity: affiliate.lastActivityAt,
             };
         }));
@@ -121,14 +125,12 @@ router.get("/overview", auth_1.authenticateToken, (0, auth_1.requireRole)(["ADMI
                 pendingAffiliates,
                 totalRevenue: totalRevenue._sum.orderValue || 0,
                 totalCommissions: totalCommissions._sum.commissionAmount || 0,
-                averageCommissionRate: 15,
-                totalClicks: allReferralCodes.reduce((sum, code) => sum + (code.currentUses || 0), 0),
-                totalConversions: allReferralUsages.length,
-                conversionRate: allReferralCodes.reduce((sum, code) => sum + (code.currentUses || 0), 0) > 0
-                    ? (allReferralUsages.length /
-                        allReferralCodes.reduce((sum, code) => sum + (code.currentUses || 0), 0)) *
-                        100
+                averageCommissionRate: totalConversions > 0
+                    ? (totalCommissions._sum.commissionAmount || 0) / totalConversions
                     : 0,
+                totalClicks,
+                totalConversions,
+                conversionRate: totalClicks > 0 ? (totalConversions / totalClicks) * 100 : 0,
             },
             dailyPerformance,
             topAffiliates: sortedTopAffiliates,

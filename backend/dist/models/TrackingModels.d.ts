@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@prisma/client";
 declare const prisma: PrismaClient<import(".prisma/client").Prisma.PrismaClientOptions, never, import("@prisma/client/runtime/library").DefaultArgs>;
 export interface TrackingWebsite {
     id: string;
@@ -15,7 +15,7 @@ export interface TrackingWebsite {
         respectDoNotTrack: boolean;
         anonymizeIP: boolean;
     };
-    status: 'ACTIVE' | 'PAUSED' | 'INACTIVE';
+    status: "ACTIVE" | "PAUSED" | "INACTIVE";
     createdAt: Date;
     updatedAt: Date;
 }
@@ -150,7 +150,7 @@ export interface Alert {
     websiteId: string;
     name: string;
     description?: string;
-    type: 'THRESHOLD' | 'ANOMALY' | 'GOAL' | 'CUSTOM';
+    type: "THRESHOLD" | "ANOMALY" | "GOAL" | "CUSTOM";
     conditions: any;
     isActive: boolean;
     lastTriggered?: Date;
@@ -160,9 +160,9 @@ export interface Alert {
 export interface Export {
     id: string;
     websiteId: string;
-    type: 'EVENTS' | 'SESSIONS' | 'CONVERSIONS' | 'STATS';
-    format: 'CSV' | 'JSON' | 'XLSX';
-    status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+    type: "EVENTS" | "SESSIONS" | "CONVERSIONS" | "STATS";
+    format: "CSV" | "JSON" | "XLSX";
+    status: "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
     filters: any;
     fileUrl?: string;
     createdAt: Date;
@@ -272,7 +272,7 @@ export interface ABTest {
     websiteId: string;
     name: string;
     description?: string;
-    status: 'DRAFT' | 'RUNNING' | 'PAUSED' | 'COMPLETED';
+    status: "DRAFT" | "RUNNING" | "PAUSED" | "COMPLETED";
     variants: Array<{
         id: string;
         name: string;
@@ -281,7 +281,7 @@ export interface ABTest {
     }>;
     metrics: Array<{
         name: string;
-        type: 'CONVERSION' | 'REVENUE' | 'ENGAGEMENT';
+        type: "CONVERSION" | "REVENUE" | "ENGAGEMENT";
         goal: number;
     }>;
     startDate: Date;
@@ -320,7 +320,7 @@ export interface DashboardWidget {
     id: string;
     websiteId: string;
     name: string;
-    type: 'CHART' | 'TABLE' | 'KPI' | 'HEATMAP' | 'FUNNEL';
+    type: "CHART" | "TABLE" | "KPI" | "HEATMAP" | "FUNNEL";
     config: any;
     position: {
         x: number;
@@ -360,7 +360,7 @@ export interface Webhook {
 export interface Integration {
     id: string;
     websiteId: string;
-    type: 'GOOGLE_ANALYTICS' | 'FACEBOOK_PIXEL' | 'HOTJAR' | 'MIXPANEL' | 'CUSTOM';
+    type: "GOOGLE_ANALYTICS" | "FACEBOOK_PIXEL" | "HOTJAR" | "MIXPANEL" | "CUSTOM";
     config: any;
     isActive: boolean;
     lastSync?: Date;

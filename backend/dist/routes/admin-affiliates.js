@@ -38,19 +38,16 @@ router.get("/", auth_1.authenticateToken, (0, auth_1.requireRole)(["ADMIN"]), as
         });
         const total = await prisma.affiliateProfile.count({ where });
         const affiliatesWithStats = await Promise.all(affiliates.map(async (affiliate) => {
-            const referralCodes = await prisma.referralCode.findMany({
-                where: { affiliateId: affiliate.id },
-            });
             const [earnings, conversions, clicks] = await Promise.all([
-                prisma.referralUsage.aggregate({
+                prisma.affiliateOrder.aggregate({
                     where: {
-                        referralCodeId: { in: referralCodes.map((c) => c.id) },
+                        affiliateId: affiliate.id,
                     },
                     _sum: { commissionAmount: true },
                 }),
-                prisma.referralUsage.count({
+                prisma.affiliateOrder.count({
                     where: {
-                        referralCodeId: { in: referralCodes.map((c) => c.id) },
+                        affiliateId: affiliate.id,
                     },
                 }),
                 prisma.affiliateClick.count({
@@ -111,19 +108,16 @@ router.get("/:id", auth_1.authenticateToken, (0, auth_1.requireRole)(["ADMIN"]),
         if (!affiliate) {
             return res.status(404).json({ error: "Affiliate not found" });
         }
-        const referralCodes = await prisma.referralCode.findMany({
-            where: { affiliateId: affiliate.id },
-        });
         const [earnings, conversions, clicks] = await Promise.all([
-            prisma.referralUsage.aggregate({
+            prisma.affiliateOrder.aggregate({
                 where: {
-                    referralCodeId: { in: referralCodes.map((c) => c.id) },
+                    affiliateId: affiliate.id,
                 },
                 _sum: { commissionAmount: true },
             }),
-            prisma.referralUsage.count({
+            prisma.affiliateOrder.count({
                 where: {
-                    referralCodeId: { in: referralCodes.map((c) => c.id) },
+                    affiliateId: affiliate.id,
                 },
             }),
             prisma.affiliateClick.count({
@@ -140,7 +134,7 @@ router.get("/:id", auth_1.authenticateToken, (0, auth_1.requireRole)(["ADMIN"]),
                     totalClicks: clicks,
                     conversionRate: clicks > 0 ? (conversions / clicks) * 100 : 0,
                 },
-                referralCodes: referralCodes.length,
+                referralCodes: 0,
             },
         });
     }
@@ -253,9 +247,6 @@ router.get("/:id/analytics", auth_1.authenticateToken, (0, auth_1.requireRole)([
             default:
                 startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
         }
-        const referralCodes = await prisma.referralCode.findMany({
-            where: { affiliateId: id },
-        });
         const [clicks, conversions, revenue, commissions] = await Promise.all([
             prisma.affiliateClick.count({
                 where: {
@@ -263,22 +254,22 @@ router.get("/:id/analytics", auth_1.authenticateToken, (0, auth_1.requireRole)([
                     createdAt: { gte: startDate },
                 },
             }),
-            prisma.referralUsage.count({
+            prisma.affiliateOrder.count({
                 where: {
-                    referralCodeId: { in: referralCodes.map((c) => c.id) },
+                    affiliateId: id,
                     createdAt: { gte: startDate },
                 },
             }),
-            prisma.referralUsage.aggregate({
+            prisma.affiliateOrder.aggregate({
                 where: {
-                    referralCodeId: { in: referralCodes.map((c) => c.id) },
+                    affiliateId: id,
                     createdAt: { gte: startDate },
                 },
                 _sum: { orderValue: true },
             }),
-            prisma.referralUsage.aggregate({
+            prisma.affiliateOrder.aggregate({
                 where: {
-                    referralCodeId: { in: referralCodes.map((c) => c.id) },
+                    affiliateId: id,
                     createdAt: { gte: startDate },
                 },
                 _sum: { commissionAmount: true },
