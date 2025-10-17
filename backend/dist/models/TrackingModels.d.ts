@@ -200,7 +200,7 @@ export interface UserJourney {
     endTime: Date;
     duration: number;
     pageViews: number;
-    events: number;
+    eventCount: number;
     conversions: number;
     pages: Array<{
         url: string;

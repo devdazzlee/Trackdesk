@@ -68,9 +68,18 @@ export declare class TrackingService {
     getRealtimeAnalytics(websiteId: string): Promise<{
         websiteId: string;
         timestamp: string;
-        activeSessions: any;
-        recentEvents: any;
-        topPages: any;
+        activeSessions: number;
+        recentEvents: {
+            id: string;
+            eventType: string;
+            timestamp: Date;
+            page: any;
+            data: import("@prisma/client/runtime/library").JsonValue;
+        }[];
+        topPages: {
+            page: any;
+            views: number;
+        }[];
     }>;
     getPageAnalytics(websiteId: string, options: {
         startDate?: string;
@@ -78,17 +87,29 @@ export declare class TrackingService {
         limit?: number;
         sortBy?: string;
         sortOrder?: string;
-    }): Promise<any>;
+    }): Promise<{
+        page: string;
+        views: number;
+        avgTime: number;
+    }[]>;
     getDeviceAnalytics(websiteId: string, options: {
         startDate?: string;
         endDate?: string;
         groupBy?: string;
-    }): Promise<any>;
+    }): Promise<{
+        [x: string]: string | number;
+        count: number;
+    }[]>;
     getGeographicAnalytics(websiteId: string, options: {
         startDate?: string;
         endDate?: string;
         groupBy?: string;
-    }): Promise<any>;
+    }): Promise<{
+        [x: string]: string | number | {
+            id: number;
+        };
+        count: number;
+    }[]>;
     getConversionAnalytics(websiteId: string, options: {
         startDate?: string;
         endDate?: string;

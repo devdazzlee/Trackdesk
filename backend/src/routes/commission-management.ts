@@ -1,9 +1,9 @@
-import express from "express";
+import express, { Router } from "express";
 import { z } from "zod";
 import { authenticateToken } from "../middleware/auth";
 import { prisma } from "../lib/prisma";
 
-const router = express.Router();
+const router: Router = express.Router();
 
 // Get all commissions with filtering
 router.get("/", authenticateToken, async (req: any, res) => {
@@ -514,15 +514,15 @@ router.patch(
       // Log the rate change
       await prisma.activity.create({
         data: {
-          type: "COMMISSION_RATE_CHANGE",
-          description: `Commission rate changed to ${commissionRate}%${reason ? ` - ${reason}` : ""}`,
-          metadata: {
+          action: "COMMISSION_RATE_CHANGE",
+          resource: "AFFILIATE_PROFILE",
+          details: {
+            description: `Commission rate changed to ${commissionRate}%${reason ? ` - ${reason}` : ""}`,
             oldRate: affiliate.commissionRate,
             newRate: commissionRate,
             reason,
           },
           userId: req.user.id,
-          affiliateId,
         },
       });
 

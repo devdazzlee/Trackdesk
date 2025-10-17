@@ -1,349 +1,563 @@
-import express, { Router } from "express";
+import express, { Router, Request, Response } from "express";
 import { authenticateToken } from "../middleware/auth";
-import { PrismaClient } from "@prisma/client";
 import { z } from "zod";
-import crypto from "crypto";
+import LinksService from "../services/LinksService";
 
 const router: Router = express.Router();
-const prisma = new PrismaClient();
+
+// Validation schemas
+const generateLinkSchema = z.object({
+  url: z.string().url("Invalid URL format"),
+  campaignName: z.string().optional(),
+  customAlias: z
+    .string()
+    .min(3)
+    .max(20)
+    .regex(/^[a-zA-Z0-9-_]+$/)
+    .optional(),
+  offerId: z.string().optional(),
+});
+
+const generateCouponSchema = z.object({
+  description: z.string().min(3, "Description must be at least 3 characters"),
+  discountType: z.enum(["PERCENTAGE", "FIXED"], {
+    errorMap: () => ({ message: "Discount type must be PERCENTAGE or FIXED" }),
+  }),
+  discountValue: z.number().positive("Discount value must be positive"),
+  minPurchase: z.number().positive().optional(),
+  maxUsage: z.number().int().positive().optional(),
+  validDays: z.number().int().positive().max(365).optional(),
+});
+
+const trackClickSchema = z.object({
+  referrer: z.string().optional(),
+  userAgent: z.string().optional(),
+  ipAddress: z.string().optional(),
+  country: z.string().optional(),
+  device: z.string().optional(),
+});
 
 // Generate affiliate link
-router.post("/generate", authenticateToken, async (req: any, res) => {
+router.post("/generate", authenticateToken, async (req: any, res: Response) => {
   try {
     const userId = req.user.id;
-    const { url, campaignName, customAlias } = req.body;
 
     // Validate input
-    const schema = z.object({
-      url: z.string().url(),
-      campaignName: z.string().optional(),
-      customAlias: z.string().optional(),
-    });
+    const validatedData = generateLinkSchema.parse(req.body);
 
-    const validatedData = schema.parse({ url, campaignName, customAlias });
+    // Generate link using service
+    const link = await LinksService.generateLink(userId, validatedData as any);
 
-    const affiliate = await prisma.affiliateProfile.findFirst({
-      where: { userId },
-    });
-
-    if (!affiliate) {
-      return res.status(404).json({ error: "Affiliate profile not found" });
-    }
-
-    // Generate unique tracking code
-    const trackingCode = customAlias || crypto.randomBytes(6).toString("hex");
-
-    // Create affiliate link (simplified - in real app, store in database)
-    const affiliateUrl = `${validatedData.url}?ref=${affiliate.id}&track=${trackingCode}`;
-    const shortUrl = `https://track.link/${trackingCode}`;
-
-    const linkData = {
-      id: crypto.randomUUID(),
-      originalUrl: validatedData.url,
-      affiliateUrl,
-      shortUrl,
-      trackingCode,
-      campaignName: validatedData.campaignName || "Default Campaign",
-      clicks: 0,
-      conversions: 0,
-      createdAt: new Date(),
-      affiliateId: affiliate.id,
-    };
-
-    res.json({
+    res.status(201).json({
       success: true,
-      link: linkData,
+      link,
       message: "Affiliate link generated successfully",
     });
   } catch (error) {
     console.error("Error generating link:", error);
+
     if (error instanceof z.ZodError) {
-      return res
-        .status(400)
-        .json({ error: "Invalid input data", details: error.errors });
+      return res.status(400).json({
+        success: false,
+        error: "Validation failed",
+        details: error.errors,
+      });
     }
-    res.status(500).json({ error: "Failed to generate affiliate link" });
+
+    if (error instanceof Error) {
+      if (error.message === "Custom alias is already taken") {
+        return res.status(409).json({
+          success: false,
+          error: error.message,
+        });
+      }
+
+      if (error.message === "Affiliate profile not found") {
+        return res.status(404).json({
+          success: false,
+          error: error.message,
+        });
+      }
+    }
+
+    res.status(500).json({
+      success: false,
+      error: "Failed to generate affiliate link",
+    });
   }
 });
 
 // Get all affiliate links
-router.get("/my-links", authenticateToken, async (req: any, res) => {
+router.get("/my-links", authenticateToken, async (req: any, res: Response) => {
   try {
     const userId = req.user.id;
 
-    const affiliate = await prisma.affiliateProfile.findFirst({
-      where: { userId },
-    });
-
-    if (!affiliate) {
-      return res.status(404).json({ error: "Affiliate profile not found" });
-    }
-
-    // Get referral codes as links
-    const referralCodes = await prisma.referralCode.findMany({
-      where: { affiliateId: affiliate.id },
-      orderBy: { createdAt: "desc" },
-    });
-
-    const links = referralCodes.map((code) => ({
-      id: code.id,
-      name: code.code,
-      url: `https://yourstore.com?ref=${code.code}`,
-      shortUrl: `https://track.link/${code.code}`,
-      trackingCode: code.code,
-      campaignName: `Referral Campaign - ${code.type}`,
-      clicks: code.currentUses || 0,
-      conversions: 0,
-      earnings: 0,
-      status: code.isActive ? "Active" : "Inactive",
-      createdAt: code.createdAt,
-    }));
+    const links = await LinksService.getMyLinks(userId);
 
     res.json({
+      success: true,
       links,
       total: links.length,
     });
   } catch (error) {
     console.error("Error fetching links:", error);
-    res.status(500).json({ error: "Failed to fetch affiliate links" });
-  }
-});
 
-// Get marketing assets
-router.get("/assets/banners", authenticateToken, async (req: any, res) => {
-  try {
-    const userId = req.user.id;
-
-    const affiliate = await prisma.affiliateProfile.findFirst({
-      where: { userId },
-    });
-
-    if (!affiliate) {
-      return res.status(404).json({ error: "Affiliate profile not found" });
+    if (
+      error instanceof Error &&
+      error.message === "Affiliate profile not found"
+    ) {
+      return res.status(404).json({
+        success: false,
+        error: error.message,
+      });
     }
 
-    // Mock banner assets
-    const banners = [
-      {
-        id: "banner-1",
-        name: "Hero Banner - 1200x628",
-        category: "Social Media",
-        size: "1200x628",
-        format: "PNG",
-        fileSize: "245 KB",
-        downloadUrl: "/assets/banners/hero-1200x628.png",
-        previewUrl: "/assets/banners/preview/hero-1200x628.png",
-        downloads: 156,
-        createdAt: new Date("2024-01-01"),
-      },
-      {
-        id: "banner-2",
-        name: "Square Banner - 1080x1080",
-        category: "Instagram",
-        size: "1080x1080",
-        format: "PNG",
-        fileSize: "312 KB",
-        downloadUrl: "/assets/banners/square-1080x1080.png",
-        previewUrl: "/assets/banners/preview/square-1080x1080.png",
-        downloads: 203,
-        createdAt: new Date("2024-01-05"),
-      },
-      {
-        id: "banner-3",
-        name: "Leaderboard - 728x90",
-        category: "Web Banner",
-        size: "728x90",
-        format: "PNG",
-        fileSize: "89 KB",
-        downloadUrl: "/assets/banners/leaderboard-728x90.png",
-        previewUrl: "/assets/banners/preview/leaderboard-728x90.png",
-        downloads: 98,
-        createdAt: new Date("2024-01-10"),
-      },
-      {
-        id: "banner-4",
-        name: "Skyscraper - 160x600",
-        category: "Web Banner",
-        size: "160x600",
-        format: "PNG",
-        fileSize: "134 KB",
-        downloadUrl: "/assets/banners/skyscraper-160x600.png",
-        previewUrl: "/assets/banners/preview/skyscraper-160x600.png",
-        downloads: 67,
-        createdAt: new Date("2024-01-15"),
-      },
-    ];
-
-    res.json({
-      banners,
-      total: banners.length,
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch affiliate links",
     });
-  } catch (error) {
-    console.error("Error fetching banners:", error);
-    res.status(500).json({ error: "Failed to fetch marketing assets" });
   }
 });
+
+// Get link statistics
+router.get(
+  "/stats/:linkId",
+  authenticateToken,
+  async (req: any, res: Response) => {
+    try {
+      const userId = req.user.id;
+      const { linkId } = req.params;
+
+      const stats = await LinksService.getLinkStats(userId, linkId);
+
+      res.json({
+        success: true,
+        stats,
+      });
+    } catch (error) {
+      console.error("Error fetching link stats:", error);
+
+      if (error instanceof Error) {
+        if (
+          error.message === "Link not found" ||
+          error.message === "Affiliate profile not found"
+        ) {
+          return res.status(404).json({
+            success: false,
+            error: error.message,
+          });
+        }
+      }
+
+      res.status(500).json({
+        success: false,
+        error: "Failed to fetch link statistics",
+      });
+    }
+  }
+);
+
+// Update link status
+router.patch(
+  "/:linkId/status",
+  authenticateToken,
+  async (req: any, res: Response) => {
+    try {
+      const userId = req.user.id;
+      const { linkId } = req.params;
+      const { isActive } = req.body;
+
+      if (typeof isActive !== "boolean") {
+        return res.status(400).json({
+          success: false,
+          error: "isActive must be a boolean",
+        });
+      }
+
+      const link = await LinksService.updateLinkStatus(
+        userId,
+        linkId,
+        isActive
+      );
+
+      res.json({
+        success: true,
+        link,
+        message: `Link ${isActive ? "activated" : "deactivated"} successfully`,
+      });
+    } catch (error) {
+      console.error("Error updating link status:", error);
+
+      if (
+        error instanceof Error &&
+        error.message === "Affiliate profile not found"
+      ) {
+        return res.status(404).json({
+          success: false,
+          error: error.message,
+        });
+      }
+
+      res.status(500).json({
+        success: false,
+        error: "Failed to update link status",
+      });
+    }
+  }
+);
+
+// Delete link
+router.delete(
+  "/:linkId",
+  authenticateToken,
+  async (req: any, res: Response) => {
+    try {
+      const userId = req.user.id;
+      const { linkId } = req.params;
+
+      const result = await LinksService.deleteLink(userId, linkId);
+
+      res.json({
+        success: true,
+        message: result.message,
+      });
+    } catch (error) {
+      console.error("Error deleting link:", error);
+
+      if (
+        error instanceof Error &&
+        error.message === "Affiliate profile not found"
+      ) {
+        return res.status(404).json({
+          success: false,
+          error: error.message,
+        });
+      }
+
+      res.status(500).json({
+        success: false,
+        error: "Failed to delete link",
+      });
+    }
+  }
+);
+
+// Get marketing assets (banners)
+router.get(
+  "/assets/banners",
+  authenticateToken,
+  async (req: any, res: Response) => {
+    try {
+      const userId = req.user.id;
+
+      // TODO: Implement proper marketing assets management with database
+      // For now, returning sample assets as placeholders
+      const banners = [
+        {
+          id: "banner-1",
+          name: "Hero Banner - 1200x628",
+          category: "Social Media",
+          size: "1200x628",
+          format: "PNG",
+          fileSize: "245 KB",
+          downloadUrl: "/assets/banners/hero-1200x628.png",
+          previewUrl: "/assets/banners/preview/hero-1200x628.png",
+          downloads: 156,
+          createdAt: new Date("2024-01-01"),
+        },
+        {
+          id: "banner-2",
+          name: "Square Banner - 1080x1080",
+          category: "Instagram",
+          size: "1080x1080",
+          format: "PNG",
+          fileSize: "312 KB",
+          downloadUrl: "/assets/banners/square-1080x1080.png",
+          previewUrl: "/assets/banners/preview/square-1080x1080.png",
+          downloads: 203,
+          createdAt: new Date("2024-01-05"),
+        },
+        {
+          id: "banner-3",
+          name: "Leaderboard - 728x90",
+          category: "Web Banner",
+          size: "728x90",
+          format: "PNG",
+          fileSize: "89 KB",
+          downloadUrl: "/assets/banners/leaderboard-728x90.png",
+          previewUrl: "/assets/banners/preview/leaderboard-728x90.png",
+          downloads: 98,
+          createdAt: new Date("2024-01-10"),
+        },
+        {
+          id: "banner-4",
+          name: "Skyscraper - 160x600",
+          category: "Web Banner",
+          size: "160x600",
+          format: "PNG",
+          fileSize: "134 KB",
+          downloadUrl: "/assets/banners/skyscraper-160x600.png",
+          previewUrl: "/assets/banners/preview/skyscraper-160x600.png",
+          downloads: 67,
+          createdAt: new Date("2024-01-15"),
+        },
+      ];
+
+      res.json({
+        success: true,
+        banners,
+        total: banners.length,
+      });
+    } catch (error) {
+      console.error("Error fetching banners:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to fetch marketing assets",
+      });
+    }
+  }
+);
 
 // Get available coupons
-router.get("/coupons/available", authenticateToken, async (req: any, res) => {
-  try {
-    const userId = req.user.id;
+router.get(
+  "/coupons/available",
+  authenticateToken,
+  async (req: any, res: Response) => {
+    try {
+      const userId = req.user.id;
 
-    const affiliate = await prisma.affiliateProfile.findFirst({
-      where: { userId },
-    });
+      const coupons = await LinksService.getAvailableCoupons(userId);
 
-    if (!affiliate) {
-      return res.status(404).json({ error: "Affiliate profile not found" });
+      res.json({
+        success: true,
+        coupons,
+        total: coupons.length,
+      });
+    } catch (error) {
+      console.error("Error fetching coupons:", error);
+
+      if (
+        error instanceof Error &&
+        error.message === "Affiliate profile not found"
+      ) {
+        return res.status(404).json({
+          success: false,
+          error: error.message,
+        });
+      }
+
+      res.status(500).json({
+        success: false,
+        error: "Failed to fetch available coupons",
+      });
     }
-
-    // Mock coupon data
-    const coupons = [
-      {
-        id: "coupon-1",
-        code: `SAVE20-${affiliate.id.slice(0, 6).toUpperCase()}`,
-        description: "20% off on all products",
-        discount: "20%",
-        type: "Percentage",
-        minPurchase: "$50",
-        maxDiscount: "$100",
-        validUntil: "2024-12-31",
-        uses: 45,
-        maxUses: 100,
-        commission: "15%",
-        status: "Active",
-      },
-      {
-        id: "coupon-2",
-        code: `NEWUSER-${affiliate.id.slice(0, 6).toUpperCase()}`,
-        description: "$10 off for new customers",
-        discount: "$10",
-        type: "Fixed Amount",
-        minPurchase: "$30",
-        maxDiscount: "$10",
-        validUntil: "2024-12-31",
-        uses: 78,
-        maxUses: 200,
-        commission: "10%",
-        status: "Active",
-      },
-      {
-        id: "coupon-3",
-        code: `FLASH25-${affiliate.id.slice(0, 6).toUpperCase()}`,
-        description: "25% off flash sale",
-        discount: "25%",
-        type: "Percentage",
-        minPurchase: "$100",
-        maxDiscount: "$250",
-        validUntil: "2024-11-30",
-        uses: 23,
-        maxUses: 50,
-        commission: "20%",
-        status: "Active",
-      },
-    ];
-
-    res.json({
-      coupons,
-      total: coupons.length,
-    });
-  } catch (error) {
-    console.error("Error fetching coupons:", error);
-    res.status(500).json({ error: "Failed to fetch available coupons" });
   }
-});
+);
 
 // Generate custom coupon
-router.post("/coupons/generate", authenticateToken, async (req: any, res) => {
+router.post(
+  "/coupons/generate",
+  authenticateToken,
+  async (req: any, res: Response) => {
+    try {
+      const userId = req.user.id;
+
+      // Validate input
+      const validatedData = generateCouponSchema.parse(req.body);
+
+      const coupon = await LinksService.generateCoupon(
+        userId,
+        validatedData as any
+      );
+
+      res.status(201).json({
+        success: true,
+        coupon,
+        message: "Coupon generated successfully",
+      });
+    } catch (error) {
+      console.error("Error generating coupon:", error);
+
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          success: false,
+          error: "Validation failed",
+          details: error.errors,
+        });
+      }
+
+      if (error instanceof Error) {
+        if (error.message === "Affiliate profile not found") {
+          return res.status(404).json({
+            success: false,
+            error: error.message,
+          });
+        }
+
+        if (error.message === "Failed to generate unique coupon code") {
+          return res.status(500).json({
+            success: false,
+            error: error.message,
+          });
+        }
+      }
+
+      res.status(500).json({
+        success: false,
+        error: "Failed to generate coupon",
+      });
+    }
+  }
+);
+
+// Validate and use coupon
+router.post("/coupons/validate", async (req: Request, res: Response) => {
   try {
-    const userId = req.user.id;
-    const { description, discountType, discountValue, minPurchase } = req.body;
+    const { couponCode } = req.body;
 
-    // Validate input
-    const schema = z.object({
-      description: z.string().min(3),
-      discountType: z.enum(["Percentage", "Fixed Amount"]),
-      discountValue: z.number().positive(),
-      minPurchase: z.number().positive().optional(),
-    });
-
-    const validatedData = schema.parse({
-      description,
-      discountType,
-      discountValue,
-      minPurchase,
-    });
-
-    const affiliate = await prisma.affiliateProfile.findFirst({
-      where: { userId },
-    });
-
-    if (!affiliate) {
-      return res.status(404).json({ error: "Affiliate profile not found" });
+    if (!couponCode || typeof couponCode !== "string") {
+      return res.status(400).json({
+        success: false,
+        error: "Coupon code is required",
+      });
     }
 
-    // Generate unique coupon code
-    const couponCode = `CUSTOM-${crypto.randomBytes(4).toString("hex").toUpperCase()}`;
-
-    const coupon = {
-      id: crypto.randomUUID(),
-      code: couponCode,
-      description: validatedData.description,
-      discount:
-        validatedData.discountType === "Percentage"
-          ? `${validatedData.discountValue}%`
-          : `$${validatedData.discountValue}`,
-      type: validatedData.discountType,
-      minPurchase: validatedData.minPurchase
-        ? `$${validatedData.minPurchase}`
-        : "None",
-      validUntil: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000)
-        .toISOString()
-        .split("T")[0],
-      uses: 0,
-      maxUses: 100,
-      commission: "15%",
-      status: "Active",
-      createdAt: new Date(),
-    };
+    const result = await LinksService.useCoupon(couponCode);
 
     res.json({
       success: true,
-      coupon,
-      message: "Coupon generated successfully",
+      ...result,
     });
   } catch (error) {
-    console.error("Error generating coupon:", error);
-    if (error instanceof z.ZodError) {
-      return res
-        .status(400)
-        .json({ error: "Invalid input data", details: error.errors });
+    console.error("Error validating coupon:", error);
+
+    if (error instanceof Error) {
+      return res.status(400).json({
+        success: false,
+        error: error.message,
+      });
     }
-    res.status(500).json({ error: "Failed to generate coupon" });
+
+    res.status(500).json({
+      success: false,
+      error: "Failed to validate coupon",
+    });
   }
 });
 
+// Deactivate coupon
+router.patch(
+  "/coupons/:couponId/deactivate",
+  authenticateToken,
+  async (req: any, res: Response) => {
+    try {
+      const userId = req.user.id;
+      const { couponId } = req.params;
+
+      const coupon = await LinksService.deactivateCoupon(userId, couponId);
+
+      res.json({
+        success: true,
+        coupon,
+        message: "Coupon deactivated successfully",
+      });
+    } catch (error) {
+      console.error("Error deactivating coupon:", error);
+
+      if (
+        error instanceof Error &&
+        error.message === "Affiliate profile not found"
+      ) {
+        return res.status(404).json({
+          success: false,
+          error: error.message,
+        });
+      }
+
+      res.status(500).json({
+        success: false,
+        error: "Failed to deactivate coupon",
+      });
+    }
+  }
+);
+
 // Track link click
-router.post("/track/:trackingCode", async (req, res) => {
+router.post("/track/:trackingCode", async (req: Request, res: Response) => {
   try {
     const { trackingCode } = req.params;
-    const { referrer, userAgent, ipAddress } = req.body;
 
-    // In a real app, you would track this in the database
-    console.log("Link click tracked:", {
-      trackingCode,
-      referrer,
-      userAgent,
-      ipAddress,
-    });
+    // Validate click data
+    const validatedData = trackClickSchema.parse(req.body);
 
+    // Track the click
+    const result = await LinksService.trackClick(trackingCode, validatedData);
+
+    // Return success with redirect URL
     res.json({
       success: true,
+      redirectUrl: result.redirectUrl,
       message: "Click tracked successfully",
     });
   } catch (error) {
     console.error("Error tracking click:", error);
-    res.status(500).json({ error: "Failed to track click" });
+
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({
+        success: false,
+        error: "Validation failed",
+        details: error.errors,
+      });
+    }
+
+    if (
+      error instanceof Error &&
+      error.message === "Tracking link not found or inactive"
+    ) {
+      return res.status(404).json({
+        success: false,
+        error: error.message,
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      error: "Failed to track click",
+    });
+  }
+});
+
+// Redirect short URL to original URL (for actual link redirection)
+router.get("/redirect/:trackingCode", async (req: Request, res: Response) => {
+  try {
+    const { trackingCode } = req.params;
+
+    // Get user agent and IP for tracking
+    const userAgent = req.headers["user-agent"] || "Unknown";
+    const referrer = req.headers.referer || req.headers.referrer;
+    const ipAddress =
+      (req.headers["x-forwarded-for"] as string)?.split(",")[0] || req.ip;
+
+    // Track the click and get redirect URL
+    const result = await LinksService.trackClick(trackingCode, {
+      userAgent,
+      referrer: referrer as string,
+      ipAddress,
+    });
+
+    // Redirect to original URL
+    res.redirect(301, result.redirectUrl);
+  } catch (error) {
+    console.error("Error redirecting:", error);
+
+    if (
+      error instanceof Error &&
+      error.message === "Tracking link not found or inactive"
+    ) {
+      return res.status(404).send("Link not found or inactive");
+    }
+
+    res.status(500).send("Failed to redirect");
   }
 });
 

@@ -1,10 +1,10 @@
-import express from "express";
+import express, { Router } from "express";
 import { z } from "zod";
 import { authenticateToken } from "../middleware/auth";
 import { ReferralSystemModel } from "../models/ReferralSystem";
 import { prisma } from "../lib/prisma";
 
-const router = express.Router();
+const router: Router = express.Router();
 
 // Get affiliate's referral codes
 router.get("/codes", authenticateToken, async (req: any, res) => {
@@ -88,7 +88,10 @@ router.post("/codes", authenticateToken, async (req: any, res) => {
     const referralCode = await ReferralSystemModel.generateReferralCode(
       affiliate.id,
       {
-        ...data,
+        type: data.type || "BOTH",
+        commissionRate: data.commissionRate || 10,
+        productId: data.productId,
+        maxUses: data.maxUses,
         expiresAt: expiresAtDate,
       }
     );
@@ -188,7 +191,7 @@ router.post("/process", async (req, res) => {
     const referralUsage = await ReferralSystemModel.processReferral(
       data.code,
       data.userId,
-      data.type,
+      data.type === "PURCHASE" ? "PRODUCT" : data.type,
       {
         productId: data.productId,
         orderValue: data.orderValue,
@@ -281,11 +284,23 @@ router.get("/admin/stats", authenticateToken, async (req: any, res) => {
       prisma.referralUsage.aggregate({
         _sum: { commissionAmount: true },
       }),
-      prisma.referralUsage.groupBy({
-        by: ["referralCodeId"],
-        _sum: { commissionAmount: true },
-        _count: { id: true },
-        orderBy: { _sum: { commissionAmount: true } },
+      // Get top affiliates by commission
+      prisma.referralUsage.findMany({
+        select: {
+          referralCodeId: true,
+          commissionAmount: true,
+          referralCode: {
+            select: {
+              code: true,
+              affiliate: {
+                select: {
+                  companyName: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: { commissionAmount: "desc" },
         take: 10,
       }),
     ]);

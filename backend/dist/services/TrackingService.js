@@ -43,26 +43,30 @@ class TrackingService {
             websiteId,
             page,
             device,
-            browser
+            browser,
+            event: eventType,
+            trackingCodeId: 'default',
+            ipAddress: '',
+            userAgent: '',
+            referrer: ''
         });
         await this.updateWebsiteStats(websiteId, eventType, timestamp);
     }
     async upsertSession(sessionData) {
         await prisma.trackingSession.upsert({
-            where: { id: sessionData.id },
+            where: { sessionId: sessionData.id },
             update: {
-                lastActivity: new Date(sessionData.lastActivity),
                 userAgent: sessionData.userAgent,
                 ipAddress: sessionData.ipAddress,
                 country: sessionData.country,
-                city: sessionData.city
+                city: sessionData.city,
+                updatedAt: new Date()
             },
             create: {
-                id: sessionData.id,
+                sessionId: sessionData.id,
                 websiteId: sessionData.websiteId,
                 userId: sessionData.userId,
                 startTime: new Date(sessionData.startTime),
-                lastActivity: new Date(sessionData.lastActivity),
                 userAgent: sessionData.userAgent,
                 ipAddress: sessionData.ipAddress,
                 country: sessionData.country,
@@ -73,16 +77,16 @@ class TrackingService {
     async storeEvent(eventData) {
         await prisma.trackingEvent.create({
             data: {
-                id: eventData.id,
+                trackingCodeId: eventData.trackingCodeId || 'default',
                 eventType: eventData.eventType,
+                event: eventData.event,
                 data: eventData.data,
                 timestamp: new Date(eventData.timestamp),
                 sessionId: eventData.sessionId,
-                userId: eventData.userId,
                 websiteId: eventData.websiteId,
-                page: eventData.page,
-                device: eventData.device,
-                browser: eventData.browser
+                ipAddress: eventData.ipAddress,
+                userAgent: eventData.userAgent,
+                referrer: eventData.referrer
             }
         });
     }
@@ -93,23 +97,25 @@ class TrackingService {
             where: {
                 websiteId_date: {
                     websiteId,
-                    date: dateStr
+                    date: new Date(dateStr)
                 }
             },
             update: {
-                [eventType === 'page_view' ? 'pageViews' :
-                    eventType === 'click' ? 'clicks' :
-                        eventType === 'conversion' ? 'conversions' : 'otherEvents']: {
-                    increment: 1
-                }
+                pageViews: eventType === 'page_view' ? { increment: 1 } : undefined,
+                events: eventType === 'click' || eventType === 'conversion' ? { increment: 1 } : undefined,
+                conversions: eventType === 'conversion' ? { increment: 1 } : undefined
             },
             create: {
                 websiteId,
-                date: dateStr,
+                date: new Date(dateStr),
                 pageViews: eventType === 'page_view' ? 1 : 0,
-                clicks: eventType === 'click' ? 1 : 0,
+                uniqueVisitors: 0,
+                sessions: 0,
+                events: eventType === 'click' || eventType === 'conversion' ? 1 : 0,
                 conversions: eventType === 'conversion' ? 1 : 0,
-                otherEvents: eventType !== 'page_view' && eventType !== 'click' && eventType !== 'conversion' ? 1 : 0
+                revenue: 0,
+                bounceRate: 0,
+                avgSessionDuration: 0
             }
         });
     }
@@ -142,7 +148,7 @@ class TrackingService {
             prisma.trackingSession.count({
                 where: {
                     websiteId,
-                    lastActivity: { gte: oneHourAgo }
+                    updatedAt: { gte: oneHourAgo }
                 }
             }),
             prisma.trackingEvent.findMany({
@@ -153,16 +159,18 @@ class TrackingService {
                 orderBy: { timestamp: 'desc' },
                 take: 50
             }),
-            prisma.trackingEvent.groupBy({
-                by: ['page'],
+            prisma.trackingEvent.findMany({
                 where: {
                     websiteId,
                     eventType: 'page_view',
                     timestamp: { gte: oneHourAgo }
                 },
-                _count: { id: true },
-                orderBy: { _count: { id: 'desc' } },
-                take: 10
+                select: {
+                    data: true,
+                    timestamp: true
+                },
+                orderBy: { timestamp: 'desc' },
+                take: 100
             })
         ]);
         return {
@@ -173,12 +181,12 @@ class TrackingService {
                 id: event.id,
                 eventType: event.eventType,
                 timestamp: event.timestamp,
-                page: event.page,
+                page: event.data?.page || null,
                 data: event.data
             })),
             topPages: topPages.map(page => ({
-                page: page.page,
-                views: page._count.id
+                page: page.data?.page || null,
+                views: 1
             }))
         };
     }
@@ -195,19 +203,34 @@ class TrackingService {
             if (endDate)
                 whereClause.timestamp.lte = new Date(endDate);
         }
-        const pageStats = await prisma.trackingEvent.groupBy({
-            by: ['page'],
+        const pageStats = await prisma.trackingEvent.findMany({
             where: whereClause,
-            _count: { id: true },
-            _avg: { timestamp: true },
-            orderBy: { _count: { id: sortOrder } },
+            select: {
+                data: true,
+                timestamp: true
+            },
+            orderBy: { timestamp: sortOrder },
             take: limit
         });
-        return pageStats.map(stat => ({
-            page: stat.page,
-            views: stat._count.id,
-            avgTimestamp: stat._avg.timestamp
-        }));
+        const pageGroups = {};
+        pageStats.forEach(event => {
+            const pageUrl = event.data?.page?.url || 'unknown';
+            if (!pageGroups[pageUrl]) {
+                pageGroups[pageUrl] = { views: 0, avgTime: 0 };
+            }
+            pageGroups[pageUrl].views++;
+        });
+        const result = Object.entries(pageGroups).map(([page, stats]) => ({
+            page,
+            views: stats.views,
+            avgTime: stats.avgTime
+        })).sort((a, b) => {
+            if (sortBy === 'views') {
+                return sortOrder === 'desc' ? b.views - a.views : a.views - b.views;
+            }
+            return 0;
+        });
+        return result;
     }
     async getDeviceAnalytics(websiteId, options) {
         const { startDate, endDate, groupBy = 'browser' } = options;
@@ -219,14 +242,22 @@ class TrackingService {
             if (endDate)
                 whereClause.timestamp.lte = new Date(endDate);
         }
-        const deviceStats = await prisma.trackingEvent.groupBy({
-            by: [groupBy],
+        const deviceStats = await prisma.trackingEvent.findMany({
             where: whereClause,
-            _count: { id: true }
+            select: {
+                data: true,
+                timestamp: true
+            },
+            take: 1000
         });
-        return deviceStats.map(stat => ({
-            [groupBy]: stat[groupBy],
-            count: stat._count.id
+        const deviceGroups = {};
+        deviceStats.forEach(event => {
+            const deviceType = event.data?.device?.platform || 'unknown';
+            deviceGroups[deviceType] = (deviceGroups[deviceType] || 0) + 1;
+        });
+        return Object.entries(deviceGroups).map(([device, count]) => ({
+            [groupBy]: device,
+            count
         }));
     }
     async getGeographicAnalytics(websiteId, options) {
@@ -270,7 +301,7 @@ class TrackingService {
             id: conversion.id,
             timestamp: conversion.timestamp,
             data: conversion.data,
-            page: conversion.page
+            page: conversion.data?.page || null
         }));
     }
     async getUserJourney(websiteId, options) {
@@ -295,7 +326,7 @@ class TrackingService {
             id: event.id,
             eventType: event.eventType,
             timestamp: event.timestamp,
-            page: event.page,
+            page: event.data?.page || null,
             data: event.data
         }));
     }
@@ -319,10 +350,10 @@ class TrackingService {
             select: { data: true }
         });
         const heatmapData = clicks
-            .filter(click => click.data?.position)
+            .filter(click => click.data && typeof click.data === 'object' && 'position' in click.data)
             .map(click => ({
-            x: click.data.position.x,
-            y: click.data.position.y
+            x: click.data.position?.x || 0,
+            y: click.data.position?.y || 0
         }));
         return {
             page,

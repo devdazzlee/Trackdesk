@@ -732,3 +732,21 @@
 {"level":"info","message":"🚀 Trackdesk Backend Server running on port 3003","timestamp":"2025-10-16T13:58:30.736Z"}
 {"level":"info","message":"📡 WebSocket server running on port 3003","timestamp":"2025-10-16T13:58:30.740Z"}
 {"level":"info","message":"🌐 Environment: development","timestamp":"2025-10-16T13:58:30.740Z"}
+{"level":"info","message":"🚀 Trackdesk Backend Server running on port 3003","timestamp":"2025-10-16T21:45:53.143Z"}
+{"level":"info","message":"📡 WebSocket server running on port 3003","timestamp":"2025-10-16T21:45:53.146Z"}
+{"level":"info","message":"🌐 Environment: development","timestamp":"2025-10-16T21:45:53.147Z"}
+{"level":"info","message":"🚀 Trackdesk Backend Server running on port 3003","timestamp":"2025-10-17T09:36:36.199Z"}
+{"level":"info","message":"📡 WebSocket server running on port 3003","timestamp":"2025-10-17T09:36:36.202Z"}
+{"level":"info","message":"🌐 Environment: development","timestamp":"2025-10-17T09:36:36.202Z"}
+{"level":"info","message":"SIGTERM received, shutting down gracefully","timestamp":"2025-10-17T09:36:54.062Z"}
+{"level":"info","message":"🚀 Trackdesk Backend Server running on port 3003","timestamp":"2025-10-17T09:36:55.253Z"}
+{"level":"info","message":"📡 WebSocket server running on port 3003","timestamp":"2025-10-17T09:36:55.257Z"}
+{"level":"info","message":"🌐 Environment: development","timestamp":"2025-10-17T09:36:55.258Z"}
+{"level":"info","message":"SIGTERM received, shutting down gracefully","timestamp":"2025-10-17T09:36:56.781Z"}
+{"level":"info","message":"🚀 Trackdesk Backend Server running on port 3003","timestamp":"2025-10-17T09:36:58.130Z"}
+{"level":"info","message":"📡 WebSocket server running on port 3003","timestamp":"2025-10-17T09:36:58.134Z"}
+{"level":"info","message":"🌐 Environment: development","timestamp":"2025-10-17T09:36:58.135Z"}
+{"level":"info","message":"SIGTERM received, shutting down gracefully","timestamp":"2025-10-17T09:37:00.149Z"}
+{"level":"info","message":"🚀 Trackdesk Backend Server running on port 3003","timestamp":"2025-10-17T09:37:01.152Z"}
+{"level":"info","message":"📡 WebSocket server running on port 3003","timestamp":"2025-10-17T09:37:01.155Z"}
+{"level":"info","message":"🌐 Environment: development","timestamp":"2025-10-17T09:37:01.156Z"}

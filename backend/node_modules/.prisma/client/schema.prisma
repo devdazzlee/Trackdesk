@@ -915,11 +915,63 @@ model TrackingEvent {
   referrer       String?
   data           Json
   timestamp      DateTime @default(now())
+  sessionId      String?
+  websiteId      String?
 
   // Relations
   trackingCode TrackingCode @relation(fields: [trackingCodeId], references: [id], onDelete: Cascade)
 
   @@map("tracking_events")
+}
+
+model TrackingSession {
+  id          String    @id @default(cuid())
+  sessionId   String    @unique
+  websiteId   String?
+  userId      String?
+  ipAddress   String?
+  userAgent   String?
+  country     String?
+  city        String?
+  device      String?
+  browser     String?
+  os          String?
+  referrer    String?
+  utmSource   String?
+  utmMedium   String?
+  utmCampaign String?
+  startTime   DateTime  @default(now())
+  endTime     DateTime?
+  duration    Int? // in seconds
+  pageViews   Int       @default(0)
+  events      Int       @default(0)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("tracking_sessions")
+}
+
+model TrackingStats {
+  id                 String   @id @default(cuid())
+  websiteId          String?
+  date               DateTime
+  pageViews          Int      @default(0)
+  uniqueVisitors     Int      @default(0)
+  sessions           Int      @default(0)
+  events             Int      @default(0)
+  conversions        Int      @default(0)
+  revenue            Float    @default(0)
+  bounceRate         Float    @default(0)
+  avgSessionDuration Float    @default(0)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([websiteId, date])
+  @@map("tracking_stats")
 }
 
 // Tracking Links Models

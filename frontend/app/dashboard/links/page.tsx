@@ -25,6 +25,12 @@ import {
   Eye,
   RefreshCw,
   Sparkles,
+  Trash2,
+  Power,
+  PowerOff,
+  BarChart3,
+  X,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { config } from "@/config/config";
@@ -40,6 +46,7 @@ interface AffiliateLink {
   conversions: number;
   earnings: number;
   status: string;
+  category?: string;
   createdAt: Date;
 }
 
@@ -62,12 +69,28 @@ interface Coupon {
   description: string;
   discount: string;
   type: string;
-  minPurchase: string;
+  minPurchase?: string;
   validUntil: string;
   uses: number;
   maxUses: number;
-  commission: string;
+  commission?: string;
   status: string;
+  createdAt?: Date;
+}
+
+interface LinkStats {
+  link: AffiliateLink;
+  clicks: {
+    id: string;
+    referrer?: string;
+    userAgent?: string;
+    ipAddress?: string;
+    createdAt: Date;
+  }[];
+  totalClicks: number;
+  totalConversions: number;
+  totalEarnings: number;
+  conversionRate: number;
 }
 
 export default function LinksPage() {
@@ -83,6 +106,24 @@ export default function LinksPage() {
   const [marketingAssets, setMarketingAssets] = useState<MarketingAsset[]>([]);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
 
+  // New state for modals and additional features
+  const [selectedLinkStats, setSelectedLinkStats] = useState<LinkStats | null>(
+    null
+  );
+  const [showStatsModal, setShowStatsModal] = useState(false);
+  const [showCouponGenerator, setShowCouponGenerator] = useState(false);
+  const [loadingStats, setLoadingStats] = useState(false);
+
+  // Coupon generator form state
+  const [couponDescription, setCouponDescription] = useState("");
+  const [couponDiscountType, setCouponDiscountType] = useState<
+    "PERCENTAGE" | "FIXED"
+  >("PERCENTAGE");
+  const [couponDiscountValue, setCouponDiscountValue] = useState("");
+  const [couponMinPurchase, setCouponMinPurchase] = useState("");
+  const [couponMaxUsage, setCouponMaxUsage] = useState("");
+  const [isGeneratingCoupon, setIsGeneratingCoupon] = useState(false);
+
   useEffect(() => {
     fetchAllData();
   }, []);
@@ -95,18 +136,42 @@ export default function LinksPage() {
 
   const fetchMyLinks = async () => {
     try {
+      console.log("Fetching links from:", `${config.apiUrl}/links/my-links`);
+
       const response = await fetch(`${config.apiUrl}/links/my-links`, {
         credentials: "include",
       });
 
+      console.log("Links fetch response status:", response.status);
+
       if (response.ok) {
         const data = await response.json();
+        console.log("Links data received:", data);
+        console.log("Number of links:", data.links?.length || 0);
+        console.log(
+          "Link IDs received:",
+          data.links?.map((link: any) => ({ id: link.id, name: link.name }))
+        );
         setMyLinks(data.links || []);
       } else {
-        console.error("Failed to fetch links:", response.status);
+        const error = await response.json();
+        console.error("Failed to fetch links:", error.error || response.status);
+        console.error("Full error response:", error);
+
+        // If authentication fails, show empty state
+        if (response.status === 401) {
+          console.log("Authentication failed - showing empty state");
+          setMyLinks([]);
+          toast.error("Please log in to view your links");
+        } else {
+          toast.error(error.error || "Failed to fetch links");
+        }
       }
     } catch (error) {
       console.error("Error fetching links:", error);
+      console.log("Network error - showing empty state");
+      setMyLinks([]);
+      toast.error("Failed to fetch links - check your connection");
     }
   };
 
@@ -120,7 +185,11 @@ export default function LinksPage() {
         const data = await response.json();
         setMarketingAssets(data.banners || []);
       } else {
-        console.error("Failed to fetch assets:", response.status);
+        const error = await response.json();
+        console.error(
+          "Failed to fetch assets:",
+          error.error || response.status
+        );
       }
     } catch (error) {
       console.error("Error fetching assets:", error);
@@ -137,7 +206,11 @@ export default function LinksPage() {
         const data = await response.json();
         setCoupons(data.coupons || []);
       } else {
-        console.error("Failed to fetch coupons:", response.status);
+        const error = await response.json();
+        console.error(
+          "Failed to fetch coupons:",
+          error.error || response.status
+        );
       }
     } catch (error) {
       console.error("Error fetching coupons:", error);
@@ -150,9 +223,29 @@ export default function LinksPage() {
       return;
     }
 
+    // Validate custom alias format if provided
+    if (customAlias && !/^[a-zA-Z0-9-_]+$/.test(customAlias)) {
+      toast.error(
+        "Custom alias can only contain letters, numbers, hyphens, and underscores"
+      );
+      return;
+    }
+
+    if (customAlias && (customAlias.length < 3 || customAlias.length > 20)) {
+      toast.error("Custom alias must be between 3 and 20 characters");
+      return;
+    }
+
     setIsGenerating(true);
 
     try {
+      console.log("Generating link:", {
+        url: urlInput,
+        campaignName,
+        customAlias,
+      });
+      console.log("API URL:", `${config.apiUrl}/links/generate`);
+
       const response = await fetch(`${config.apiUrl}/links/generate`, {
         method: "POST",
         headers: {
@@ -166,16 +259,36 @@ export default function LinksPage() {
         }),
       });
 
+      console.log("Generate link response status:", response.status);
+
       if (response.ok) {
         const data = await response.json();
-        toast.success("Affiliate link generated successfully!");
+        console.log("Link generated successfully:", data);
+        console.log("Generated link ID:", data.link?.id);
+        toast.success(data.message || "Affiliate link generated successfully!");
         setUrlInput("");
         setCampaignName("");
         setCustomAlias("");
         fetchMyLinks(); // Refresh links list
       } else {
         const error = await response.json();
-        toast.error(error.error || "Failed to generate link");
+        console.error("Error response:", error);
+        console.error("Response status:", response.status);
+
+        // Handle authentication errors
+        if (response.status === 401) {
+          toast.error("Please log in to generate affiliate links");
+          return;
+        }
+
+        // Show specific error messages
+        if (error.details && Array.isArray(error.details)) {
+          // Zod validation errors
+          const messages = error.details.map((d: any) => d.message).join(", ");
+          toast.error(messages);
+        } else {
+          toast.error(error.error || "Failed to generate link");
+        }
       }
     } catch (error) {
       console.error("Error generating link:", error);
@@ -203,6 +316,221 @@ export default function LinksPage() {
     await fetchAllData();
     setIsRefreshing(false);
     toast.success("Data refreshed successfully");
+  };
+
+  const handleDeleteLink = async (linkId: string, linkName: string) => {
+    console.log(
+      "Delete button clicked - Link ID:",
+      linkId,
+      "Link Name:",
+      linkName
+    );
+
+    if (!confirm(`Are you sure you want to delete "${linkName}"?`)) {
+      return;
+    }
+
+    try {
+      console.log(
+        "Sending DELETE request to:",
+        `${config.apiUrl}/links/${linkId}`
+      );
+      const response = await fetch(`${config.apiUrl}/links/${linkId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      console.log("Delete response status:", response.status);
+
+      if (response.ok) {
+        toast.success("Link deleted successfully");
+        fetchMyLinks(); // Refresh links list
+      } else {
+        const error = await response.json();
+        console.error("Delete error response:", error);
+        toast.error(error.error || "Failed to delete link");
+      }
+    } catch (error) {
+      console.error("Error deleting link:", error);
+      toast.error("Failed to delete link");
+    }
+  };
+
+  const handleToggleLinkStatus = async (
+    linkId: string,
+    currentStatus: string
+  ) => {
+    console.log(
+      "Toggle button clicked - Link ID:",
+      linkId,
+      "Current Status:",
+      currentStatus
+    );
+
+    const isActive = currentStatus === "Active";
+    const newStatus = !isActive;
+
+    try {
+      console.log(
+        "Sending PATCH request to:",
+        `${config.apiUrl}/links/${linkId}/status`
+      );
+      const response = await fetch(`${config.apiUrl}/links/${linkId}/status`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({ isActive: newStatus }),
+      });
+
+      console.log("Toggle response status:", response.status);
+
+      if (response.ok) {
+        toast.success(
+          `Link ${newStatus ? "activated" : "deactivated"} successfully`
+        );
+        fetchMyLinks(); // Refresh links list
+      } else {
+        const error = await response.json();
+        console.error("Toggle error response:", error);
+        toast.error(error.error || "Failed to update link status");
+      }
+    } catch (error) {
+      console.error("Error updating link status:", error);
+      toast.error("Failed to update link status");
+    }
+  };
+
+  const handleViewLinkStats = async (linkId: string) => {
+    console.log("View Stats button clicked - Link ID:", linkId);
+
+    setLoadingStats(true);
+    setShowStatsModal(true);
+
+    try {
+      console.log(
+        "Sending GET request to:",
+        `${config.apiUrl}/links/stats/${linkId}`
+      );
+      const response = await fetch(`${config.apiUrl}/links/stats/${linkId}`, {
+        credentials: "include",
+      });
+
+      console.log("Stats response status:", response.status);
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log("Stats data received:", data);
+        setSelectedLinkStats(data.stats);
+      } else {
+        const error = await response.json();
+        console.error("Stats error response:", error);
+        toast.error(error.error || "Failed to fetch link statistics");
+        setShowStatsModal(false);
+      }
+    } catch (error) {
+      console.error("Error fetching link stats:", error);
+      toast.error("Failed to fetch link statistics");
+      setShowStatsModal(false);
+    } finally {
+      setLoadingStats(false);
+    }
+  };
+
+  const handleGenerateCoupon = async () => {
+    if (!couponDescription.trim()) {
+      toast.error("Please enter a coupon description");
+      return;
+    }
+
+    if (!couponDiscountValue || parseFloat(couponDiscountValue) <= 0) {
+      toast.error("Please enter a valid discount value");
+      return;
+    }
+
+    setIsGeneratingCoupon(true);
+
+    try {
+      const response = await fetch(`${config.apiUrl}/links/coupons/generate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          description: couponDescription,
+          discountType: couponDiscountType,
+          discountValue: parseFloat(couponDiscountValue),
+          minPurchase: couponMinPurchase
+            ? parseFloat(couponMinPurchase)
+            : undefined,
+          maxUsage: couponMaxUsage ? parseInt(couponMaxUsage) : undefined,
+          validDays: 90, // Default 90 days
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        toast.success(data.message || "Coupon generated successfully!");
+
+        // Reset form
+        setCouponDescription("");
+        setCouponDiscountValue("");
+        setCouponMinPurchase("");
+        setCouponMaxUsage("");
+        setShowCouponGenerator(false);
+
+        // Refresh coupons list
+        fetchCoupons();
+      } else {
+        const error = await response.json();
+
+        if (error.details && Array.isArray(error.details)) {
+          const messages = error.details.map((d: any) => d.message).join(", ");
+          toast.error(messages);
+        } else {
+          toast.error(error.error || "Failed to generate coupon");
+        }
+      }
+    } catch (error) {
+      console.error("Error generating coupon:", error);
+      toast.error("Failed to generate coupon");
+    } finally {
+      setIsGeneratingCoupon(false);
+    }
+  };
+
+  const handleDeactivateCoupon = async (
+    couponId: string,
+    couponCode: string
+  ) => {
+    if (
+      !confirm(`Are you sure you want to deactivate coupon "${couponCode}"?`)
+    ) {
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${config.apiUrl}/links/coupons/${couponId}/deactivate`,
+        {
+          method: "PATCH",
+          credentials: "include",
+        }
+      );
+
+      if (response.ok) {
+        toast.success("Coupon deactivated successfully");
+        fetchCoupons(); // Refresh coupons list
+      } else {
+        const error = await response.json();
+        toast.error(error.error || "Failed to deactivate coupon");
+      }
+    } catch (error) {
+      console.error("Error deactivating coupon:", error);
+      toast.error("Failed to deactivate coupon");
+    }
   };
 
   if (isLoading) {
@@ -284,6 +612,10 @@ export default function LinksPage() {
                   value={customAlias}
                   onChange={(e) => setCustomAlias(e.target.value)}
                 />
+                <p className="text-xs text-muted-foreground">
+                  3-20 characters, letters, numbers, hyphens and underscores
+                  only
+                </p>
               </div>
               <Button
                 onClick={handleGenerateLink}
@@ -403,6 +735,46 @@ export default function LinksPage() {
                           </p>
                         </div>
                       </div>
+
+                      <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleViewLinkStats(link.id)}
+                          className="flex-1"
+                        >
+                          <BarChart3 className="w-4 h-4 mr-2" />
+                          View Stats
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            handleToggleLinkStatus(link.id, link.status)
+                          }
+                          className="flex-1"
+                        >
+                          {link.status === "Active" ? (
+                            <>
+                              <PowerOff className="w-4 h-4 mr-2" />
+                              Deactivate
+                            </>
+                          ) : (
+                            <>
+                              <Power className="w-4 h-4 mr-2" />
+                              Activate
+                            </>
+                          )}
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDeleteLink(link.id, link.name)}
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Delete
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -479,10 +851,18 @@ export default function LinksPage() {
         <TabsContent value="coupons" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Available Coupon Codes</CardTitle>
-              <CardDescription>
-                Share these discount codes to boost conversions
-              </CardDescription>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <CardTitle>Available Coupon Codes</CardTitle>
+                  <CardDescription>
+                    Share these discount codes to boost conversions
+                  </CardDescription>
+                </div>
+                <Button onClick={() => setShowCouponGenerator(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Generate Coupon
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {coupons.length === 0 ? (
@@ -535,21 +915,13 @@ export default function LinksPage() {
                         </Badge>
                       </div>
 
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-3 border-t">
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 pt-3 border-t">
                         <div>
                           <p className="text-sm text-muted-foreground">
                             Discount
                           </p>
                           <p className="font-semibold text-green-600">
                             {coupon.discount}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">
-                            Commission
-                          </p>
-                          <p className="font-semibold text-blue-600">
-                            {coupon.commission}
                           </p>
                         </div>
                         <div>
@@ -565,6 +937,21 @@ export default function LinksPage() {
                           <p className="font-semibold">{coupon.validUntil}</p>
                         </div>
                       </div>
+
+                      {coupon.status === "ACTIVE" && (
+                        <div className="mt-4 pt-4 border-t">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              handleDeactivateCoupon(coupon.id, coupon.code)
+                            }
+                          >
+                            <PowerOff className="w-4 h-4 mr-2" />
+                            Deactivate Coupon
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -573,6 +960,250 @@ export default function LinksPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Link Stats Modal */}
+      {showStatsModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            <div className="p-6 border-b flex items-center justify-between">
+              <h2 className="text-2xl font-bold">Link Statistics</h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setShowStatsModal(false);
+                  setSelectedLinkStats(null);
+                }}
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-88px)]">
+              {loadingStats ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+                </div>
+              ) : selectedLinkStats ? (
+                <div className="space-y-6">
+                  {/* Stats Overview */}
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <Card>
+                      <CardContent className="pt-6">
+                        <p className="text-sm text-muted-foreground">
+                          Total Clicks
+                        </p>
+                        <p className="text-2xl font-bold">
+                          {selectedLinkStats.totalClicks}
+                        </p>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="pt-6">
+                        <p className="text-sm text-muted-foreground">
+                          Conversions
+                        </p>
+                        <p className="text-2xl font-bold">
+                          {selectedLinkStats.totalConversions}
+                        </p>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="pt-6">
+                        <p className="text-sm text-muted-foreground">
+                          Earnings
+                        </p>
+                        <p className="text-2xl font-bold text-green-600">
+                          ${selectedLinkStats.totalEarnings.toFixed(2)}
+                        </p>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="pt-6">
+                        <p className="text-sm text-muted-foreground">
+                          Conversion Rate
+                        </p>
+                        <p className="text-2xl font-bold">
+                          {selectedLinkStats.conversionRate.toFixed(2)}%
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Recent Clicks */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4">
+                      Recent Clicks
+                    </h3>
+                    {selectedLinkStats.clicks.length === 0 ? (
+                      <p className="text-muted-foreground text-center py-8">
+                        No clicks yet
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {selectedLinkStats.clicks.slice(0, 10).map((click) => (
+                          <div
+                            key={click.id}
+                            className="p-3 border rounded-lg text-sm"
+                          >
+                            <div className="flex justify-between items-start gap-4">
+                              <div className="flex-1 space-y-1">
+                                <p className="font-medium">
+                                  {click.referrer || "Direct"}
+                                </p>
+                                <p className="text-muted-foreground truncate">
+                                  {click.userAgent?.substring(0, 60) ||
+                                    "Unknown device"}
+                                </p>
+                              </div>
+                              <div className="text-right text-muted-foreground">
+                                <p>
+                                  {new Date(
+                                    click.createdAt
+                                  ).toLocaleDateString()}
+                                </p>
+                                <p className="text-xs">
+                                  {new Date(
+                                    click.createdAt
+                                  ).toLocaleTimeString()}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Coupon Generator Modal */}
+      {showCouponGenerator && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-2xl w-full">
+            <div className="p-6 border-b flex items-center justify-between">
+              <h2 className="text-2xl font-bold">Generate Custom Coupon</h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setShowCouponGenerator(false);
+                  setCouponDescription("");
+                  setCouponDiscountValue("");
+                  setCouponMinPurchase("");
+                  setCouponMaxUsage("");
+                }}
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <Label htmlFor="coupon-description">Description *</Label>
+                <Input
+                  id="coupon-description"
+                  placeholder="e.g., 20% off on all products"
+                  value={couponDescription}
+                  onChange={(e) => setCouponDescription(e.target.value)}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="discount-type">Discount Type *</Label>
+                  <select
+                    id="discount-type"
+                    value={couponDiscountType}
+                    onChange={(e) =>
+                      setCouponDiscountType(
+                        e.target.value as "PERCENTAGE" | "FIXED"
+                      )
+                    }
+                    className="w-full px-3 py-2 border rounded-md"
+                  >
+                    <option value="PERCENTAGE">Percentage (%)</option>
+                    <option value="FIXED">Fixed Amount ($)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <Label htmlFor="discount-value">Discount Value *</Label>
+                  <Input
+                    id="discount-value"
+                    type="number"
+                    placeholder={
+                      couponDiscountType === "PERCENTAGE" ? "20" : "10"
+                    }
+                    value={couponDiscountValue}
+                    onChange={(e) => setCouponDiscountValue(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="min-purchase">
+                    Minimum Purchase (optional)
+                  </Label>
+                  <Input
+                    id="min-purchase"
+                    type="number"
+                    placeholder="50"
+                    value={couponMinPurchase}
+                    onChange={(e) => setCouponMinPurchase(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="max-usage">Maximum Uses (optional)</Label>
+                  <Input
+                    id="max-usage"
+                    type="number"
+                    placeholder="100"
+                    value={couponMaxUsage}
+                    onChange={(e) => setCouponMaxUsage(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <Button
+                  onClick={handleGenerateCoupon}
+                  disabled={isGeneratingCoupon}
+                  className="flex-1"
+                >
+                  {isGeneratingCoupon ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4 mr-2" />
+                      Generate Coupon
+                    </>
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowCouponGenerator(false);
+                    setCouponDescription("");
+                    setCouponDiscountValue("");
+                    setCouponMinPurchase("");
+                    setCouponMaxUsage("");
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

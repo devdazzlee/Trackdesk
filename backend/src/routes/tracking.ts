@@ -1,8 +1,8 @@
-import express from "express";
+import express, { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
 
-const router = express.Router();
+const router: Router = express.Router();
 
 // Track referral click
 router.post("/click", async (req, res) => {
@@ -261,11 +261,50 @@ router.post("/webhook/:storeId", async (req, res) => {
       customerEmail: data.customerEmail,
       items: data.items,
       timestamp: new Date().toISOString(),
+      url: req.headers.referer || "",
+      referrer: req.headers.referer || "",
+      userAgent: req.headers["user-agent"] || "",
+      utmSource: (req.query.utm_source as string) || "",
+      utmMedium: (req.query.utm_medium as string) || "",
+      utmCampaign: (req.query.utm_campaign as string) || "",
+      ipAddress: req.ip || req.connection.remoteAddress || "",
     };
 
-    // Reuse the order tracking logic
-    req.body = trackingData;
-    return router.handle(req, res);
+    // Find affiliate by referral code
+    const affiliate = await prisma.affiliateProfile.findFirst({
+      where: {
+        referralCodes: {
+          some: {
+            code: trackingData.referralCode,
+          },
+        },
+      },
+    });
+
+    if (!affiliate) {
+      return res.status(404).json({ error: "Affiliate not found" });
+    }
+
+    // Process the tracking data directly
+    const clickData = {
+      affiliateId: affiliate.id,
+      referralCode: trackingData.referralCode,
+      storeId: trackingData.storeId,
+      url: trackingData.url || "",
+      referrer: trackingData.referrer || "",
+      userAgent: trackingData.userAgent || "",
+      utmSource: trackingData.utmSource || "",
+      utmMedium: trackingData.utmMedium || "",
+      utmCampaign: trackingData.utmCampaign || "",
+      ipAddress: trackingData.ipAddress || "",
+    };
+
+    // Create affiliate click record
+    const affiliateClick = await prisma.affiliateClick.create({
+      data: clickData,
+    });
+
+    res.json({ success: true, clickId: affiliateClick.id });
   } catch (error) {
     console.error("Error processing webhook:", error);
     res.status(500).json({ error: "Failed to process webhook" });

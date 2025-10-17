@@ -235,10 +235,13 @@ router.patch(
         where: { id },
         data: {
           tier: validatedData.tier,
-          ...(validatedData.commissionRate !== undefined &&
-            {
-              // Update commission rate in referral codes
-            }),
+          ...(validatedData.commissionRate && {
+            commissionRate: validatedData.commissionRate,
+          }),
+          // ...(validatedData.commissionRate !== undefined &&
+          //   {
+          //     // Update commission rate in referral codes
+          //   }),
         },
       });
 
