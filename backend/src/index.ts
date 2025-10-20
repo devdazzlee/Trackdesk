@@ -45,6 +45,7 @@ import adminDashboardRoutes from "./routes/admin-dashboard"; // Admin dashboard 
 import adminAffiliatesRoutes from "./routes/admin-affiliates"; // Admin affiliate management routes
 import adminPayoutsRoutes from "./routes/admin-payouts"; // Admin payout management routes
 import adminOffersRoutes from "./routes/admin-offers"; // Admin offers management routes
+import uploadRoutes from "./routes/upload"; // File upload routes
 
 // Load environment variables
 dotenv.config();
@@ -147,12 +148,12 @@ app.get("/health", (req, res) => {
 });
 
 // Rate limiting
-const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || "900000"), // 15 minutes
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || "100"),
-  message: "Too many requests from this IP, please try again later.",
-});
-app.use("/api/", limiter);
+// const limiter = rateLimit({
+//   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || "900000"), // 15 minutes
+//   max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || "100"),
+//   message: "Too many requests from this IP, please try again later.",
+// });
+// app.use("/api/", limiter);
 
 // Routes
 app.use("/api/auth", authRoutes);
@@ -191,6 +192,7 @@ app.use("/api/admin/dashboard", adminDashboardRoutes); // Admin dashboard routes
 app.use("/api/admin/affiliates", adminAffiliatesRoutes); // Admin affiliate management
 app.use("/api/admin/payouts", adminPayoutsRoutes); // Admin payout management
 app.use("/api/admin/offers", adminOffersRoutes); // Admin offers management
+app.use("/api/upload", uploadRoutes); // File upload routes
 
 // WebSocket connection handling
 io.on("connection", (socket) => {

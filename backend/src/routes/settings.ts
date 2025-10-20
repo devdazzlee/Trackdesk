@@ -20,6 +20,7 @@ router.get("/profile", authenticateToken, async (req: any, res) => {
         firstName: true,
         lastName: true,
         phone: true,
+        avatar: true,
         createdAt: true,
         role: true,
       },
@@ -141,28 +142,61 @@ router.get("/security", authenticateToken, async (req: any, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
+    // Fetch real login activity from Activity model
+    const loginActivities = await prisma.activity.findMany({
+      where: {
+        userId: userId,
+        action: "LOGIN",
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      take: 10, // Last 10 login attempts
+    });
+
+    // Format login history with better device parsing
+    const loginHistory = loginActivities.map((activity) => {
+      const userAgent = activity.userAgent || "Unknown Device";
+      let device = "Unknown Device";
+      
+      // Parse browser
+      if (userAgent.includes("Chrome") && !userAgent.includes("Edge")) {
+        device = "Chrome";
+      } else if (userAgent.includes("Safari") && !userAgent.includes("Chrome")) {
+        device = "Safari";
+      } else if (userAgent.includes("Firefox")) {
+        device = "Firefox";
+      } else if (userAgent.includes("Edge") || userAgent.includes("Edg/")) {
+        device = "Edge";
+      }
+
+      // Parse OS
+      if (userAgent.includes("Macintosh") || userAgent.includes("Mac OS")) {
+        device += " on MacOS";
+      } else if (userAgent.includes("Windows")) {
+        device += " on Windows";
+      } else if (userAgent.includes("Linux") && !userAgent.includes("Android")) {
+        device += " on Linux";
+      } else if (userAgent.includes("iPhone") || userAgent.includes("iPad")) {
+        device += " on iOS";
+      } else if (userAgent.includes("Android")) {
+        device += " on Android";
+      }
+
+      return {
+        id: activity.id,
+        timestamp: activity.createdAt,
+        ipAddress: activity.ipAddress || "Unknown",
+        device: device,
+        location: "Unknown", // Add geolocation service if needed
+        status: "Success",
+      };
+    });
+
     res.json({
       email: user.email,
       lastPasswordChange: user.updatedAt,
-      twoFactorEnabled: false,
-      loginHistory: [
-        {
-          id: "login-1",
-          timestamp: new Date(),
-          ipAddress: "192.168.1.1",
-          device: "Chrome on MacOS",
-          location: "New York, USA",
-          status: "Success",
-        },
-        {
-          id: "login-2",
-          timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000),
-          ipAddress: "192.168.1.1",
-          device: "Safari on iOS",
-          location: "New York, USA",
-          status: "Success",
-        },
-      ],
+      loginHistory: loginHistory,
     });
   } catch (error) {
     console.error("Error fetching security settings:", error);

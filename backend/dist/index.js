@@ -6,7 +6,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const helmet_1 = __importDefault(require("helmet"));
-const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 const cookie_parser_1 = __importDefault(require("cookie-parser"));
 const http_1 = require("http");
 const socket_io_1 = require("socket.io");
@@ -48,6 +47,7 @@ const admin_dashboard_1 = __importDefault(require("./routes/admin-dashboard"));
 const admin_affiliates_1 = __importDefault(require("./routes/admin-affiliates"));
 const admin_payouts_1 = __importDefault(require("./routes/admin-payouts"));
 const admin_offers_1 = __importDefault(require("./routes/admin-offers"));
+const upload_1 = __importDefault(require("./routes/upload"));
 dotenv_1.default.config();
 const logger = winston_1.default.createLogger({
     level: process.env.LOG_LEVEL || "info",
@@ -121,12 +121,6 @@ app.options("*", (0, cors_1.default)());
 app.get("/health", (req, res) => {
     res.status(200).json({ status: "OK", timestamp: new Date().toISOString() });
 });
-const limiter = (0, express_rate_limit_1.default)({
-    windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || "900000"),
-    max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || "100"),
-    message: "Too many requests from this IP, please try again later.",
-});
-app.use("/api/", limiter);
 app.use("/api/auth", auth_1.default);
 app.use("/api/dashboard", dashboard_1.default);
 app.use("/api/affiliates", affiliate_1.default);
@@ -163,6 +157,7 @@ app.use("/api/admin/dashboard", admin_dashboard_1.default);
 app.use("/api/admin/affiliates", admin_affiliates_1.default);
 app.use("/api/admin/payouts", admin_payouts_1.default);
 app.use("/api/admin/offers", admin_offers_1.default);
+app.use("/api/upload", upload_1.default);
 io.on("connection", (socket) => {
     logger.info(`Client connected: ${socket.id}`);
     socket.on("join_affiliate", (affiliateId) => {
