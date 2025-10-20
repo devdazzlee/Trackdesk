@@ -2,6 +2,7 @@
 
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -22,8 +23,6 @@ import {
   Target,
   Calendar,
   Download,
-  Bell,
-  ExternalLink,
   Plus,
   Settings,
   CreditCard,
@@ -78,6 +77,7 @@ interface RealTimeStats {
 
 export default function DashboardPage() {
   const { user, isLoading } = useAuth();
+  const router = useRouter();
   const [dashboardData, setDashboardData] = useState<DashboardOverview | null>(
     null
   );
@@ -134,10 +134,123 @@ export default function DashboardPage() {
   };
 
   const handleRefresh = async () => {
-    setIsRefreshing(true);
-    await Promise.all([fetchDashboardData(), fetchRealTimeStats()]);
-    setIsRefreshing(false);
-    toast.success("Dashboard data refreshed");
+    try {
+      setIsRefreshing(true);
+      toast.loading("Refreshing dashboard data...", { id: "refresh-toast" });
+      
+      await Promise.all([fetchDashboardData(), fetchRealTimeStats()]);
+      
+      toast.success("Dashboard data refreshed successfully!", { id: "refresh-toast" });
+    } catch (error) {
+      console.error("Refresh error:", error);
+      toast.error("Failed to refresh data. Please try again.", { id: "refresh-toast" });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  const handleExport = async () => {
+    try {
+      toast.loading("Preparing CSV export...", { id: "export-toast" });
+      
+      if (!dashboardData) {
+        toast.error("No data available to export", { id: "export-toast" });
+        return;
+      }
+
+      // Create CSV content
+      const csvRows = [];
+      
+      // Header
+      csvRows.push("Metric,Value");
+      csvRows.push("");
+      
+      // Dashboard Statistics
+      csvRows.push("=== DASHBOARD STATISTICS ===");
+      csvRows.push("Total Referrals," + (dashboardData.totalReferrals || 0));
+      csvRows.push("Total Commissions,$" + (dashboardData.totalCommissions || 0).toFixed(2));
+      csvRows.push("Pending Commissions,$" + (dashboardData.pendingCommissions || 0).toFixed(2));
+      csvRows.push("Conversion Rate," + (dashboardData.conversionRate || 0) + "%");
+      csvRows.push("Active Codes," + (dashboardData.activeCodes || 0));
+      csvRows.push("Total Codes," + (dashboardData.totalCodes || 0));
+      csvRows.push("");
+      
+      // Real-time Stats (if available)
+      if (realTimeStats) {
+        csvRows.push("=== REAL-TIME STATISTICS ===");
+        csvRows.push("Live Clicks," + (realTimeStats.liveClicks || 0));
+        csvRows.push("Live Conversions," + (realTimeStats.liveConversions || 0));
+        csvRows.push("Live Revenue,$" + (realTimeStats.liveRevenue || 0).toFixed(2));
+        csvRows.push("Last Updated," + (realTimeStats.timestamp || "N/A"));
+        csvRows.push("");
+      }
+      
+      // Top Links
+      if (dashboardData.topLinks && dashboardData.topLinks.length > 0) {
+        csvRows.push("=== TOP PERFORMING LINKS ===");
+        csvRows.push("Link Name,Clicks,Conversions,Earnings,Status");
+        dashboardData.topLinks.forEach(link => {
+          const linkName = (link.name || "Unnamed Link").replace(/"/g, '""');
+          csvRows.push(
+            `"${linkName}",${link.clicks || 0},${link.conversions || 0},$${(link.earnings || 0).toFixed(2)},${link.status || "Unknown"}`
+          );
+        });
+        csvRows.push("");
+      }
+      
+      // Recent Activity
+      if (dashboardData.recentActivity && dashboardData.recentActivity.length > 0) {
+        csvRows.push("=== RECENT ACTIVITY ===");
+        csvRows.push("Type,Description,Amount,Time,Status");
+        dashboardData.recentActivity.forEach(activity => {
+          const description = (activity.description || "").replace(/"/g, '""');
+          const amount = activity.amount || "";
+          csvRows.push(
+            `${activity.type || ""},"${description}",${amount},${activity.time || ""},${activity.status || ""}`
+          );
+        });
+        csvRows.push("");
+      }
+      
+      // Daily Stats
+      if (dashboardData.dailyStats && dashboardData.dailyStats.length > 0) {
+        csvRows.push("=== DAILY PERFORMANCE ===");
+        csvRows.push("Date,Referrals,Commissions");
+        dashboardData.dailyStats.forEach(day => {
+          csvRows.push(
+            `${day.date || ""},${day.referrals || 0},$${(day.commissions || 0).toFixed(2)}`
+          );
+        });
+        csvRows.push("");
+      }
+      
+      // Add metadata
+      csvRows.push("=== EXPORT INFORMATION ===");
+      csvRows.push("Export Date," + new Date().toLocaleString());
+      csvRows.push("User," + (user?.email || "Unknown"));
+      csvRows.push("User Name," + (user?.name || "Unknown"));
+      
+      // Convert to CSV string
+      const csvContent = csvRows.join("\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      
+      // Create download link
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `trackdesk-dashboard-${new Date().toISOString().split('T')[0]}.csv`;
+      
+      // Trigger download
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      toast.success("Dashboard data exported as CSV!", { id: "export-toast" });
+    } catch (error) {
+      console.error("Export error:", error);
+      toast.error("Failed to export data. Please try again.", { id: "export-toast" });
+    }
   };
 
   if (isLoading || isDataLoading) {
@@ -209,18 +322,6 @@ export default function DashboardPage() {
   // Use real recent activity from API
   const recentActivity = dashboardData.recentActivity;
 
-  // System notifications (mock for now - can be replaced with real notifications API)
-  const notifications = [
-    {
-      id: 1,
-      type: "success",
-      title: "Dashboard Updated",
-      description:
-        "Your dashboard data has been refreshed with the latest information.",
-      time: "Just now",
-      color: "bg-green-100 border-green-200 text-green-800",
-    },
-  ];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -270,6 +371,7 @@ export default function DashboardPage() {
               <Button
                 variant="secondary"
                 size="sm"
+                onClick={handleExport}
                 className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm transition-all duration-200 hover:scale-105"
               >
                 <Download className="h-4 w-4 mr-2" />
@@ -563,6 +665,7 @@ export default function DashboardPage() {
                 <Button
                   variant="outline"
                   className="w-full justify-start h-12 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-all duration-200 group"
+                  onClick={() => router.push("/dashboard/links")}
                 >
                   <LinkIcon className="h-5 w-5 mr-3 text-blue-600 group-hover:scale-110 transition-transform" />
                   <span className="font-medium">Create New Link</span>
@@ -570,6 +673,7 @@ export default function DashboardPage() {
                 <Button
                   variant="outline"
                   className="w-full justify-start h-12 hover:bg-green-50 hover:border-green-300 hover:text-green-700 transition-all duration-200 group"
+                  onClick={() => router.push("/dashboard/statistics")}
                 >
                   <BarChart3 className="h-5 w-5 mr-3 text-green-600 group-hover:scale-110 transition-transform" />
                   <span className="font-medium">View Analytics</span>
@@ -577,6 +681,7 @@ export default function DashboardPage() {
                 <Button
                   variant="outline"
                   className="w-full justify-start h-12 hover:bg-purple-50 hover:border-purple-300 hover:text-purple-700 transition-all duration-200 group"
+                  onClick={() => router.push("/dashboard/commissions")}
                 >
                   <DollarSign className="h-5 w-5 mr-3 text-purple-600 group-hover:scale-110 transition-transform" />
                   <span className="font-medium">View Earnings</span>
@@ -584,6 +689,7 @@ export default function DashboardPage() {
                 <Button
                   variant="outline"
                   className="w-full justify-start h-12 hover:bg-orange-50 hover:border-orange-300 hover:text-orange-700 transition-all duration-200 group"
+                  onClick={() => router.push("/dashboard/settings")}
                 >
                   <Settings className="h-5 w-5 mr-3 text-orange-600 group-hover:scale-110 transition-transform" />
                   <span className="font-medium">Account Settings</span>
@@ -708,65 +814,6 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Notifications */}
-        <div className="group">
-          <Card className="bg-white hover:shadow-xl transition-all duration-300 border-0 shadow-lg hover:scale-[1.01]">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-xl font-semibold text-gray-800 flex items-center">
-                <div className="w-2 h-2 bg-orange-500 rounded-full mr-3"></div>
-                Notifications
-              </CardTitle>
-              <CardDescription className="text-gray-600">
-                Important updates and system notifications
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="p-6">
-              <div className="space-y-4">
-                {notifications.map((notification) => (
-                  <div
-                    key={notification.id}
-                    className={`p-4 rounded-lg border-l-4 ${notification.color} hover:shadow-md transition-all duration-200 cursor-pointer group`}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2 mb-1">
-                          <Badge
-                            variant="outline"
-                            className={`text-xs ${
-                              notification.type === "success"
-                                ? "text-green-600 border-green-200 bg-green-50"
-                                : notification.type === "warning"
-                                ? "text-yellow-600 border-yellow-200 bg-yellow-50"
-                                : "text-blue-600 border-blue-200 bg-blue-50"
-                            }`}
-                          >
-                            {notification.type.toUpperCase()}
-                          </Badge>
-                          <span className="text-sm text-gray-500">
-                            {notification.time}
-                          </span>
-                        </div>
-                        <h4 className="font-medium text-gray-900 mb-1 group-hover:text-gray-700 transition-colors">
-                          {notification.title}
-                        </h4>
-                        <p className="text-sm text-gray-600 group-hover:text-gray-700 transition-colors">
-                          {notification.description}
-                        </p>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
       </div>
     </div>
   );

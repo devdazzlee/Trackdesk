@@ -212,27 +212,32 @@ export class AuthClient {
 
   public async getProfile(): Promise<User> {
     try {
-      const token = this.getToken();
-      if (!token) {
-        throw new Error("No authentication token found");
-      }
-
       const response = await fetch(`${API_BASE_URL}/auth/me`, {
         method: "GET",
         headers: {
-          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        credentials: "include",
+        credentials: "include", // This will send httpOnly cookies
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
-        throw new Error(data.error || "Failed to fetch profile");
+        const errorData = await response.json().catch(() => ({ error: "Failed to fetch profile" }));
+        console.error("Get profile failed:", response.status, errorData);
+        throw new Error(errorData.error || "Failed to fetch profile");
       }
 
-      return data;
+      const data = await response.json();
+      console.log("getProfile API response:", data); // Debug log
+      
+      // Ensure we return a properly formatted User object
+      return {
+        id: data.id,
+        email: data.email,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        role: data.role,
+        avatar: data.avatar,
+      };
     } catch (error) {
       console.error("Get profile error:", error);
       throw error;

@@ -22,9 +22,13 @@ import {
   Globe,
   Save,
   RefreshCw,
+  Upload,
+  Camera,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { config } from "@/config/config";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface UserProfile {
   user: {
@@ -33,6 +37,7 @@ interface UserProfile {
     firstName: string;
     lastName: string;
     phone: string;
+    avatar: string | null;
     createdAt: Date;
     role: string;
   };
@@ -46,9 +51,11 @@ interface UserProfile {
 }
 
 export default function ProfileSettingsPage() {
+  const { refreshUser } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -117,6 +124,81 @@ export default function ProfileSettingsPage() {
     }
   };
 
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error("Please upload an image file");
+      return;
+    }
+
+    // Validate file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image size should be less than 5MB");
+      return;
+    }
+
+    setIsUploadingAvatar(true);
+    toast.loading("Uploading avatar...", { id: "avatar-upload" });
+
+    try {
+      const formData = new FormData();
+      formData.append("avatar", file);
+
+      const response = await fetch(`${config.apiUrl}/upload/avatar`, {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        toast.success("Avatar uploaded successfully!", { id: "avatar-upload" });
+        fetchProfile(); // Refresh profile to show new avatar
+        await refreshUser(); // Refresh auth context to update navbar/sidebar
+      } else {
+        const error = await response.json();
+        toast.error(error.error || "Failed to upload avatar", { id: "avatar-upload" });
+      }
+    } catch (error) {
+      console.error("Error uploading avatar:", error);
+      toast.error("Failed to upload avatar", { id: "avatar-upload" });
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
+
+  const handleDeleteAvatar = async () => {
+    if (!profile?.user.avatar) return;
+
+    if (!confirm("Are you sure you want to delete your profile picture?")) {
+      return;
+    }
+
+    toast.loading("Deleting avatar...", { id: "avatar-delete" });
+
+    try {
+      const response = await fetch(`${config.apiUrl}/upload/avatar`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      if (response.ok) {
+        toast.success("Avatar deleted successfully!", { id: "avatar-delete" });
+        fetchProfile(); // Refresh profile
+        await refreshUser(); // Refresh auth context to update navbar/sidebar
+      } else {
+        const error = await response.json();
+        toast.error(error.error || "Failed to delete avatar", { id: "avatar-delete" });
+      }
+    } catch (error) {
+      console.error("Error deleting avatar:", error);
+      toast.error("Failed to delete avatar", { id: "avatar-delete" });
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -157,19 +239,37 @@ export default function ProfileSettingsPage() {
         </CardHeader>
         <CardContent>
           <div className="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-6">
-            <Avatar className="w-24 h-24">
-              <AvatarImage src="/placeholder-avatar.jpg" />
-              <AvatarFallback className="text-2xl">
-                {profile.user.firstName?.charAt(0)}
-                {profile.user.lastName?.charAt(0)}
-              </AvatarFallback>
-            </Avatar>
+            <div className="relative group">
+              <Avatar className="w-24 h-24 ring-4 ring-white shadow-lg">
+                <AvatarImage 
+                  src={profile.user.avatar || undefined} 
+                  alt={`${profile.user.firstName} ${profile.user.lastName}`}
+                />
+                <AvatarFallback className="text-2xl bg-gradient-to-br from-blue-500 to-purple-600 text-white">
+                  {profile.user.firstName?.charAt(0)}
+                  {profile.user.lastName?.charAt(0)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="absolute inset-0 bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                <label htmlFor="avatar-upload" className="cursor-pointer">
+                  <Camera className="h-8 w-8 text-white" />
+                  <input
+                    id="avatar-upload"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleAvatarUpload}
+                    disabled={isUploadingAvatar}
+                  />
+                </label>
+              </div>
+            </div>
             <div className="flex-1 text-center sm:text-left">
               <h2 className="text-2xl font-bold mb-2">
                 {profile.user.firstName} {profile.user.lastName}
               </h2>
               <p className="text-muted-foreground mb-3">{profile.user.email}</p>
-              <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
+              <div className="flex flex-wrap gap-2 justify-center sm:justify-start mb-3">
                 <Badge>{profile.user.role}</Badge>
                 {profile.affiliate && (
                   <>
@@ -186,6 +286,31 @@ export default function ProfileSettingsPage() {
                       {profile.affiliate.status}
                     </Badge>
                   </>
+                )}
+              </div>
+              <div className="flex gap-2 justify-center sm:justify-start">
+                <label htmlFor="avatar-upload-btn">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={isUploadingAvatar}
+                    onClick={() => document.getElementById('avatar-upload')?.click()}
+                    type="button"
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    {isUploadingAvatar ? "Uploading..." : "Upload Photo"}
+                  </Button>
+                </label>
+                {profile.user.avatar && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleDeleteAvatar}
+                    className="text-red-600 hover:text-red-700"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete
+                  </Button>
                 )}
               </div>
             </div>

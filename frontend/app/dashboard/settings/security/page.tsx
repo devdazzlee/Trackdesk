@@ -16,11 +16,12 @@ import {
   Shield,
   Key,
   Lock,
-  Smartphone,
   AlertTriangle,
   CheckCircle,
   RefreshCw,
   Clock,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { toast } from "sonner";
 import { config } from "@/config/config";
@@ -28,7 +29,6 @@ import { config } from "@/config/config";
 interface SecuritySettings {
   email: string;
   lastPasswordChange: Date;
-  twoFactorEnabled: boolean;
   loginHistory: Array<{
     id: string;
     timestamp: Date;
@@ -49,6 +49,11 @@ export default function SecuritySettingsPage() {
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
+  });
+  const [showPasswords, setShowPasswords] = useState({
+    current: false,
+    new: false,
+    confirm: false,
   });
 
   useEffect(() => {
@@ -183,37 +188,6 @@ export default function SecuritySettingsPage() {
 
             <div className="flex items-center justify-between p-3 border rounded-lg">
               <div className="flex items-center space-x-3">
-                <div
-                  className={`w-10 h-10 ${
-                    securityData.twoFactorEnabled
-                      ? "bg-green-100"
-                      : "bg-yellow-100"
-                  } rounded-full flex items-center justify-center`}
-                >
-                  <Smartphone
-                    className={`w-5 h-5 ${
-                      securityData.twoFactorEnabled
-                        ? "text-green-600"
-                        : "text-yellow-600"
-                    }`}
-                  />
-                </div>
-                <div>
-                  <p className="font-medium">Two-Factor Authentication</p>
-                  <p className="text-sm text-muted-foreground">
-                    {securityData.twoFactorEnabled
-                      ? "Enabled and active"
-                      : "Not enabled"}
-                  </p>
-                </div>
-              </div>
-              <Button variant="outline" size="sm">
-                {securityData.twoFactorEnabled ? "Disable" : "Enable"}
-              </Button>
-            </div>
-
-            <div className="flex items-center justify-between p-3 border rounded-lg">
-              <div className="flex items-center space-x-3">
                 <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
                   <Clock className="w-5 h-5 text-blue-600" />
                 </div>
@@ -247,7 +221,7 @@ export default function SecuritySettingsPage() {
                 <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="currentPassword"
-                  type="password"
+                  type={showPasswords.current ? "text" : "password"}
                   value={passwordForm.currentPassword}
                   onChange={(e) =>
                     setPasswordForm({
@@ -255,9 +229,25 @@ export default function SecuritySettingsPage() {
                       currentPassword: e.target.value,
                     })
                   }
-                  className="pl-10"
+                  className="pl-10 pr-10"
                   required
                 />
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShowPasswords({
+                      ...showPasswords,
+                      current: !showPasswords.current,
+                    })
+                  }
+                  className="absolute right-3 top-3 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {showPasswords.current ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
               </div>
             </div>
 
@@ -267,7 +257,7 @@ export default function SecuritySettingsPage() {
                 <Key className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="newPassword"
-                  type="password"
+                  type={showPasswords.new ? "text" : "password"}
                   value={passwordForm.newPassword}
                   onChange={(e) =>
                     setPasswordForm({
@@ -275,9 +265,25 @@ export default function SecuritySettingsPage() {
                       newPassword: e.target.value,
                     })
                   }
-                  className="pl-10"
+                  className="pl-10 pr-10"
                   required
                 />
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShowPasswords({
+                      ...showPasswords,
+                      new: !showPasswords.new,
+                    })
+                  }
+                  className="absolute right-3 top-3 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {showPasswords.new ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
               </div>
               <p className="text-xs text-muted-foreground">
                 Must be at least 6 characters
@@ -290,7 +296,7 @@ export default function SecuritySettingsPage() {
                 <Key className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="confirmPassword"
-                  type="password"
+                  type={showPasswords.confirm ? "text" : "password"}
                   value={passwordForm.confirmPassword}
                   onChange={(e) =>
                     setPasswordForm({
@@ -298,9 +304,25 @@ export default function SecuritySettingsPage() {
                       confirmPassword: e.target.value,
                     })
                   }
-                  className="pl-10"
+                  className="pl-10 pr-10"
                   required
                 />
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShowPasswords({
+                      ...showPasswords,
+                      confirm: !showPasswords.confirm,
+                    })
+                  }
+                  className="absolute right-3 top-3 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {showPasswords.confirm ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
               </div>
             </div>
 
@@ -364,12 +386,6 @@ export default function SecuritySettingsPage() {
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li className="flex items-center space-x-2">
                   <div className="w-1.5 h-1.5 bg-yellow-600 rounded-full"></div>
-                  <span>
-                    Enable two-factor authentication for added security
-                  </span>
-                </li>
-                <li className="flex items-center space-x-2">
-                  <div className="w-1.5 h-1.5 bg-yellow-600 rounded-full"></div>
                   <span>Use a strong, unique password for your account</span>
                 </li>
                 <li className="flex items-center space-x-2">
@@ -379,6 +395,10 @@ export default function SecuritySettingsPage() {
                 <li className="flex items-center space-x-2">
                   <div className="w-1.5 h-1.5 bg-yellow-600 rounded-full"></div>
                   <span>Change your password every 3-6 months</span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <div className="w-1.5 h-1.5 bg-yellow-600 rounded-full"></div>
+                  <span>Never share your password with anyone</span>
                 </li>
               </ul>
             </div>

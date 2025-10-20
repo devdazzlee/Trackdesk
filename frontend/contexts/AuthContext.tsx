@@ -127,10 +127,24 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
 
       const userData = await authClient.getProfile();
+      console.log("Refreshed user data:", userData); // Debug log
+      
+      // Validate that we received the required user fields
+      if (!userData || !userData.id || !userData.email || !userData.firstName || !userData.lastName) {
+        console.error("Invalid user data received:", userData);
+        throw new Error("Invalid user data structure");
+      }
+      
       setUser(userData);
+      // Update cookies to persist the new user data (including avatar)
+      authClient.setAuth(token, userData);
     } catch (error) {
       console.error("Refresh user error:", error);
-      setUser(null);
+      // Don't clear user on refresh error - keep existing user data
+      // Only clear if we're certain the session is invalid
+      if (error instanceof Error && error.message.includes("authentication")) {
+        setUser(null);
+      }
     }
   };
 

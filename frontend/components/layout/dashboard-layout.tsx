@@ -25,7 +25,6 @@ import {
   Settings,
   User,
   Users,
-  Bell,
   Menu,
   LogOut,
   ChevronDown,
@@ -43,11 +42,35 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { LogoutButton } from "@/components/auth/LogoutButton";
 import { getFullName, getInitials } from "@/lib/auth-client";
+import { config } from "@/config/config";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
   userType?: "affiliate" | "admin" | "manager";
 }
+
+// Helper function to get full avatar URL
+const getAvatarUrl = (avatar: string | null | undefined): string => {
+  if (!avatar) {
+    console.log("No avatar provided, using placeholder");
+    return "/placeholder-avatar.jpg";
+  }
+  
+  // If avatar is already a full URL (starts with http:// or https://), return as is
+  if (avatar.startsWith("http://") || avatar.startsWith("https://")) {
+    console.log("Avatar is full URL:", avatar);
+    return avatar;
+  }
+  
+  // If avatar is a relative path, construct full URL
+  // Remove leading slash if present to avoid double slashes
+  const cleanPath = avatar.startsWith("/") ? avatar.slice(1) : avatar;
+  const baseUrl = config.apiUrl.replace("/api", "");
+  const fullUrl = `${baseUrl}/${cleanPath}`;
+  
+  console.log("Constructed avatar URL:", fullUrl, "from avatar:", avatar);
+  return fullUrl;
+};
 
 const affiliateNavItems = [
   {
@@ -96,7 +119,6 @@ const affiliateNavItems = [
     subItems: [
       { title: "Profile", href: "/dashboard/settings/profile" },
       { title: "Security", href: "/dashboard/settings/security" },
-      { title: "Notifications", href: "/dashboard/settings/notifications" },
     ],
   },
 ];
@@ -164,7 +186,6 @@ const managerNavItems = [
     subItems: [
       { title: "Profile", href: "/manager/settings/profile" },
       { title: "Security", href: "/manager/settings/security" },
-      { title: "Notifications", href: "/manager/settings/notifications" },
     ],
   },
 ];
@@ -208,7 +229,6 @@ export default function DashboardLayout({
 }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
   const { user } = useAuth();
@@ -255,39 +275,6 @@ export default function DashboardLayout({
     else if (userType === "manager") supportPath = "/manager/settings";
     router.push(supportPath);
   };
-
-  const handleViewAllNotifications = () => {
-    let notificationsPath = "/dashboard/notifications";
-    if (userType === "admin") notificationsPath = "/admin/notifications";
-    else if (userType === "manager")
-      notificationsPath = "/manager/notifications";
-    router.push(notificationsPath);
-  };
-
-  // Mock notifications data
-  const notifications = [
-    {
-      id: "1",
-      title: "New conversion recorded",
-      message: "You earned $15.50 from a new conversion",
-      time: "2 minutes ago",
-      unread: true,
-    },
-    {
-      id: "2",
-      title: "Payout processed",
-      message: "Your payout of $250.00 has been processed",
-      time: "1 hour ago",
-      unread: true,
-    },
-    {
-      id: "3",
-      title: "New offer available",
-      message: "Check out our latest Black Friday offer",
-      time: "3 hours ago",
-      unread: false,
-    },
-  ];
 
   const SidebarContent = () => (
     <div className="flex h-full flex-col">
@@ -380,7 +367,7 @@ export default function DashboardLayout({
       <div className="p-4 border-t">
         <div className="flex items-center space-x-3 p-3 rounded-lg bg-slate-50">
           <Avatar className="h-8 w-8">
-            <AvatarImage src={user?.avatar || "/placeholder-avatar.jpg"} />
+            <AvatarImage src={getAvatarUrl(user?.avatar)} />
             <AvatarFallback>{user ? getInitials(user) : "U"}</AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
@@ -452,60 +439,6 @@ export default function DashboardLayout({
             </div>
 
             <div className="flex items-center space-x-4">
-              {/* Notifications */}
-              <DropdownMenu
-                open={notificationsOpen}
-                onOpenChange={setNotificationsOpen}
-              >
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="relative">
-                    <Bell className="h-5 w-5" />
-                    <Badge
-                      variant="destructive"
-                      className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
-                    >
-                      {notifications.filter((n) => n.unread).length}
-                    </Badge>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-80">
-                  <DropdownMenuLabel>Notifications</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {notifications.map((notification) => (
-                    <DropdownMenuItem
-                      key={notification.id}
-                      className="flex flex-col items-start p-3"
-                    >
-                      <div className="flex items-start justify-between w-full">
-                        <div className="flex-1">
-                          <p className="font-medium text-sm">
-                            {notification.title}
-                          </p>
-                          <p className="text-xs text-slate-600 mt-1">
-                            {notification.message}
-                          </p>
-                          <p className="text-xs text-slate-400 mt-1">
-                            {notification.time}
-                          </p>
-                        </div>
-                        {notification.unread && (
-                          <div className="w-2 h-2 bg-blue-600 rounded-full ml-2 mt-1"></div>
-                        )}
-                      </div>
-                    </DropdownMenuItem>
-                  ))}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    className="text-center"
-                    onClick={handleViewAllNotifications}
-                  >
-                    <span className="text-sm text-blue-600">
-                      View all notifications
-                    </span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
               {/* User Menu */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -515,7 +448,7 @@ export default function DashboardLayout({
                   >
                     <Avatar className="h-8 w-8">
                       <AvatarImage
-                        src={user?.avatar || "/placeholder-avatar.jpg"}
+                        src={getAvatarUrl(user?.avatar)}
                       />
                       <AvatarFallback>
                         {user ? getInitials(user) : "U"}
