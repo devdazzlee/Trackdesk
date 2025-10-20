@@ -55,19 +55,19 @@ const getAvatarUrl = (avatar: string | null | undefined): string => {
     console.log("No avatar provided, using placeholder");
     return "/placeholder-avatar.jpg";
   }
-  
+
   // If avatar is already a full URL (starts with http:// or https://), return as is
   if (avatar.startsWith("http://") || avatar.startsWith("https://")) {
     console.log("Avatar is full URL:", avatar);
     return avatar;
   }
-  
+
   // If avatar is a relative path, construct full URL
   // Remove leading slash if present to avoid double slashes
   const cleanPath = avatar.startsWith("/") ? avatar.slice(1) : avatar;
   const baseUrl = config.apiUrl.replace("/api", "");
   const fullUrl = `${baseUrl}/${cleanPath}`;
-  
+
   console.log("Constructed avatar URL:", fullUrl, "from avatar:", avatar);
   return fullUrl;
 };
@@ -217,9 +217,14 @@ const adminNavItems = [
     icon: LinkIcon,
   },
   {
-    title: "System Settings",
+    title: "Settings",
     href: "/admin/settings",
     icon: Settings,
+    subItems: [
+      { title: "Profile", href: "/admin/settings/profile" },
+      { title: "System Settings", href: "/admin/settings" },
+      { title: "Security", href: "/admin/settings/security" },
+    ],
   },
 ];
 
@@ -257,7 +262,7 @@ export default function DashboardLayout({
 
   const handleProfileClick = () => {
     let profilePath = "/dashboard/settings/profile";
-    if (userType === "admin") profilePath = "/admin/settings";
+    if (userType === "admin") profilePath = "/admin/settings/profile";
     else if (userType === "manager") profilePath = "/manager/settings/profile";
     router.push(profilePath);
   };
@@ -447,9 +452,7 @@ export default function DashboardLayout({
                     className="flex items-center space-x-2"
                   >
                     <Avatar className="h-8 w-8">
-                      <AvatarImage
-                        src={getAvatarUrl(user?.avatar)}
-                      />
+                      <AvatarImage src={getAvatarUrl(user?.avatar)} />
                       <AvatarFallback>
                         {user ? getInitials(user) : "U"}
                       </AvatarFallback>

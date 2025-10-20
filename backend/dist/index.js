@@ -47,6 +47,7 @@ const admin_dashboard_1 = __importDefault(require("./routes/admin-dashboard"));
 const admin_affiliates_1 = __importDefault(require("./routes/admin-affiliates"));
 const admin_payouts_1 = __importDefault(require("./routes/admin-payouts"));
 const admin_offers_1 = __importDefault(require("./routes/admin-offers"));
+const admin_settings_1 = __importDefault(require("./routes/admin-settings"));
 const upload_1 = __importDefault(require("./routes/upload"));
 dotenv_1.default.config();
 const logger = winston_1.default.createLogger({
@@ -157,6 +158,7 @@ app.use("/api/admin/dashboard", admin_dashboard_1.default);
 app.use("/api/admin/affiliates", admin_affiliates_1.default);
 app.use("/api/admin/payouts", admin_payouts_1.default);
 app.use("/api/admin/offers", admin_offers_1.default);
+app.use("/api/admin/settings", admin_settings_1.default);
 app.use("/api/upload", upload_1.default);
 io.on("connection", (socket) => {
     logger.info(`Client connected: ${socket.id}`);

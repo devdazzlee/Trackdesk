@@ -1,0 +1,233 @@
+import express, { Router } from "express";
+import { authenticateToken } from "../middleware/auth";
+import { PrismaClient } from "@prisma/client";
+import { z } from "zod";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+
+const router: Router = express.Router();
+const prisma = new PrismaClient();
+
+// Configure multer for avatar uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = path.join(__dirname, "../../uploads/avatars");
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, `admin-${uniqueSuffix}${path.extname(file.originalname)}`);
+  },
+});
+
+const upload = multer({
+  storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith("image/")) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only image files are allowed"));
+    }
+  },
+});
+
+// Get admin profile
+router.get("/profile", authenticateToken, async (req: any, res) => {
+  try {
+    if (req.user.role !== "ADMIN") {
+      return res
+        .status(403)
+        .json({ error: "Only admins can access this profile" });
+    }
+
+    const userId = req.user.id;
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        phone: true,
+        avatar: true,
+        createdAt: true,
+        role: true,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const admin = await prisma.adminProfile.findFirst({
+      where: { userId },
+    });
+
+    res.json({
+      user,
+      admin: admin
+        ? {
+            id: admin.id,
+            permissions: admin.permissions,
+            department: admin.department,
+          }
+        : null,
+    });
+  } catch (error) {
+    console.error("Error fetching admin profile:", error);
+    res.status(500).json({ error: "Failed to fetch profile" });
+  }
+});
+
+// Update admin profile
+router.put("/profile", authenticateToken, async (req: any, res) => {
+  try {
+    if (req.user.role !== "ADMIN") {
+      return res
+        .status(403)
+        .json({ error: "Only admins can update this profile" });
+    }
+
+    const userId = req.user.id;
+    const schema = z.object({
+      firstName: z.string().min(1, "First name is required"),
+      lastName: z.string().min(1, "Last name is required"),
+      phone: z.string().optional(),
+      department: z.string().optional(),
+    });
+
+    const { firstName, lastName, phone, department } = schema.parse(req.body);
+
+    // Update user profile
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        firstName,
+        lastName,
+        phone,
+      },
+    });
+
+    // Update or create admin profile
+    await prisma.adminProfile.upsert({
+      where: { userId },
+      update: {
+        department,
+      },
+      create: {
+        userId,
+        department,
+        permissions: ["READ", "WRITE", "DELETE"], // Default admin permissions
+      },
+    });
+
+    res.json({
+      success: true,
+      message: "Profile updated successfully",
+      user: {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        firstName: updatedUser.firstName,
+        lastName: updatedUser.lastName,
+        phone: updatedUser.phone,
+        avatar: updatedUser.avatar,
+        role: updatedUser.role,
+      },
+    });
+  } catch (error) {
+    console.error("Error updating admin profile:", error);
+    if (error instanceof z.ZodError) {
+      return res
+        .status(400)
+        .json({ error: "Invalid input data", details: error.errors });
+    }
+    res.status(500).json({ error: "Failed to update profile" });
+  }
+});
+
+// Upload admin avatar
+router.post(
+  "/profile/avatar",
+  authenticateToken,
+  upload.single("avatar"),
+  async (req: any, res) => {
+    try {
+      if (req.user.role !== "ADMIN") {
+        return res
+          .status(403)
+          .json({ error: "Only admins can upload avatars" });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+
+      const userId = req.user.id;
+      const avatarPath = `/uploads/avatars/${req.file.filename}`;
+
+      // Update user avatar
+      const updatedUser = await prisma.user.update({
+        where: { id: userId },
+        data: { avatar: avatarPath },
+      });
+
+      res.json({
+        success: true,
+        message: "Avatar uploaded successfully",
+        avatar: avatarPath,
+      });
+    } catch (error) {
+      console.error("Error uploading avatar:", error);
+      res.status(500).json({ error: "Failed to upload avatar" });
+    }
+  }
+);
+
+// Remove admin avatar
+router.delete("/profile/avatar", authenticateToken, async (req: any, res) => {
+  try {
+    if (req.user.role !== "ADMIN") {
+      return res.status(403).json({ error: "Only admins can remove avatars" });
+    }
+
+    const userId = req.user.id;
+
+    // Get current user to find avatar path
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { avatar: true },
+    });
+
+    // Remove avatar from database
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: { avatar: null },
+    });
+
+    // Delete avatar file if it exists
+    if (user?.avatar) {
+      const avatarPath = path.join(__dirname, "../../", user.avatar);
+      if (fs.existsSync(avatarPath)) {
+        fs.unlinkSync(avatarPath);
+      }
+    }
+
+    res.json({
+      success: true,
+      message: "Avatar removed successfully",
+    });
+  } catch (error) {
+    console.error("Error removing avatar:", error);
+    res.status(500).json({ error: "Failed to remove avatar" });
+  }
+});
+
+export default router;

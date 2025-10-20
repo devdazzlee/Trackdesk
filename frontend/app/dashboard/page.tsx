@@ -137,13 +137,17 @@ export default function DashboardPage() {
     try {
       setIsRefreshing(true);
       toast.loading("Refreshing dashboard data...", { id: "refresh-toast" });
-      
+
       await Promise.all([fetchDashboardData(), fetchRealTimeStats()]);
-      
-      toast.success("Dashboard data refreshed successfully!", { id: "refresh-toast" });
+
+      toast.success("Dashboard data refreshed successfully!", {
+        id: "refresh-toast",
+      });
     } catch (error) {
       console.error("Refresh error:", error);
-      toast.error("Failed to refresh data. Please try again.", { id: "refresh-toast" });
+      toast.error("Failed to refresh data. Please try again.", {
+        id: "refresh-toast",
+      });
     } finally {
       setIsRefreshing(false);
     }
@@ -152,7 +156,7 @@ export default function DashboardPage() {
   const handleExport = async () => {
     try {
       toast.loading("Preparing CSV export...", { id: "export-toast" });
-      
+
       if (!dashboardData) {
         toast.error("No data available to export", { id: "export-toast" });
         return;
@@ -160,96 +164,120 @@ export default function DashboardPage() {
 
       // Create CSV content
       const csvRows = [];
-      
+
       // Header
       csvRows.push("Metric,Value");
       csvRows.push("");
-      
+
       // Dashboard Statistics
       csvRows.push("=== DASHBOARD STATISTICS ===");
       csvRows.push("Total Referrals," + (dashboardData.totalReferrals || 0));
-      csvRows.push("Total Commissions,$" + (dashboardData.totalCommissions || 0).toFixed(2));
-      csvRows.push("Pending Commissions,$" + (dashboardData.pendingCommissions || 0).toFixed(2));
-      csvRows.push("Conversion Rate," + (dashboardData.conversionRate || 0) + "%");
+      csvRows.push(
+        "Total Commissions,$" + (dashboardData.totalCommissions || 0).toFixed(2)
+      );
+      csvRows.push(
+        "Pending Commissions,$" +
+          (dashboardData.pendingCommissions || 0).toFixed(2)
+      );
+      csvRows.push(
+        "Conversion Rate," + (dashboardData.conversionRate || 0) + "%"
+      );
       csvRows.push("Active Codes," + (dashboardData.activeCodes || 0));
       csvRows.push("Total Codes," + (dashboardData.totalCodes || 0));
       csvRows.push("");
-      
+
       // Real-time Stats (if available)
       if (realTimeStats) {
         csvRows.push("=== REAL-TIME STATISTICS ===");
         csvRows.push("Live Clicks," + (realTimeStats.liveClicks || 0));
-        csvRows.push("Live Conversions," + (realTimeStats.liveConversions || 0));
-        csvRows.push("Live Revenue,$" + (realTimeStats.liveRevenue || 0).toFixed(2));
+        csvRows.push(
+          "Live Conversions," + (realTimeStats.liveConversions || 0)
+        );
+        csvRows.push(
+          "Live Revenue,$" + (realTimeStats.liveRevenue || 0).toFixed(2)
+        );
         csvRows.push("Last Updated," + (realTimeStats.timestamp || "N/A"));
         csvRows.push("");
       }
-      
+
       // Top Links
       if (dashboardData.topLinks && dashboardData.topLinks.length > 0) {
         csvRows.push("=== TOP PERFORMING LINKS ===");
         csvRows.push("Link Name,Clicks,Conversions,Earnings,Status");
-        dashboardData.topLinks.forEach(link => {
+        dashboardData.topLinks.forEach((link) => {
           const linkName = (link.name || "Unnamed Link").replace(/"/g, '""');
           csvRows.push(
-            `"${linkName}",${link.clicks || 0},${link.conversions || 0},$${(link.earnings || 0).toFixed(2)},${link.status || "Unknown"}`
+            `"${linkName}",${link.clicks || 0},${link.conversions || 0},$${(
+              link.earnings || 0
+            ).toFixed(2)},${link.status || "Unknown"}`
           );
         });
         csvRows.push("");
       }
-      
+
       // Recent Activity
-      if (dashboardData.recentActivity && dashboardData.recentActivity.length > 0) {
+      if (
+        dashboardData.recentActivity &&
+        dashboardData.recentActivity.length > 0
+      ) {
         csvRows.push("=== RECENT ACTIVITY ===");
         csvRows.push("Type,Description,Amount,Time,Status");
-        dashboardData.recentActivity.forEach(activity => {
+        dashboardData.recentActivity.forEach((activity) => {
           const description = (activity.description || "").replace(/"/g, '""');
           const amount = activity.amount || "";
           csvRows.push(
-            `${activity.type || ""},"${description}",${amount},${activity.time || ""},${activity.status || ""}`
+            `${activity.type || ""},"${description}",${amount},${
+              activity.time || ""
+            },${activity.status || ""}`
           );
         });
         csvRows.push("");
       }
-      
+
       // Daily Stats
       if (dashboardData.dailyStats && dashboardData.dailyStats.length > 0) {
         csvRows.push("=== DAILY PERFORMANCE ===");
         csvRows.push("Date,Referrals,Commissions");
-        dashboardData.dailyStats.forEach(day => {
+        dashboardData.dailyStats.forEach((day) => {
           csvRows.push(
-            `${day.date || ""},${day.referrals || 0},$${(day.commissions || 0).toFixed(2)}`
+            `${day.date || ""},${day.referrals || 0},$${(
+              day.commissions || 0
+            ).toFixed(2)}`
           );
         });
         csvRows.push("");
       }
-      
+
       // Add metadata
       csvRows.push("=== EXPORT INFORMATION ===");
       csvRows.push("Export Date," + new Date().toLocaleString());
       csvRows.push("User," + (user?.email || "Unknown"));
-      csvRows.push("User Name," + (user?.name || "Unknown"));
-      
+      csvRows.push("User Name," + (user ? getFullName(user) : "Unknown"));
+
       // Convert to CSV string
       const csvContent = csvRows.join("\n");
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-      
+
       // Create download link
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `trackdesk-dashboard-${new Date().toISOString().split('T')[0]}.csv`;
-      
+      link.download = `trackdesk-dashboard-${
+        new Date().toISOString().split("T")[0]
+      }.csv`;
+
       // Trigger download
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-      
+
       toast.success("Dashboard data exported as CSV!", { id: "export-toast" });
     } catch (error) {
       console.error("Export error:", error);
-      toast.error("Failed to export data. Please try again.", { id: "export-toast" });
+      toast.error("Failed to export data. Please try again.", {
+        id: "export-toast",
+      });
     }
   };
 
@@ -321,7 +349,6 @@ export default function DashboardPage() {
 
   // Use real recent activity from API
   const recentActivity = dashboardData.recentActivity;
-
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -813,7 +840,6 @@ export default function DashboardPage() {
             </Card>
           </div>
         </div>
-
       </div>
     </div>
   );

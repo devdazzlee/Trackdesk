@@ -1,6 +1,9 @@
 import { getServerUser, getServerToken } from "@/lib/auth-server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
+// Mark this route as dynamic since it uses cookies
+export const dynamic = "force-dynamic";
+
 export default async function TestServerAuthPage() {
   const user = await getServerUser();
   const token = await getServerToken();

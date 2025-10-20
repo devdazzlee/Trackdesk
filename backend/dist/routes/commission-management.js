@@ -30,8 +30,8 @@ router.get("/", auth_1.authenticateToken, async (req, res) => {
             if (dateTo)
                 where.createdAt.lte = new Date(dateTo);
         }
-        const [commissions, total] = await Promise.all([
-            prisma_1.prisma.commission.findMany({
+        const [orders, total, statistics] = await Promise.all([
+            prisma_1.prisma.affiliateOrder.findMany({
                 where,
                 include: {
                     affiliate: {
@@ -45,155 +45,72 @@ router.get("/", auth_1.authenticateToken, async (req, res) => {
                             },
                         },
                     },
-                    conversion: {
-                        include: {
-                            offer: {
-                                select: {
-                                    name: true,
-                                    description: true,
-                                },
-                            },
-                        },
-                    },
                 },
                 orderBy: { [sortBy]: sortOrder },
                 skip: (page - 1) * limit,
                 take: parseInt(limit),
             }),
-            prisma_1.prisma.commission.count({ where }),
+            prisma_1.prisma.affiliateOrder.count({ where }),
+            Promise.all([
+                prisma_1.prisma.affiliateOrder.count(),
+                prisma_1.prisma.affiliateOrder.aggregate({
+                    _sum: { commissionAmount: true },
+                }),
+                prisma_1.prisma.affiliateOrder.count({ where: { status: "PAID" } }),
+                prisma_1.prisma.affiliateOrder.aggregate({
+                    where: { status: "PAID" },
+                    _sum: { commissionAmount: true },
+                }),
+                prisma_1.prisma.affiliateOrder.count({ where: { status: "PENDING" } }),
+                prisma_1.prisma.affiliateOrder.aggregate({
+                    where: { status: "PENDING" },
+                    _sum: { commissionAmount: true },
+                }),
+                prisma_1.prisma.affiliateOrder.count({ where: { status: "APPROVED" } }),
+                prisma_1.prisma.affiliateOrder.aggregate({
+                    where: { status: "APPROVED" },
+                    _sum: { commissionAmount: true },
+                }),
+                prisma_1.prisma.affiliateProfile.count({ where: { status: "ACTIVE" } }),
+            ]),
         ]);
-        if (total === 0) {
-            const mockCommissions = [
-                {
-                    id: "demo-1",
-                    amount: 25.0,
-                    rate: 5.0,
-                    status: "PENDING",
-                    createdAt: new Date().toISOString(),
-                    affiliate: {
-                        id: "affiliate-1",
-                        user: {
-                            firstName: "Demo",
-                            lastName: "Affiliate",
-                            email: "demo.affiliate@trackdesk.com",
-                        },
-                    },
-                    conversion: {
-                        orderValue: 500.0,
-                        offer: {
-                            name: "Demo Product",
-                            description: "Demo product for testing",
-                        },
-                    },
+        const commissions = orders.map((order) => ({
+            id: order.id,
+            amount: order.commissionAmount,
+            rate: order.commissionRate,
+            status: order.status,
+            createdAt: order.createdAt,
+            payoutDate: order.status === "PAID" ? order.updatedAt : undefined,
+            affiliate: order.affiliate,
+            conversion: {
+                orderValue: order.orderValue,
+                offer: {
+                    name: order.referralCode || "Direct Sale",
+                    description: `Order ${order.orderId}`,
                 },
-                {
-                    id: "demo-2",
-                    amount: 50.0,
-                    rate: 5.0,
-                    status: "APPROVED",
-                    createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-                    affiliate: {
-                        id: "affiliate-1",
-                        user: {
-                            firstName: "Demo",
-                            lastName: "Affiliate",
-                            email: "demo.affiliate@trackdesk.com",
-                        },
-                    },
-                    conversion: {
-                        orderValue: 1000.0,
-                        offer: {
-                            name: "Demo Product",
-                            description: "Demo product for testing",
-                        },
-                    },
-                },
-                {
-                    id: "demo-3",
-                    amount: 75.0,
-                    rate: 5.0,
-                    status: "PAID",
-                    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-                    payoutDate: new Date().toISOString(),
-                    affiliate: {
-                        id: "affiliate-1",
-                        user: {
-                            firstName: "Demo",
-                            lastName: "Affiliate",
-                            email: "demo.affiliate@trackdesk.com",
-                        },
-                    },
-                    conversion: {
-                        orderValue: 1500.0,
-                        offer: {
-                            name: "Demo Product",
-                            description: "Demo product for testing",
-                        },
-                    },
-                },
-                {
-                    id: "demo-4",
-                    amount: 30.0,
-                    rate: 5.0,
-                    status: "PENDING",
-                    createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-                    affiliate: {
-                        id: "affiliate-1",
-                        user: {
-                            firstName: "Demo",
-                            lastName: "Affiliate",
-                            email: "demo.affiliate@trackdesk.com",
-                        },
-                    },
-                    conversion: {
-                        orderValue: 600.0,
-                        offer: {
-                            name: "Demo Product",
-                            description: "Demo product for testing",
-                        },
-                    },
-                },
-                {
-                    id: "demo-5",
-                    amount: 100.0,
-                    rate: 5.0,
-                    status: "APPROVED",
-                    createdAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-                    affiliate: {
-                        id: "affiliate-1",
-                        user: {
-                            firstName: "Demo",
-                            lastName: "Affiliate",
-                            email: "demo.affiliate@trackdesk.com",
-                        },
-                    },
-                    conversion: {
-                        orderValue: 2000.0,
-                        offer: {
-                            name: "Demo Product",
-                            description: "Demo product for testing",
-                        },
-                    },
-                },
-            ];
-            return res.json({
-                data: mockCommissions,
-                pagination: {
-                    page: parseInt(page),
-                    limit: parseInt(limit),
-                    total: mockCommissions.length,
-                    pages: Math.ceil(mockCommissions.length / parseInt(limit)),
-                },
-            });
-        }
+            },
+        }));
+        const [totalCommissions, totalAmount, paidCount, paidAmount, pendingCount, pendingAmount, approvedCount, approvedAmount, activeAffiliates,] = statistics;
+        const formattedStatistics = {
+            totalCommissions,
+            totalAmount: totalAmount._sum.commissionAmount || 0,
+            paidCommissions: paidCount,
+            paidAmount: paidAmount._sum.commissionAmount || 0,
+            pendingCommissions: pendingCount,
+            pendingAmount: pendingAmount._sum.commissionAmount || 0,
+            approvedCommissions: approvedCount,
+            approvedAmount: approvedAmount._sum.commissionAmount || 0,
+            activeAffiliates,
+        };
         res.json({
-            commissions,
+            data: commissions,
             pagination: {
                 page: parseInt(page),
                 limit: parseInt(limit),
                 total,
-                pages: Math.ceil(total / limit),
+                pages: Math.ceil(total / parseInt(limit)),
             },
+            statistics: formattedStatistics,
         });
     }
     catch (error) {
@@ -214,40 +131,81 @@ router.patch("/:id/status", auth_1.authenticateToken, async (req, res) => {
         });
         const { status, notes } = schema.parse(req.body);
         const { id } = req.params;
-        const commission = await prisma_1.prisma.commission.update({
+        const order = await prisma_1.prisma.affiliateOrder.update({
             where: { id },
             data: {
                 status,
-                ...(status === "PAID" && { payoutDate: new Date() }),
-                ...(notes && { metadata: { notes } }),
+                updatedAt: new Date(),
             },
+        });
+        const affiliate = await prisma_1.prisma.affiliateProfile.findUnique({
+            where: { id: order.affiliateId },
             include: {
-                affiliate: {
-                    include: {
-                        user: {
-                            select: {
-                                firstName: true,
-                                lastName: true,
-                                email: true,
-                            },
-                        },
+                user: {
+                    select: {
+                        firstName: true,
+                        lastName: true,
+                        email: true,
                     },
                 },
             },
         });
-        if (status === "APPROVED") {
+        if (status === "APPROVED" || status === "PAID") {
             await prisma_1.prisma.affiliateProfile.update({
-                where: { id: commission.affiliateId },
+                where: { id: order.affiliateId },
                 data: {
-                    totalEarnings: { increment: commission.amount },
+                    totalEarnings: { increment: order.commissionAmount },
                 },
             });
         }
-        res.json(commission);
+        res.json({
+            id: order.id,
+            amount: order.commissionAmount,
+            rate: order.commissionRate,
+            status: order.status,
+            createdAt: order.createdAt,
+            affiliate,
+            conversion: {
+                orderValue: order.orderValue,
+                offer: {
+                    name: order.referralCode || "Direct Sale",
+                    description: `Order ${order.orderId}`,
+                },
+            },
+        });
     }
     catch (error) {
         console.error("Error updating commission status:", error);
         res.status(500).json({ error: "Failed to update commission status" });
+    }
+});
+router.delete("/:id", auth_1.authenticateToken, async (req, res) => {
+    try {
+        if (req.user.role !== "ADMIN") {
+            return res
+                .status(403)
+                .json({ error: "Only admins can delete commissions" });
+        }
+        const { id } = req.params;
+        const order = await prisma_1.prisma.affiliateOrder.update({
+            where: { id },
+            data: {
+                status: "CANCELLED",
+                updatedAt: new Date(),
+            },
+        });
+        res.json({
+            success: true,
+            message: "Commission deleted successfully",
+            commission: {
+                id: order.id,
+                status: order.status,
+            },
+        });
+    }
+    catch (error) {
+        console.error("Error deleting commission:", error);
+        res.status(500).json({ error: "Failed to delete commission" });
     }
 });
 router.patch("/bulk-status", auth_1.authenticateToken, async (req, res) => {
@@ -265,27 +223,27 @@ router.patch("/bulk-status", auth_1.authenticateToken, async (req, res) => {
         const { commissionIds, status, notes } = schema.parse(req.body);
         const updateData = {
             status,
-            ...(notes && { metadata: { notes } }),
+            updatedAt: new Date(),
         };
         if (status === "PAID") {
             updateData.payoutDate = new Date();
         }
-        const result = await prisma_1.prisma.commission.updateMany({
+        const result = await prisma_1.prisma.affiliateOrder.updateMany({
             where: {
                 id: { in: commissionIds },
             },
             data: updateData,
         });
         if (status === "APPROVED") {
-            const commissions = await prisma_1.prisma.commission.findMany({
+            const orders = await prisma_1.prisma.affiliateOrder.findMany({
                 where: { id: { in: commissionIds } },
-                select: { affiliateId: true, amount: true },
+                select: { affiliateId: true, commissionAmount: true },
             });
-            const affiliateUpdates = commissions.reduce((acc, commission) => {
-                if (!acc[commission.affiliateId]) {
-                    acc[commission.affiliateId] = 0;
+            const affiliateUpdates = orders.reduce((acc, order) => {
+                if (!acc[order.affiliateId]) {
+                    acc[order.affiliateId] = 0;
                 }
-                acc[commission.affiliateId] += commission.amount;
+                acc[order.affiliateId] += order.commissionAmount;
                 return acc;
             }, {});
             await Promise.all(Object.entries(affiliateUpdates).map(([affiliateId, amount]) => prisma_1.prisma.affiliateProfile.update({
@@ -325,57 +283,35 @@ router.get("/analytics", auth_1.authenticateToken, async (req, res) => {
                 dateFrom = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
         }
         const [totalCommissions, totalAmount, statusBreakdown, topAffiliates, dailyStats,] = await Promise.all([
-            prisma_1.prisma.commission.count({
+            prisma_1.prisma.affiliateOrder.count({
                 where: { createdAt: { gte: dateFrom } },
             }),
-            prisma_1.prisma.commission.aggregate({
+            prisma_1.prisma.affiliateOrder.aggregate({
                 where: { createdAt: { gte: dateFrom } },
-                _sum: { amount: true },
+                _sum: { commissionAmount: true },
             }),
-            prisma_1.prisma.commission.groupBy({
+            prisma_1.prisma.affiliateOrder.groupBy({
                 by: ["status"],
                 where: { createdAt: { gte: dateFrom } },
-                _sum: { amount: true },
+                _sum: { commissionAmount: true },
                 _count: { id: true },
             }),
-            prisma_1.prisma.commission.groupBy({
+            prisma_1.prisma.affiliateOrder.groupBy({
                 by: ["affiliateId"],
                 where: { createdAt: { gte: dateFrom } },
-                _sum: { amount: true },
+                _sum: { commissionAmount: true },
                 _count: { id: true },
-                orderBy: { _sum: { amount: "desc" } },
+                orderBy: { _sum: { commissionAmount: "desc" } },
                 take: 10,
             }),
-            prisma_1.prisma.commission.groupBy({
+            prisma_1.prisma.affiliateOrder.groupBy({
                 by: ["createdAt"],
                 where: { createdAt: { gte: dateFrom } },
-                _sum: { amount: true },
+                _sum: { commissionAmount: true },
                 _count: { id: true },
                 orderBy: { createdAt: "asc" },
             }),
         ]);
-        if (totalCommissions === 0) {
-            return res.json({
-                period,
-                totalCommissions: 5,
-                totalAmount: 280.0,
-                statusBreakdown: [
-                    { status: "PENDING", _sum: { amount: 55.0 }, _count: { id: 2 } },
-                    { status: "APPROVED", _sum: { amount: 150.0 }, _count: { id: 2 } },
-                    { status: "PAID", _sum: { amount: 75.0 }, _count: { id: 1 } },
-                ],
-                topAffiliates: [
-                    {
-                        affiliateId: "affiliate-1",
-                        affiliateName: "Demo Affiliate",
-                        affiliateEmail: "demo.affiliate@trackdesk.com",
-                        _sum: { amount: 280.0 },
-                        _count: { id: 5 },
-                    },
-                ],
-                dailyStats: [],
-            });
-        }
         const topAffiliateIds = topAffiliates.map((a) => a.affiliateId);
         const affiliateDetails = await prisma_1.prisma.affiliateProfile.findMany({
             where: { id: { in: topAffiliateIds } },
@@ -402,7 +338,7 @@ router.get("/analytics", auth_1.authenticateToken, async (req, res) => {
         res.json({
             period,
             totalCommissions,
-            totalAmount: totalAmount._sum.amount || 0,
+            totalAmount: totalAmount._sum.commissionAmount || 0,
             statusBreakdown,
             topAffiliates: topAffiliatesWithDetails,
             dailyStats,

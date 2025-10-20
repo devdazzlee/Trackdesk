@@ -45,6 +45,7 @@ import adminDashboardRoutes from "./routes/admin-dashboard"; // Admin dashboard 
 import adminAffiliatesRoutes from "./routes/admin-affiliates"; // Admin affiliate management routes
 import adminPayoutsRoutes from "./routes/admin-payouts"; // Admin payout management routes
 import adminOffersRoutes from "./routes/admin-offers"; // Admin offers management routes
+import adminSettingsRoutes from "./routes/admin-settings"; // Admin settings routes
 import uploadRoutes from "./routes/upload"; // File upload routes
 
 // Load environment variables
@@ -192,6 +193,7 @@ app.use("/api/admin/dashboard", adminDashboardRoutes); // Admin dashboard routes
 app.use("/api/admin/affiliates", adminAffiliatesRoutes); // Admin affiliate management
 app.use("/api/admin/payouts", adminPayoutsRoutes); // Admin payout management
 app.use("/api/admin/offers", adminOffersRoutes); // Admin offers management
+app.use("/api/admin/settings", adminSettingsRoutes); // Admin settings routes
 app.use("/api/upload", uploadRoutes); // File upload routes
 
 // WebSocket connection handling

@@ -41,8 +41,9 @@ router.get("/", authenticateToken, async (req: any, res) => {
       if (dateTo) where.createdAt.lte = new Date(dateTo);
     }
 
-    const [commissions, total] = await Promise.all([
-      prisma.commission.findMany({
+    // Get real commission data from AffiliateOrder table
+    const [orders, total, statistics] = await Promise.all([
+      prisma.affiliateOrder.findMany({
         where,
         include: {
           affiliate: {
@@ -56,165 +57,89 @@ router.get("/", authenticateToken, async (req: any, res) => {
               },
             },
           },
-          conversion: {
-            include: {
-              offer: {
-                select: {
-                  name: true,
-                  description: true,
-                },
-              },
-            },
-          },
         },
         orderBy: { [sortBy]: sortOrder },
         skip: (page - 1) * limit,
         take: parseInt(limit),
       }),
-      prisma.commission.count({ where }),
+      prisma.affiliateOrder.count({ where }),
+      // Calculate statistics
+      Promise.all([
+        prisma.affiliateOrder.count(),
+        prisma.affiliateOrder.aggregate({
+          _sum: { commissionAmount: true },
+        }),
+        prisma.affiliateOrder.count({ where: { status: "PAID" } }),
+        prisma.affiliateOrder.aggregate({
+          where: { status: "PAID" },
+          _sum: { commissionAmount: true },
+        }),
+        prisma.affiliateOrder.count({ where: { status: "PENDING" } }),
+        prisma.affiliateOrder.aggregate({
+          where: { status: "PENDING" },
+          _sum: { commissionAmount: true },
+        }),
+        prisma.affiliateOrder.count({ where: { status: "APPROVED" } }),
+        prisma.affiliateOrder.aggregate({
+          where: { status: "APPROVED" },
+          _sum: { commissionAmount: true },
+        }),
+        prisma.affiliateProfile.count({ where: { status: "ACTIVE" } }),
+      ]),
     ]);
 
-    // If no commissions exist, return mock data for demo purposes
-    if (total === 0) {
-      const mockCommissions = [
-        {
-          id: "demo-1",
-          amount: 25.0,
-          rate: 5.0,
-          status: "PENDING",
-          createdAt: new Date().toISOString(),
-          affiliate: {
-            id: "affiliate-1",
-            user: {
-              firstName: "Demo",
-              lastName: "Affiliate",
-              email: "demo.affiliate@trackdesk.com",
-            },
-          },
-          conversion: {
-            orderValue: 500.0,
-            offer: {
-              name: "Demo Product",
-              description: "Demo product for testing",
-            },
-          },
+    // Format orders as commission objects
+    const commissions = orders.map((order) => ({
+      id: order.id,
+      amount: order.commissionAmount,
+      rate: order.commissionRate,
+      status: order.status,
+      createdAt: order.createdAt,
+      payoutDate: order.status === "PAID" ? order.updatedAt : undefined,
+      affiliate: order.affiliate,
+      conversion: {
+        orderValue: order.orderValue,
+        offer: {
+          name: order.referralCode || "Direct Sale",
+          description: `Order ${order.orderId}`,
         },
-        {
-          id: "demo-2",
-          amount: 50.0,
-          rate: 5.0,
-          status: "APPROVED",
-          createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-          affiliate: {
-            id: "affiliate-1",
-            user: {
-              firstName: "Demo",
-              lastName: "Affiliate",
-              email: "demo.affiliate@trackdesk.com",
-            },
-          },
-          conversion: {
-            orderValue: 1000.0,
-            offer: {
-              name: "Demo Product",
-              description: "Demo product for testing",
-            },
-          },
-        },
-        {
-          id: "demo-3",
-          amount: 75.0,
-          rate: 5.0,
-          status: "PAID",
-          createdAt: new Date(
-            Date.now() - 2 * 24 * 60 * 60 * 1000
-          ).toISOString(),
-          payoutDate: new Date().toISOString(),
-          affiliate: {
-            id: "affiliate-1",
-            user: {
-              firstName: "Demo",
-              lastName: "Affiliate",
-              email: "demo.affiliate@trackdesk.com",
-            },
-          },
-          conversion: {
-            orderValue: 1500.0,
-            offer: {
-              name: "Demo Product",
-              description: "Demo product for testing",
-            },
-          },
-        },
-        {
-          id: "demo-4",
-          amount: 30.0,
-          rate: 5.0,
-          status: "PENDING",
-          createdAt: new Date(
-            Date.now() - 3 * 24 * 60 * 60 * 1000
-          ).toISOString(),
-          affiliate: {
-            id: "affiliate-1",
-            user: {
-              firstName: "Demo",
-              lastName: "Affiliate",
-              email: "demo.affiliate@trackdesk.com",
-            },
-          },
-          conversion: {
-            orderValue: 600.0,
-            offer: {
-              name: "Demo Product",
-              description: "Demo product for testing",
-            },
-          },
-        },
-        {
-          id: "demo-5",
-          amount: 100.0,
-          rate: 5.0,
-          status: "APPROVED",
-          createdAt: new Date(
-            Date.now() - 4 * 24 * 60 * 60 * 1000
-          ).toISOString(),
-          affiliate: {
-            id: "affiliate-1",
-            user: {
-              firstName: "Demo",
-              lastName: "Affiliate",
-              email: "demo.affiliate@trackdesk.com",
-            },
-          },
-          conversion: {
-            orderValue: 2000.0,
-            offer: {
-              name: "Demo Product",
-              description: "Demo product for testing",
-            },
-          },
-        },
-      ];
+      },
+    }));
 
-      return res.json({
-        data: mockCommissions,
-        pagination: {
-          page: parseInt(page as string),
-          limit: parseInt(limit as string),
-          total: mockCommissions.length,
-          pages: Math.ceil(mockCommissions.length / parseInt(limit as string)),
-        },
-      });
-    }
+    // Format statistics
+    const [
+      totalCommissions,
+      totalAmount,
+      paidCount,
+      paidAmount,
+      pendingCount,
+      pendingAmount,
+      approvedCount,
+      approvedAmount,
+      activeAffiliates,
+    ] = statistics;
+
+    const formattedStatistics = {
+      totalCommissions,
+      totalAmount: totalAmount._sum.commissionAmount || 0,
+      paidCommissions: paidCount,
+      paidAmount: paidAmount._sum.commissionAmount || 0,
+      pendingCommissions: pendingCount,
+      pendingAmount: pendingAmount._sum.commissionAmount || 0,
+      approvedCommissions: approvedCount,
+      approvedAmount: approvedAmount._sum.commissionAmount || 0,
+      activeAffiliates,
+    };
 
     res.json({
-      commissions,
+      data: commissions,
       pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
+        page: parseInt(page as string),
+        limit: parseInt(limit as string),
         total,
-        pages: Math.ceil(total / limit),
+        pages: Math.ceil(total / parseInt(limit as string)),
       },
+      statistics: formattedStatistics,
     });
   } catch (error) {
     console.error("Error fetching commissions:", error);
@@ -222,7 +147,7 @@ router.get("/", authenticateToken, async (req: any, res) => {
   }
 });
 
-// Update commission status
+// Update commission status (using AffiliateOrder table)
 router.patch("/:id/status", authenticateToken, async (req: any, res) => {
   try {
     if (req.user.role !== "ADMIN") {
@@ -239,42 +164,91 @@ router.patch("/:id/status", authenticateToken, async (req: any, res) => {
     const { status, notes } = schema.parse(req.body);
     const { id } = req.params;
 
-    const commission = await prisma.commission.update({
+    // Update AffiliateOrder status (real commission data)
+    const order = await prisma.affiliateOrder.update({
       where: { id },
       data: {
         status,
-        ...(status === "PAID" && { payoutDate: new Date() }),
-        ...(notes && { metadata: { notes } }),
+        updatedAt: new Date(),
       },
+    });
+
+    // Get affiliate profile for response
+    const affiliate = await prisma.affiliateProfile.findUnique({
+      where: { id: order.affiliateId },
       include: {
-        affiliate: {
-          include: {
-            user: {
-              select: {
-                firstName: true,
-                lastName: true,
-                email: true,
-              },
-            },
+        user: {
+          select: {
+            firstName: true,
+            lastName: true,
+            email: true,
           },
         },
       },
     });
 
-    // If approved, update affiliate's pending earnings
-    if (status === "APPROVED") {
+    // If approved or paid, update affiliate's total earnings
+    if (status === "APPROVED" || status === "PAID") {
       await prisma.affiliateProfile.update({
-        where: { id: commission.affiliateId },
+        where: { id: order.affiliateId },
         data: {
-          totalEarnings: { increment: commission.amount },
+          totalEarnings: { increment: order.commissionAmount },
         },
       });
     }
 
-    res.json(commission);
+    res.json({
+      id: order.id,
+      amount: order.commissionAmount,
+      rate: order.commissionRate,
+      status: order.status,
+      createdAt: order.createdAt,
+      affiliate,
+      conversion: {
+        orderValue: order.orderValue,
+        offer: {
+          name: order.referralCode || "Direct Sale",
+          description: `Order ${order.orderId}`,
+        },
+      },
+    });
   } catch (error) {
     console.error("Error updating commission status:", error);
     res.status(500).json({ error: "Failed to update commission status" });
+  }
+});
+
+// Delete commission (soft delete by setting status to CANCELLED)
+router.delete("/:id", authenticateToken, async (req: any, res) => {
+  try {
+    if (req.user.role !== "ADMIN") {
+      return res
+        .status(403)
+        .json({ error: "Only admins can delete commissions" });
+    }
+
+    const { id } = req.params;
+
+    // Soft delete by setting status to CANCELLED
+    const order = await prisma.affiliateOrder.update({
+      where: { id },
+      data: {
+        status: "CANCELLED",
+        updatedAt: new Date(),
+      },
+    });
+
+    res.json({
+      success: true,
+      message: "Commission deleted successfully",
+      commission: {
+        id: order.id,
+        status: order.status,
+      },
+    });
+  } catch (error) {
+    console.error("Error deleting commission:", error);
+    res.status(500).json({ error: "Failed to delete commission" });
   }
 });
 
@@ -297,14 +271,14 @@ router.patch("/bulk-status", authenticateToken, async (req: any, res) => {
 
     const updateData: any = {
       status,
-      ...(notes && { metadata: { notes } }),
+      updatedAt: new Date(),
     };
 
     if (status === "PAID") {
       updateData.payoutDate = new Date();
     }
 
-    const result = await prisma.commission.updateMany({
+    const result = await prisma.affiliateOrder.updateMany({
       where: {
         id: { in: commissionIds },
       },
@@ -313,17 +287,17 @@ router.patch("/bulk-status", authenticateToken, async (req: any, res) => {
 
     // If approved, update affiliate earnings
     if (status === "APPROVED") {
-      const commissions = await prisma.commission.findMany({
+      const orders = await prisma.affiliateOrder.findMany({
         where: { id: { in: commissionIds } },
-        select: { affiliateId: true, amount: true },
+        select: { affiliateId: true, commissionAmount: true },
       });
 
-      const affiliateUpdates = commissions.reduce(
-        (acc, commission) => {
-          if (!acc[commission.affiliateId]) {
-            acc[commission.affiliateId] = 0;
+      const affiliateUpdates = orders.reduce(
+        (acc, order) => {
+          if (!acc[order.affiliateId]) {
+            acc[order.affiliateId] = 0;
           }
-          acc[commission.affiliateId] += commission.amount;
+          acc[order.affiliateId] += order.commissionAmount;
           return acc;
         },
         {} as Record<string, number>
@@ -381,59 +355,35 @@ router.get("/analytics", authenticateToken, async (req: any, res) => {
       topAffiliates,
       dailyStats,
     ] = await Promise.all([
-      prisma.commission.count({
+      prisma.affiliateOrder.count({
         where: { createdAt: { gte: dateFrom } },
       }),
-      prisma.commission.aggregate({
+      prisma.affiliateOrder.aggregate({
         where: { createdAt: { gte: dateFrom } },
-        _sum: { amount: true },
+        _sum: { commissionAmount: true },
       }),
-      prisma.commission.groupBy({
+      prisma.affiliateOrder.groupBy({
         by: ["status"],
         where: { createdAt: { gte: dateFrom } },
-        _sum: { amount: true },
+        _sum: { commissionAmount: true },
         _count: { id: true },
       }),
-      prisma.commission.groupBy({
+      prisma.affiliateOrder.groupBy({
         by: ["affiliateId"],
         where: { createdAt: { gte: dateFrom } },
-        _sum: { amount: true },
+        _sum: { commissionAmount: true },
         _count: { id: true },
-        orderBy: { _sum: { amount: "desc" } },
+        orderBy: { _sum: { commissionAmount: "desc" } },
         take: 10,
       }),
-      prisma.commission.groupBy({
+      prisma.affiliateOrder.groupBy({
         by: ["createdAt"],
         where: { createdAt: { gte: dateFrom } },
-        _sum: { amount: true },
+        _sum: { commissionAmount: true },
         _count: { id: true },
         orderBy: { createdAt: "asc" },
       }),
     ]);
-
-    // If no commissions exist, return mock analytics data
-    if (totalCommissions === 0) {
-      return res.json({
-        period,
-        totalCommissions: 5,
-        totalAmount: 280.0,
-        statusBreakdown: [
-          { status: "PENDING", _sum: { amount: 55.0 }, _count: { id: 2 } },
-          { status: "APPROVED", _sum: { amount: 150.0 }, _count: { id: 2 } },
-          { status: "PAID", _sum: { amount: 75.0 }, _count: { id: 1 } },
-        ],
-        topAffiliates: [
-          {
-            affiliateId: "affiliate-1",
-            affiliateName: "Demo Affiliate",
-            affiliateEmail: "demo.affiliate@trackdesk.com",
-            _sum: { amount: 280.0 },
-            _count: { id: 5 },
-          },
-        ],
-        dailyStats: [],
-      });
-    }
 
     // Get affiliate details for top affiliates
     const topAffiliateIds = topAffiliates.map((a) => a.affiliateId);
@@ -466,7 +416,7 @@ router.get("/analytics", authenticateToken, async (req: any, res) => {
     res.json({
       period,
       totalCommissions,
-      totalAmount: totalAmount._sum.amount || 0,
+      totalAmount: totalAmount._sum.commissionAmount || 0,
       statusBreakdown,
       topAffiliates: topAffiliatesWithDetails,
       dailyStats,

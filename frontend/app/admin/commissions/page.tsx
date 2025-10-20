@@ -81,19 +81,19 @@ interface CommissionAnalytics {
   totalAmount: number;
   statusBreakdown: Array<{
     status: string;
-    _sum: { amount: number };
+    _sum: { commissionAmount: number };
     _count: { id: number };
   }>;
   topAffiliates: Array<{
     affiliateId: string;
     affiliateName: string;
     affiliateEmail: string;
-    _sum: { amount: number };
+    _sum: { commissionAmount: number };
     _count: { id: number };
   }>;
   dailyStats: Array<{
     createdAt: string;
-    _sum: { amount: number };
+    _sum: { commissionAmount: number };
     _count: { id: number };
   }>;
 }
@@ -369,7 +369,7 @@ export default function CommissionsPage() {
                 $
                 {analytics.statusBreakdown
                   .find((s) => s.status === "PAID")
-                  ?._sum.amount.toFixed(2) || "0.00"}
+                  ?._sum.commissionAmount.toFixed(2) || "0.00"}
               </p>
             </CardContent>
           </Card>
@@ -387,7 +387,7 @@ export default function CommissionsPage() {
                 $
                 {analytics.statusBreakdown
                   .find((s) => s.status === "PENDING")
-                  ?._sum.amount.toFixed(2) || "0.00"}
+                  ?._sum.commissionAmount.toFixed(2) || "0.00"}
               </p>
             </CardContent>
           </Card>
