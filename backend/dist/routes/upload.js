@@ -36,12 +36,15 @@ router.post('/avatar', auth_1.authenticateToken, upload.single('avatar'), async 
             where: { id: userId },
             select: { avatar: true },
         });
+        console.log("🖼️ Uploading avatar for user:", userId);
         const base64Image = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
         const uploadResult = await (0, cloudinary_1.uploadImage)(base64Image, 'trackdesk/profiles');
-        await prisma_1.prisma.user.update({
+        console.log("☁️ Cloudinary upload successful:", uploadResult.url);
+        const updatedUser = await prisma_1.prisma.user.update({
             where: { id: userId },
             data: { avatar: uploadResult.url },
         });
+        console.log("💾 Database updated - User avatar:", updatedUser.avatar);
         if (user?.avatar && user.avatar.includes('cloudinary.com')) {
             try {
                 const urlParts = user.avatar.split('/');

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -14,11 +14,18 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Eye, EyeOff, ArrowLeft, AlertCircle, CheckCircle, Mail } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  ArrowLeft,
+  AlertCircle,
+  CheckCircle,
+  Mail,
+} from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
-export default function LoginPage() {
+function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
@@ -102,7 +109,10 @@ export default function LoginPage() {
                   <span className="text-sm text-red-600">{error}</span>
                 </div>
                 {error.toLowerCase().includes("verify") && (
-                  <Link href="/auth/resend-verification" className="text-sm text-blue-600 hover:underline flex items-center mt-2">
+                  <Link
+                    href="/auth/resend-verification"
+                    className="text-sm text-blue-600 hover:underline flex items-center mt-2"
+                  >
                     <Mail className="h-3 w-3 mr-1" />
                     Resend verification email
                   </Link>
@@ -215,5 +225,22 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-teal-50">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading...</p>
+          </div>
+        </div>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   );
 }

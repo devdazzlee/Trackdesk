@@ -55,6 +55,18 @@ router.get("/", auth_1.authenticateToken, (0, auth_1.requireRole)(["ADMIN"]), as
                 }),
             ]);
             const conversionRate = clicks > 0 ? (conversions / clicks) * 100 : 0;
+            const lastLoginActivity = await prisma.activity.findFirst({
+                where: {
+                    userId: affiliate.userId,
+                    action: "user_login",
+                },
+                orderBy: {
+                    createdAt: "desc",
+                },
+                select: {
+                    createdAt: true,
+                },
+            });
             return {
                 id: affiliate.id,
                 name: `${affiliate.user?.firstName || ""} ${affiliate.user?.lastName || ""}`.trim() ||
@@ -67,7 +79,12 @@ router.get("/", auth_1.authenticateToken, (0, auth_1.requireRole)(["ADMIN"]), as
                 totalClicks: clicks,
                 totalConversions: conversions,
                 conversionRate: Math.round(conversionRate * 10) / 10,
-                lastActivity: affiliate.lastActivityAt?.toISOString().split("T")[0] || "N/A",
+                lastActivity: lastLoginActivity?.createdAt
+                    ? lastLoginActivity.createdAt
+                        .toISOString()
+                        .replace("T", " ")
+                        .split(".")[0]
+                    : "Never",
                 paymentMethod: affiliate.paymentMethod,
                 country: "Unknown",
             };
@@ -124,6 +141,18 @@ router.get("/:id", auth_1.authenticateToken, (0, auth_1.requireRole)(["ADMIN"]),
                 where: { affiliateId: affiliate.id },
             }),
         ]);
+        const lastLoginActivity = await prisma.activity.findFirst({
+            where: {
+                userId: affiliate.userId,
+                action: "user_login",
+            },
+            orderBy: {
+                createdAt: "desc",
+            },
+            select: {
+                createdAt: true,
+            },
+        });
         res.json({
             affiliate: {
                 ...affiliate,
@@ -133,6 +162,12 @@ router.get("/:id", auth_1.authenticateToken, (0, auth_1.requireRole)(["ADMIN"]),
                     totalConversions: conversions,
                     totalClicks: clicks,
                     conversionRate: clicks > 0 ? (conversions / clicks) * 100 : 0,
+                    lastLogin: lastLoginActivity?.createdAt
+                        ? lastLoginActivity.createdAt
+                            .toISOString()
+                            .replace("T", " ")
+                            .split(".")[0]
+                        : "Never",
                 },
                 referralCodes: 0,
             },

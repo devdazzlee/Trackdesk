@@ -1,18 +1,26 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { config } from "@/config/config";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { CheckCircle, XCircle, Loader2, Mail } from "lucide-react";
 
-export default function VerifyEmailPage() {
+function VerifyEmailForm() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const token = searchParams.get("token");
-  
-  const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
+
+  const [status, setStatus] = useState<"loading" | "success" | "error">(
+    "loading"
+  );
   const [message, setMessage] = useState("");
   const [email, setEmail] = useState("");
   const [isResending, setIsResending] = useState(false);
@@ -65,13 +73,16 @@ export default function VerifyEmailPage() {
 
     setIsResending(true);
     try {
-      const response = await fetch(`${config.apiUrl}/auth/resend-verification`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email }),
-      });
+      const response = await fetch(
+        `${config.apiUrl}/auth/resend-verification`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email }),
+        }
+      );
 
       const data = await response.json();
 
@@ -108,9 +119,7 @@ export default function VerifyEmailPage() {
             {status === "success" && "Email Verified!"}
             {status === "error" && "Verification Failed"}
           </CardTitle>
-          <CardDescription className="mt-2">
-            {message}
-          </CardDescription>
+          <CardDescription className="mt-2">{message}</CardDescription>
         </CardHeader>
 
         <CardContent>
@@ -119,7 +128,7 @@ export default function VerifyEmailPage() {
               <p className="text-sm text-gray-600 mb-4">
                 Redirecting to login page in 3 seconds...
               </p>
-              <Button 
+              <Button
                 onClick={() => router.push("/auth/login")}
                 className="w-full"
               >
@@ -162,7 +171,7 @@ export default function VerifyEmailPage() {
                   </Button>
                 </div>
               </div>
-              <Button 
+              <Button
                 onClick={() => router.push("/auth/login")}
                 variant="ghost"
                 className="w-full"
@@ -182,5 +191,22 @@ export default function VerifyEmailPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-teal-50">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading...</p>
+          </div>
+        </div>
+      }
+    >
+      <VerifyEmailForm />
+    </Suspense>
   );
 }

@@ -5,12 +5,12 @@ export declare class SecurityService {
     logSecurityEvent(userId: string, event: string, details: string, ipAddress?: string, userAgent?: string): Promise<{
         id: string;
         createdAt: Date;
+        userId: string;
         action: string;
         resource: string;
         details: import("@prisma/client/runtime/library").JsonValue | null;
         ipAddress: string | null;
         userAgent: string | null;
-        userId: string;
     }>;
 }
 //# sourceMappingURL=SecurityService.d.ts.map

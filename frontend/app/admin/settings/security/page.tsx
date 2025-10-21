@@ -26,6 +26,7 @@ import {
   CheckCircle,
 } from "lucide-react";
 import { toast } from "sonner";
+import { config } from "@/config/config";
 
 export default function SecuritySettingsPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -62,6 +63,12 @@ export default function SecuritySettingsPage() {
   };
 
   const handleChangePassword = async () => {
+    // Validation
+    if (!passwordForm.currentPassword) {
+      toast.error("Current password is required");
+      return;
+    }
+
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
       toast.error("New passwords do not match");
       return;
@@ -74,15 +81,36 @@ export default function SecuritySettingsPage() {
 
     setIsLoading(true);
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      toast.success("Password changed successfully");
-      setPasswordForm({
-        currentPassword: "",
-        newPassword: "",
-        confirmPassword: "",
-      });
+      const response = await fetch(
+        `${config.apiUrl}/admin/settings/security/password`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            currentPassword: passwordForm.currentPassword,
+            newPassword: passwordForm.newPassword,
+            confirmPassword: passwordForm.confirmPassword,
+          }),
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        toast.success(data.message || "Password changed successfully");
+        setPasswordForm({
+          currentPassword: "",
+          newPassword: "",
+          confirmPassword: "",
+        });
+      } else {
+        const error = await response.json();
+        toast.error(error.error || "Failed to change password");
+      }
     } catch (error) {
+      console.error("Error changing password:", error);
       toast.error("Failed to change password");
     } finally {
       setIsLoading(false);
@@ -105,142 +133,6 @@ export default function SecuritySettingsPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Security Settings */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5" />
-              Security Configuration
-            </CardTitle>
-            <CardDescription>
-              Configure security settings for your admin account
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="two-factor">Two-Factor Authentication</Label>
-                <p className="text-sm text-muted-foreground">
-                  Add an extra layer of security to your account
-                </p>
-              </div>
-              <Switch
-                id="two-factor"
-                checked={securitySettings.twoFactorEnabled}
-                onCheckedChange={(checked) =>
-                  setSecuritySettings((prev) => ({
-                    ...prev,
-                    twoFactorEnabled: checked,
-                  }))
-                }
-              />
-            </div>
-
-            <Separator />
-
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="ip-whitelist">IP Whitelist</Label>
-                <p className="text-sm text-muted-foreground">
-                  Restrict access to specific IP addresses
-                </p>
-              </div>
-              <Switch
-                id="ip-whitelist"
-                checked={securitySettings.ipWhitelist}
-                onCheckedChange={(checked) =>
-                  setSecuritySettings((prev) => ({
-                    ...prev,
-                    ipWhitelist: checked,
-                  }))
-                }
-              />
-            </div>
-
-            <Separator />
-
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="audit-logging">Audit Logging</Label>
-                <p className="text-sm text-muted-foreground">
-                  Log all administrative actions
-                </p>
-              </div>
-              <Switch
-                id="audit-logging"
-                checked={securitySettings.auditLogging}
-                onCheckedChange={(checked) =>
-                  setSecuritySettings((prev) => ({
-                    ...prev,
-                    auditLogging: checked,
-                  }))
-                }
-              />
-            </div>
-
-            <Separator />
-
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="login-notifications">Login Notifications</Label>
-                <p className="text-sm text-muted-foreground">
-                  Get notified of new login attempts
-                </p>
-              </div>
-              <Switch
-                id="login-notifications"
-                checked={securitySettings.loginNotifications}
-                onCheckedChange={(checked) =>
-                  setSecuritySettings((prev) => ({
-                    ...prev,
-                    loginNotifications: checked,
-                  }))
-                }
-              />
-            </div>
-
-            <Separator />
-
-            <div className="space-y-2">
-              <Label htmlFor="session-timeout">Session Timeout (minutes)</Label>
-              <Input
-                id="session-timeout"
-                type="number"
-                value={securitySettings.sessionTimeout}
-                onChange={(e) =>
-                  setSecuritySettings((prev) => ({
-                    ...prev,
-                    sessionTimeout: parseInt(e.target.value) || 30,
-                  }))
-                }
-                min="5"
-                max="480"
-              />
-              <p className="text-sm text-muted-foreground">
-                Automatically log out after inactivity
-              </p>
-            </div>
-
-            <Button
-              onClick={handleSaveSettings}
-              disabled={isLoading}
-              className="w-full"
-            >
-              {isLoading ? (
-                <>
-                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="mr-2 h-4 w-4" />
-                  Save Security Settings
-                </>
-              )}
-            </Button>
-          </CardContent>
-        </Card>
-
         {/* Password Change */}
         <Card>
           <CardHeader>
@@ -386,64 +278,6 @@ export default function SecuritySettingsPage() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Security Status */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5" />
-            Security Status
-          </CardTitle>
-          <CardDescription>
-            Overview of your current security settings
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="flex items-center space-x-3">
-              <div className="flex-shrink-0">
-                {securitySettings.twoFactorEnabled ? (
-                  <CheckCircle className="h-5 w-5 text-green-500" />
-                ) : (
-                  <AlertTriangle className="h-5 w-5 text-yellow-500" />
-                )}
-              </div>
-              <div>
-                <p className="text-sm font-medium">Two-Factor Authentication</p>
-                <p className="text-xs text-muted-foreground">
-                  {securitySettings.twoFactorEnabled ? "Enabled" : "Disabled"}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-3">
-              <div className="flex-shrink-0">
-                <CheckCircle className="h-5 w-5 text-green-500" />
-              </div>
-              <div>
-                <p className="text-sm font-medium">Password Policy</p>
-                <p className="text-xs text-muted-foreground">Strong</p>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-3">
-              <div className="flex-shrink-0">
-                {securitySettings.auditLogging ? (
-                  <CheckCircle className="h-5 w-5 text-green-500" />
-                ) : (
-                  <AlertTriangle className="h-5 w-5 text-yellow-500" />
-                )}
-              </div>
-              <div>
-                <p className="text-sm font-medium">Audit Logging</p>
-                <p className="text-xs text-muted-foreground">
-                  {securitySettings.auditLogging ? "Enabled" : "Disabled"}
-                </p>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

@@ -86,12 +86,12 @@ export declare class OfferService {
             startDate: Date;
             endDate: Date | null;
             category: string;
-            accountId: string;
-            categoryId: string | null;
             terms: string | null;
             requirements: string | null;
-            tags: string[];
             totalRevenue: number;
+            accountId: string;
+            categoryId: string | null;
+            tags: string[];
         }[];
         pagination: {
             page: number;
@@ -114,7 +114,6 @@ export declare class OfferService {
                 phone: string | null;
                 createdAt: Date;
                 updatedAt: Date;
-                userId: string;
                 companyName: string | null;
                 website: string | null;
                 socialMedia: import("@prisma/client/runtime/library").JsonValue | null;
@@ -122,8 +121,6 @@ export declare class OfferService {
                 paymentEmail: string | null;
                 taxId: string | null;
                 address: import("@prisma/client/runtime/library").JsonValue | null;
-                bankAccount: string | null;
-                kycVerified: boolean;
                 tier: import(".prisma/client").$Enums.AffiliateTier;
                 commissionRate: number;
                 totalEarnings: number;
@@ -131,6 +128,9 @@ export declare class OfferService {
                 totalConversions: number;
                 conversionRate: number;
                 lastActivityAt: Date | null;
+                bankAccount: string | null;
+                kycVerified: boolean;
+                userId: string;
             };
         } & {
             id: string;
@@ -167,12 +167,12 @@ export declare class OfferService {
         startDate: Date;
         endDate: Date | null;
         category: string;
-        accountId: string;
-        categoryId: string | null;
         terms: string | null;
         requirements: string | null;
-        tags: string[];
         totalRevenue: number;
+        accountId: string;
+        categoryId: string | null;
+        tags: string[];
     }>;
     createOffer(data: CreateOfferData, accountId: string): Promise<{
         name: string;
@@ -188,12 +188,12 @@ export declare class OfferService {
         startDate: Date;
         endDate: Date | null;
         category: string;
-        accountId: string;
-        categoryId: string | null;
         terms: string | null;
         requirements: string | null;
-        tags: string[];
         totalRevenue: number;
+        accountId: string;
+        categoryId: string | null;
+        tags: string[];
     }>;
     updateOffer(id: string, data: UpdateOfferData): Promise<{
         name: string;
@@ -209,12 +209,12 @@ export declare class OfferService {
         startDate: Date;
         endDate: Date | null;
         category: string;
-        accountId: string;
-        categoryId: string | null;
         terms: string | null;
         requirements: string | null;
-        tags: string[];
         totalRevenue: number;
+        accountId: string;
+        categoryId: string | null;
+        tags: string[];
     }>;
     deleteOffer(id: string): Promise<void>;
     getOfferApplications(offerId: string, params: GetOfferApplicationsParams): Promise<{
@@ -231,7 +231,6 @@ export declare class OfferService {
                 phone: string | null;
                 createdAt: Date;
                 updatedAt: Date;
-                userId: string;
                 companyName: string | null;
                 website: string | null;
                 socialMedia: import("@prisma/client/runtime/library").JsonValue | null;
@@ -239,8 +238,6 @@ export declare class OfferService {
                 paymentEmail: string | null;
                 taxId: string | null;
                 address: import("@prisma/client/runtime/library").JsonValue | null;
-                bankAccount: string | null;
-                kycVerified: boolean;
                 tier: import(".prisma/client").$Enums.AffiliateTier;
                 commissionRate: number;
                 totalEarnings: number;
@@ -248,6 +245,9 @@ export declare class OfferService {
                 totalConversions: number;
                 conversionRate: number;
                 lastActivityAt: Date | null;
+                bankAccount: string | null;
+                kycVerified: boolean;
+                userId: string;
             };
         } & {
             id: string;

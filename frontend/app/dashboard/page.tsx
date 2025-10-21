@@ -3,7 +3,6 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { DataLoading, ErrorState } from "@/components/ui/loading";
 import {
   Card,
   CardContent,
@@ -89,18 +88,11 @@ export default function DashboardPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
-    if (!isLoading && !user) {
-      // User is not authenticated, redirect to login
-      setIsDataLoading(false);
-      router.push("/auth/login");
-      return;
-    }
-
     if (user) {
       fetchDashboardData();
       fetchRealTimeStats();
     }
-  }, [user, isLoading, router]);
+  }, [user]);
 
   const fetchDashboardData = async () => {
     try {
@@ -290,28 +282,44 @@ export default function DashboardPage() {
   };
 
   if (isLoading || isDataLoading) {
-    return <DataLoading message="Loading dashboard data..." />;
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      </div>
+    );
   }
 
   if (!user) {
     return (
-      <ErrorState
-        title="Authentication Required"
-        message="Please log in to access the dashboard."
-        actionText="Go to Login"
-        onAction={() => router.push("/auth/login")}
-      />
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            Authentication Required
+          </h2>
+          <p className="text-gray-600">
+            Please log in to access the dashboard.
+          </p>
+        </div>
+      </div>
     );
   }
 
   if (!dashboardData) {
     return (
-      <ErrorState
-        title="No Data Available"
-        message="Unable to load dashboard data."
-        actionText="Try Again"
-        onAction={handleRefresh}
-      />
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            No Data Available
+          </h2>
+          <p className="text-gray-600 mb-4">Unable to load dashboard data.</p>
+          <Button onClick={handleRefresh} disabled={isRefreshing}>
+            <RefreshCw
+              className={`w-4 h-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`}
+            />
+            Try Again
+          </Button>
+        </div>
+      </div>
     );
   }
 
@@ -560,13 +568,14 @@ export default function DashboardPage() {
                         <rect width="100%" height="100%" fill="url(#grid)" />
 
                         {/* Data Points and Lines */}
-                        {performanceData && performanceData.length > 0 && (() => {
+                        {(() => {
                           const points = performanceData.map(
                             (point, index) => ({
                               x: (index / 6) * 350 + 25,
-                              clicksY: 200 - ((point.clicks || 0) / 250) * 180,
-                              conversionsY: 200 - ((point.conversions || 0) / 25) * 180,
-                              earningsY: 200 - ((point.earnings || 0) / 700) * 180,
+                              clicksY: 200 - (point.clicks / 250) * 180,
+                              conversionsY:
+                                200 - (point.conversions / 25) * 180,
+                              earningsY: 200 - (point.earnings / 700) * 180,
                               ...point,
                             })
                           );

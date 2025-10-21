@@ -52,11 +52,13 @@ interface DashboardLayoutProps {
 // Helper function to get full avatar URL
 const getAvatarUrl = (avatar: string | null | undefined): string => {
   if (!avatar) {
+    console.log("No avatar provided, using placeholder");
     return "/placeholder-avatar.jpg";
   }
 
   // If avatar is already a full URL (starts with http:// or https://), return as is
   if (avatar.startsWith("http://") || avatar.startsWith("https://")) {
+    console.log("Avatar is full URL:", avatar);
     return avatar;
   }
 
@@ -66,7 +68,7 @@ const getAvatarUrl = (avatar: string | null | undefined): string => {
   const baseUrl = config.apiUrl.replace("/api", "");
   const fullUrl = `${baseUrl}/${cleanPath}`;
 
-
+  console.log("Constructed avatar URL:", fullUrl, "from avatar:", avatar);
   return fullUrl;
 };
 
@@ -235,7 +237,6 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const router = useRouter();
   const { user } = useAuth();
-  console.log("🚀 ~ DashboardLayout ~ user:", user)
 
   const navItems =
     userType === "admin"

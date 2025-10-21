@@ -1,8 +1,29 @@
-export declare class EmailService {
-    private transporter;
-    sendWelcomeEmail(email: string, firstName: string): Promise<import("nodemailer/lib/smtp-transport").SentMessageInfo>;
-    sendCommissionNotification(email: string, amount: number): Promise<import("nodemailer/lib/smtp-transport").SentMessageInfo>;
-    sendPayoutNotification(email: string, amount: number, method: string): Promise<import("nodemailer/lib/smtp-transport").SentMessageInfo>;
-    sendPasswordResetEmail(email: string, resetToken: string): Promise<import("nodemailer/lib/smtp-transport").SentMessageInfo>;
+interface EmailOptions {
+    to: string;
+    subject: string;
+    html: string;
+    text?: string;
 }
+declare class EmailService {
+    private transporter;
+    constructor();
+    sendEmail(options: EmailOptions): Promise<void>;
+    sendVerificationEmail(email: string, firstName: string, verificationToken: string): Promise<void>;
+    sendWelcomeEmail(email: string, firstName: string): Promise<void>;
+    sendPasswordResetEmail(email: string, firstName: string, resetToken: string): Promise<void>;
+    sendCommissionPaidEmail(email: string, firstName: string, commissionDetails: {
+        commissionId: string;
+        amount: number;
+        commissionRate: number;
+        orderValue: number;
+        referralCode: string;
+        paidDate: string;
+        paymentMethod: string;
+    }): Promise<void>;
+    static generateToken(): string;
+    static generateTokenExpiry(): Date;
+}
+declare const emailService: EmailService;
+export { EmailService };
+export default emailService;
 //# sourceMappingURL=EmailService.d.ts.map

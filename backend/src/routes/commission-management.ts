@@ -2,6 +2,7 @@ import express, { Router } from "express";
 import { z } from "zod";
 import { authenticateToken } from "../middleware/auth";
 import { prisma } from "../lib/prisma";
+import emailService from "../services/EmailService";
 
 const router: Router = express.Router();
 
@@ -88,23 +89,49 @@ router.get("/", authenticateToken, async (req: any, res) => {
       ]),
     ]);
 
-    // Format orders as commission objects
-    const commissions = orders.map((order) => ({
-      id: order.id,
-      amount: order.commissionAmount,
-      rate: order.commissionRate,
-      status: order.status,
-      createdAt: order.createdAt,
-      payoutDate: order.status === "PAID" ? order.updatedAt : undefined,
-      affiliate: order.affiliate,
-      conversion: {
-        orderValue: order.orderValue,
-        offer: {
-          name: order.referralCode || "Direct Sale",
-          description: `Order ${order.orderId}`,
-        },
-      },
-    }));
+    // Format orders as commission objects with last login data
+    const commissions = await Promise.all(
+      orders.map(async (order) => {
+        // Get last login for this affiliate
+        const lastLoginActivity = await prisma.activity.findFirst({
+          where: {
+            userId: order.affiliate.userId,
+            action: "user_login",
+          },
+          orderBy: {
+            createdAt: "desc",
+          },
+          select: {
+            createdAt: true,
+          },
+        });
+
+        return {
+          id: order.id,
+          amount: order.commissionAmount,
+          rate: order.commissionRate,
+          status: order.status,
+          createdAt: order.createdAt,
+          payoutDate: order.status === "PAID" ? order.updatedAt : undefined,
+          affiliate: {
+            ...order.affiliate,
+            lastLogin: lastLoginActivity?.createdAt
+              ? lastLoginActivity.createdAt
+                  .toISOString()
+                  .replace("T", " ")
+                  .split(".")[0]
+              : "Never",
+          },
+          conversion: {
+            orderValue: order.orderValue,
+            offer: {
+              name: order.referralCode || "Direct Sale",
+              description: `Order ${order.orderId}`,
+            },
+          },
+        };
+      })
+    );
 
     // Format statistics
     const [
@@ -197,6 +224,33 @@ router.patch("/:id/status", authenticateToken, async (req: any, res) => {
       });
     }
 
+    // Send email notification when status is marked as PAID
+    if (status === "PAID" && affiliate) {
+      try {
+        await emailService.sendCommissionPaidEmail(
+          affiliate.user.email,
+          affiliate.user.firstName,
+          {
+            commissionId: order.id,
+            amount: order.commissionAmount,
+            commissionRate: order.commissionRate,
+            orderValue: order.orderValue,
+            referralCode: order.referralCode || "Direct Sale",
+            paidDate: new Date().toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            }),
+            paymentMethod: affiliate.paymentMethod || "Default Payment Method",
+          }
+        );
+        console.log(`✅ Commission paid email sent to ${affiliate.user.email}`);
+      } catch (emailError) {
+        console.error("Failed to send commission paid email:", emailError);
+        // Don't fail the entire request if email fails
+      }
+    }
+
     res.json({
       id: order.id,
       amount: order.commissionAmount,
@@ -284,6 +338,58 @@ router.patch("/bulk-status", authenticateToken, async (req: any, res) => {
       },
       data: updateData,
     });
+
+    // If status is PAID, send email notifications to affiliates
+    if (status === "PAID") {
+      const orders = await prisma.affiliateOrder.findMany({
+        where: { id: { in: commissionIds } },
+        include: {
+          affiliate: {
+            include: {
+              user: {
+                select: {
+                  firstName: true,
+                  lastName: true,
+                  email: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      // Send emails to each affiliate (don't wait for all to complete)
+      orders.forEach(async (order) => {
+        try {
+          await emailService.sendCommissionPaidEmail(
+            order.affiliate.user.email,
+            order.affiliate.user.firstName,
+            {
+              commissionId: order.id,
+              amount: order.commissionAmount,
+              commissionRate: order.commissionRate,
+              orderValue: order.orderValue,
+              referralCode: order.referralCode || "Direct Sale",
+              paidDate: new Date().toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              }),
+              paymentMethod:
+                order.affiliate.paymentMethod || "Default Payment Method",
+            }
+          );
+          console.log(
+            `✅ Bulk commission paid email sent to ${order.affiliate.user.email}`
+          );
+        } catch (emailError) {
+          console.error(
+            `Failed to send email to ${order.affiliate.user.email}:`,
+            emailError
+          );
+        }
+      });
+    }
 
     // If approved, update affiliate earnings
     if (status === "APPROVED") {

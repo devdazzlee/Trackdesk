@@ -7,6 +7,7 @@ const express_1 = __importDefault(require("express"));
 const zod_1 = require("zod");
 const auth_1 = require("../middleware/auth");
 const prisma_1 = require("../lib/prisma");
+const EmailService_1 = __importDefault(require("../services/EmailService"));
 const router = express_1.default.Router();
 router.get("/", auth_1.authenticateToken, async (req, res) => {
     try {
@@ -74,21 +75,43 @@ router.get("/", auth_1.authenticateToken, async (req, res) => {
                 prisma_1.prisma.affiliateProfile.count({ where: { status: "ACTIVE" } }),
             ]),
         ]);
-        const commissions = orders.map((order) => ({
-            id: order.id,
-            amount: order.commissionAmount,
-            rate: order.commissionRate,
-            status: order.status,
-            createdAt: order.createdAt,
-            payoutDate: order.status === "PAID" ? order.updatedAt : undefined,
-            affiliate: order.affiliate,
-            conversion: {
-                orderValue: order.orderValue,
-                offer: {
-                    name: order.referralCode || "Direct Sale",
-                    description: `Order ${order.orderId}`,
+        const commissions = await Promise.all(orders.map(async (order) => {
+            const lastLoginActivity = await prisma_1.prisma.activity.findFirst({
+                where: {
+                    userId: order.affiliate.userId,
+                    action: "user_login",
                 },
-            },
+                orderBy: {
+                    createdAt: "desc",
+                },
+                select: {
+                    createdAt: true,
+                },
+            });
+            return {
+                id: order.id,
+                amount: order.commissionAmount,
+                rate: order.commissionRate,
+                status: order.status,
+                createdAt: order.createdAt,
+                payoutDate: order.status === "PAID" ? order.updatedAt : undefined,
+                affiliate: {
+                    ...order.affiliate,
+                    lastLogin: lastLoginActivity?.createdAt
+                        ? lastLoginActivity.createdAt
+                            .toISOString()
+                            .replace("T", " ")
+                            .split(".")[0]
+                        : "Never",
+                },
+                conversion: {
+                    orderValue: order.orderValue,
+                    offer: {
+                        name: order.referralCode || "Direct Sale",
+                        description: `Order ${order.orderId}`,
+                    },
+                },
+            };
         }));
         const [totalCommissions, totalAmount, paidCount, paidAmount, pendingCount, pendingAmount, approvedCount, approvedAmount, activeAffiliates,] = statistics;
         const formattedStatistics = {
@@ -157,6 +180,27 @@ router.patch("/:id/status", auth_1.authenticateToken, async (req, res) => {
                     totalEarnings: { increment: order.commissionAmount },
                 },
             });
+        }
+        if (status === "PAID" && affiliate) {
+            try {
+                await EmailService_1.default.sendCommissionPaidEmail(affiliate.user.email, affiliate.user.firstName, {
+                    commissionId: order.id,
+                    amount: order.commissionAmount,
+                    commissionRate: order.commissionRate,
+                    orderValue: order.orderValue,
+                    referralCode: order.referralCode || "Direct Sale",
+                    paidDate: new Date().toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                    }),
+                    paymentMethod: affiliate.paymentMethod || "Default Payment Method",
+                });
+                console.log(`✅ Commission paid email sent to ${affiliate.user.email}`);
+            }
+            catch (emailError) {
+                console.error("Failed to send commission paid email:", emailError);
+            }
         }
         res.json({
             id: order.id,
@@ -234,6 +278,45 @@ router.patch("/bulk-status", auth_1.authenticateToken, async (req, res) => {
             },
             data: updateData,
         });
+        if (status === "PAID") {
+            const orders = await prisma_1.prisma.affiliateOrder.findMany({
+                where: { id: { in: commissionIds } },
+                include: {
+                    affiliate: {
+                        include: {
+                            user: {
+                                select: {
+                                    firstName: true,
+                                    lastName: true,
+                                    email: true,
+                                },
+                            },
+                        },
+                    },
+                },
+            });
+            orders.forEach(async (order) => {
+                try {
+                    await EmailService_1.default.sendCommissionPaidEmail(order.affiliate.user.email, order.affiliate.user.firstName, {
+                        commissionId: order.id,
+                        amount: order.commissionAmount,
+                        commissionRate: order.commissionRate,
+                        orderValue: order.orderValue,
+                        referralCode: order.referralCode || "Direct Sale",
+                        paidDate: new Date().toLocaleDateString("en-US", {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                        }),
+                        paymentMethod: order.affiliate.paymentMethod || "Default Payment Method",
+                    });
+                    console.log(`✅ Bulk commission paid email sent to ${order.affiliate.user.email}`);
+                }
+                catch (emailError) {
+                    console.error(`Failed to send email to ${order.affiliate.user.email}:`, emailError);
+                }
+            });
+        }
         if (status === "APPROVED") {
             const orders = await prisma_1.prisma.affiliateOrder.findMany({
                 where: { id: { in: commissionIds } },

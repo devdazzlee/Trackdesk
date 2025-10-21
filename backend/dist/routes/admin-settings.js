@@ -10,6 +10,7 @@ const zod_1 = require("zod");
 const multer_1 = __importDefault(require("multer"));
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
+const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const router = express_1.default.Router();
 const prisma = new client_1.PrismaClient();
 const storage = multer_1.default.diskStorage({
@@ -195,6 +196,65 @@ router.delete("/profile/avatar", auth_1.authenticateToken, async (req, res) => {
     catch (error) {
         console.error("Error removing avatar:", error);
         res.status(500).json({ error: "Failed to remove avatar" });
+    }
+});
+router.put("/security/password", auth_1.authenticateToken, async (req, res) => {
+    try {
+        if (req.user.role !== "ADMIN") {
+            return res.status(403).json({ error: "Only admins can change password" });
+        }
+        const userId = req.user.id;
+        const schema = zod_1.z.object({
+            currentPassword: zod_1.z.string().min(1, "Current password is required"),
+            newPassword: zod_1.z
+                .string()
+                .min(8, "New password must be at least 8 characters"),
+            confirmPassword: zod_1.z.string().min(1, "Confirm password is required"),
+        });
+        const { currentPassword, newPassword, confirmPassword } = schema.parse(req.body);
+        if (newPassword !== confirmPassword) {
+            return res.status(400).json({ error: "Passwords do not match" });
+        }
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { id: true, password: true, email: true },
+        });
+        if (!user) {
+            return res.status(404).json({ error: "User not found" });
+        }
+        const isPasswordValid = await bcryptjs_1.default.compare(currentPassword, user.password);
+        if (!isPasswordValid) {
+            return res.status(400).json({ error: "Current password is incorrect" });
+        }
+        const hashedPassword = await bcryptjs_1.default.hash(newPassword, 10);
+        await prisma.user.update({
+            where: { id: userId },
+            data: { password: hashedPassword },
+        });
+        await prisma.activity.create({
+            data: {
+                userId,
+                action: "password_changed",
+                resource: "security",
+                details: {
+                    timestamp: new Date().toISOString(),
+                    userEmail: user.email,
+                },
+            },
+        });
+        res.json({
+            success: true,
+            message: "Password changed successfully",
+        });
+    }
+    catch (error) {
+        console.error("Error changing password:", error);
+        if (error instanceof zod_1.z.ZodError) {
+            return res
+                .status(400)
+                .json({ error: "Invalid input data", details: error.errors });
+        }
+        res.status(500).json({ error: "Failed to change password" });
     }
 });
 exports.default = router;

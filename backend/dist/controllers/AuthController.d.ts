@@ -12,5 +12,7 @@ export declare class AuthController {
     verify2FA(req: any, res: Response): Promise<void>;
     disable2FA(req: any, res: Response): Promise<void>;
     generateBackupCodes(req: any, res: Response): Promise<void>;
+    verifyEmail(req: Request, res: Response): Promise<Response<any, Record<string, any>>>;
+    resendVerificationEmail(req: Request, res: Response): Promise<Response<any, Record<string, any>>>;
 }
 //# sourceMappingURL=AuthController.d.ts.map

@@ -5,6 +5,7 @@ import { z } from "zod";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import bcrypt from "bcryptjs";
 
 const router: Router = express.Router();
 const prisma = new PrismaClient();
@@ -227,6 +228,88 @@ router.delete("/profile/avatar", authenticateToken, async (req: any, res) => {
   } catch (error) {
     console.error("Error removing avatar:", error);
     res.status(500).json({ error: "Failed to remove avatar" });
+  }
+});
+
+// Change password
+router.put("/security/password", authenticateToken, async (req: any, res) => {
+  try {
+    if (req.user.role !== "ADMIN") {
+      return res.status(403).json({ error: "Only admins can change password" });
+    }
+
+    const userId = req.user.id;
+    const schema = z.object({
+      currentPassword: z.string().min(1, "Current password is required"),
+      newPassword: z
+        .string()
+        .min(8, "New password must be at least 8 characters"),
+      confirmPassword: z.string().min(1, "Confirm password is required"),
+    });
+
+    const { currentPassword, newPassword, confirmPassword } = schema.parse(
+      req.body
+    );
+
+    // Verify passwords match
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ error: "Passwords do not match" });
+    }
+
+    // Get current user
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, password: true, email: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Verify current password
+    const isPasswordValid = await bcrypt.compare(
+      currentPassword,
+      user.password
+    );
+
+    if (!isPasswordValid) {
+      return res.status(400).json({ error: "Current password is incorrect" });
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update password
+    await prisma.user.update({
+      where: { id: userId },
+      data: { password: hashedPassword },
+    });
+
+    // Log activity
+    await prisma.activity.create({
+      data: {
+        userId,
+        action: "password_changed",
+        resource: "security",
+        details: {
+          timestamp: new Date().toISOString(),
+          userEmail: user.email,
+        },
+      },
+    });
+
+    res.json({
+      success: true,
+      message: "Password changed successfully",
+    });
+  } catch (error) {
+    console.error("Error changing password:", error);
+    if (error instanceof z.ZodError) {
+      return res
+        .status(400)
+        .json({ error: "Invalid input data", details: error.errors });
+    }
+    res.status(500).json({ error: "Failed to change password" });
   }
 });
 

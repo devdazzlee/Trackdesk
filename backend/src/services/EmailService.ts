@@ -18,16 +18,16 @@ class EmailService {
       host: process.env.SMTP_HOST || "smtp.gmail.com",
       port: parseInt(process.env.SMTP_PORT || "587"),
       secure: process.env.SMTP_SECURE === "true", // true for 465, false for other ports
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-  });
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
   }
 
   async sendEmail(options: EmailOptions): Promise<void> {
     try {
-    const mailOptions = {
+      const mailOptions = {
         from: process.env.SMTP_FROM || '"Trackdesk" <noreply@trackdesk.com>',
         to: options.to,
         subject: options.subject,
@@ -356,6 +356,351 @@ This verification link will expire in 24 hours. If you didn't create an account 
       to: email,
       subject: "Reset Your Password - Trackdesk",
       html,
+    });
+  }
+
+  async sendCommissionPaidEmail(
+    email: string,
+    firstName: string,
+    commissionDetails: {
+      commissionId: string;
+      amount: number;
+      commissionRate: number;
+      orderValue: number;
+      referralCode: string;
+      paidDate: string;
+      paymentMethod: string;
+    }
+  ): Promise<void> {
+    const dashboardUrl = `${process.env.FRONTEND_URL || "http://localhost:3000"}/dashboard/commissions`;
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Commission Payment Received - Trackdesk</title>
+          <style>
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+              line-height: 1.6;
+              color: #333;
+              max-width: 600px;
+              margin: 0 auto;
+              padding: 20px;
+              background-color: #f3f4f6;
+            }
+            .container {
+              background-color: #ffffff;
+              border-radius: 12px;
+              padding: 40px;
+              box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            }
+            .header {
+              text-align: center;
+              margin-bottom: 30px;
+              padding-bottom: 20px;
+              border-bottom: 2px solid #f0fdf4;
+            }
+            .logo {
+              font-size: 32px;
+              font-weight: bold;
+              color: #3b82f6;
+              margin-bottom: 10px;
+            }
+            .success-icon {
+              font-size: 64px;
+              margin: 20px 0;
+            }
+            h1 {
+              color: #10b981;
+              margin: 20px 0 10px 0;
+              font-size: 28px;
+            }
+            .subtitle {
+              color: #6b7280;
+              font-size: 16px;
+              margin-bottom: 30px;
+            }
+            .amount-box {
+              background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+              color: white;
+              padding: 30px;
+              border-radius: 10px;
+              text-align: center;
+              margin: 30px 0;
+              box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+            }
+            .amount-label {
+              font-size: 14px;
+              opacity: 0.9;
+              margin-bottom: 5px;
+              font-weight: 500;
+              text-transform: uppercase;
+              letter-spacing: 1px;
+            }
+            .amount {
+              font-size: 48px;
+              font-weight: bold;
+              margin: 10px 0;
+              text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            }
+            .payment-status {
+              font-size: 14px;
+              opacity: 0.95;
+              margin-top: 10px;
+              padding: 8px 16px;
+              background-color: rgba(255, 255, 255, 0.2);
+              border-radius: 20px;
+              display: inline-block;
+            }
+            .details-section {
+              background-color: #f9fafb;
+              border-radius: 8px;
+              padding: 25px;
+              margin: 25px 0;
+            }
+            .details-title {
+              font-size: 18px;
+              font-weight: 600;
+              color: #1f2937;
+              margin-bottom: 20px;
+              display: flex;
+              align-items: center;
+            }
+            .details-title:before {
+              content: "📊";
+              margin-right: 10px;
+              font-size: 22px;
+            }
+            .detail-row {
+              display: flex;
+              justify-content: space-between;
+              padding: 12px 0;
+              border-bottom: 1px solid #e5e7eb;
+            }
+            .detail-row:last-child {
+              border-bottom: none;
+            }
+            .detail-label {
+              color: #6b7280;
+              font-weight: 500;
+            }
+            .detail-value {
+              color: #1f2937;
+              font-weight: 600;
+              text-align: right;
+            }
+            .button {
+              display: inline-block;
+              padding: 14px 32px;
+              background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+              color: #ffffff !important;
+              text-decoration: none;
+              border-radius: 8px;
+              font-weight: 600;
+              text-align: center;
+              margin: 25px 0;
+              box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+              transition: transform 0.2s;
+            }
+            .button:hover {
+              background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+              transform: translateY(-2px);
+            }
+            .info-box {
+              background-color: #eff6ff;
+              border-left: 4px solid #3b82f6;
+              padding: 16px;
+              margin: 25px 0;
+              border-radius: 6px;
+            }
+            .info-box-title {
+              font-weight: 600;
+              color: #1e40af;
+              margin-bottom: 8px;
+              display: flex;
+              align-items: center;
+            }
+            .info-box-title:before {
+              content: "ℹ️";
+              margin-right: 8px;
+            }
+            .info-box-content {
+              color: #1e40af;
+              font-size: 14px;
+              line-height: 1.6;
+            }
+            .footer {
+              margin-top: 40px;
+              padding-top: 20px;
+              border-top: 2px solid #e5e7eb;
+              text-align: center;
+            }
+            .footer-text {
+              font-size: 14px;
+              color: #6b7280;
+              margin: 10px 0;
+            }
+            .social-links {
+              margin: 20px 0;
+            }
+            .social-links a {
+              color: #3b82f6;
+              text-decoration: none;
+              margin: 0 10px;
+              font-weight: 500;
+            }
+            .highlight {
+              background-color: #fef3c7;
+              padding: 2px 6px;
+              border-radius: 3px;
+              font-weight: 600;
+              color: #92400e;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <div class="logo">🎯 Trackdesk</div>
+              <div class="success-icon">💰</div>
+              <h1>Payment Processed!</h1>
+              <p class="subtitle">Your commission has been successfully paid</p>
+            </div>
+            
+            <p style="font-size: 16px; color: #374151;">
+              Hi <strong>${firstName}</strong>,
+            </p>
+            
+            <p style="font-size: 16px; color: #374151;">
+              Great news! Your commission has been marked as <span class="highlight">PAID</span> and the payment has been processed to your account.
+            </p>
+            
+            <div class="amount-box">
+              <div class="amount-label">Commission Amount</div>
+              <div class="amount">$${commissionDetails.amount.toFixed(2)}</div>
+              <div class="payment-status">✓ Payment Processed</div>
+            </div>
+            
+            <div class="details-section">
+              <div class="details-title">Payment Details</div>
+              
+              <div class="detail-row">
+                <span class="detail-label">Commission ID</span>
+                <span class="detail-value">#${commissionDetails.commissionId.substring(0, 8).toUpperCase()}</span>
+              </div>
+              
+              <div class="detail-row">
+                <span class="detail-label">Referral Code</span>
+                <span class="detail-value">${commissionDetails.referralCode}</span>
+              </div>
+              
+              <div class="detail-row">
+                <span class="detail-label">Order Value</span>
+                <span class="detail-value">$${commissionDetails.orderValue.toFixed(2)}</span>
+              </div>
+              
+              <div class="detail-row">
+                <span class="detail-label">Commission Rate</span>
+                <span class="detail-value">${commissionDetails.commissionRate}%</span>
+              </div>
+              
+              <div class="detail-row">
+                <span class="detail-label">Payment Method</span>
+                <span class="detail-value">${commissionDetails.paymentMethod || "Default Method"}</span>
+              </div>
+              
+              <div class="detail-row">
+                <span class="detail-label">Payment Date</span>
+                <span class="detail-value">${commissionDetails.paidDate}</span>
+              </div>
+            </div>
+            
+            <div style="text-align: center;">
+              <a href="${dashboardUrl}" class="button">
+                View Commission History →
+              </a>
+            </div>
+            
+            <div class="info-box">
+              <div class="info-box-title">What's Next?</div>
+              <div class="info-box-content">
+                • The payment should reflect in your account within 2-5 business days<br>
+                • You can view your complete commission history in your dashboard<br>
+                • Keep promoting to earn more commissions!<br>
+                • Check your pending commissions for upcoming payments
+              </div>
+            </div>
+            
+            <p style="font-size: 16px; color: #374151; margin-top: 30px;">
+              <strong>Thank you for being a valued affiliate partner!</strong>
+            </p>
+            
+            <p style="font-size: 14px; color: #6b7280;">
+              If you have any questions about this payment or need assistance, please don't hesitate to contact our support team.
+            </p>
+            
+            <div class="footer">
+              <p class="footer-text">
+                <strong>Keep up the great work! 🚀</strong>
+              </p>
+              <p class="footer-text">
+                The Trackdesk Team
+              </p>
+              <div class="social-links">
+                <a href="#">Help Center</a> • 
+                <a href="#">Contact Support</a> • 
+                <a href="#">Dashboard</a>
+              </div>
+              <p style="font-size: 12px; color: #9ca3af; margin-top: 20px;">
+                This email was sent to <strong>${email}</strong> regarding your affiliate account.<br>
+                © ${new Date().getFullYear()} Trackdesk. All rights reserved.
+              </p>
+              <p style="font-size: 11px; color: #d1d5db; margin-top: 10px;">
+                This is an automated email notification. Please do not reply to this message.
+              </p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    const text = `
+Commission Payment Processed - Trackdesk
+
+Hi ${firstName},
+
+Great news! Your commission has been marked as PAID and the payment has been processed to your account.
+
+COMMISSION AMOUNT: $${commissionDetails.amount.toFixed(2)}
+
+Payment Details:
+- Commission ID: #${commissionDetails.commissionId.substring(0, 8).toUpperCase()}
+- Referral Code: ${commissionDetails.referralCode}
+- Order Value: $${commissionDetails.orderValue.toFixed(2)}
+- Commission Rate: ${commissionDetails.commissionRate}%
+- Payment Method: ${commissionDetails.paymentMethod || "Default Method"}
+- Payment Date: ${commissionDetails.paidDate}
+
+What's Next?
+• The payment should reflect in your account within 2-5 business days
+• You can view your complete commission history in your dashboard
+• Keep promoting to earn more commissions!
+
+View your commission history: ${dashboardUrl}
+
+Thank you for being a valued affiliate partner!
+
+The Trackdesk Team
+    `.trim();
+
+    await this.sendEmail({
+      to: email,
+      subject: `💰 Commission Payment Processed - $${commissionDetails.amount.toFixed(2)}`,
+      html,
+      text,
     });
   }
 

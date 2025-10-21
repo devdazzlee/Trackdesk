@@ -56,12 +56,12 @@ export declare class AnalyticsService {
     } & {
         id: string;
         createdAt: Date;
+        userId: string;
         action: string;
         resource: string;
         details: import("@prisma/client/runtime/library").JsonValue | null;
         ipAddress: string | null;
         userAgent: string | null;
-        userId: string;
     })[]>;
     getRealTimeMetrics(): Promise<{
         clicks: number;
@@ -93,12 +93,12 @@ export declare class AnalyticsService {
                         startDate: Date;
                         endDate: Date | null;
                         category: string;
-                        accountId: string;
-                        categoryId: string | null;
                         terms: string | null;
                         requirements: string | null;
-                        tags: string[];
                         totalRevenue: number;
+                        accountId: string;
+                        categoryId: string | null;
+                        tags: string[];
                     };
                 } & {
                     id: string;
@@ -118,9 +118,9 @@ export declare class AnalyticsService {
             } & {
                 id: string;
                 createdAt: Date;
+                userId: string | null;
                 ipAddress: string;
                 userAgent: string;
-                userId: string | null;
                 affiliateId: string;
                 referrer: string | null;
                 conversionId: string | null;
@@ -130,8 +130,8 @@ export declare class AnalyticsService {
                 device: string | null;
                 browser: string | null;
                 os: string | null;
-                source: string | null;
                 converted: boolean;
+                source: string | null;
                 timestamp: Date;
             };
         } & {
@@ -164,12 +164,12 @@ export declare class AnalyticsService {
                     startDate: Date;
                     endDate: Date | null;
                     category: string;
-                    accountId: string;
-                    categoryId: string | null;
                     terms: string | null;
                     requirements: string | null;
-                    tags: string[];
                     totalRevenue: number;
+                    accountId: string;
+                    categoryId: string | null;
+                    tags: string[];
                 };
             } & {
                 id: string;
@@ -189,9 +189,9 @@ export declare class AnalyticsService {
         } & {
             id: string;
             createdAt: Date;
+            userId: string | null;
             ipAddress: string;
             userAgent: string;
-            userId: string | null;
             affiliateId: string;
             referrer: string | null;
             conversionId: string | null;
@@ -201,8 +201,8 @@ export declare class AnalyticsService {
             device: string | null;
             browser: string | null;
             os: string | null;
-            source: string | null;
             converted: boolean;
+            source: string | null;
             timestamp: Date;
         })[];
         firstClick: {
@@ -221,12 +221,12 @@ export declare class AnalyticsService {
                     startDate: Date;
                     endDate: Date | null;
                     category: string;
-                    accountId: string;
-                    categoryId: string | null;
                     terms: string | null;
                     requirements: string | null;
-                    tags: string[];
                     totalRevenue: number;
+                    accountId: string;
+                    categoryId: string | null;
+                    tags: string[];
                 };
             } & {
                 id: string;
@@ -246,9 +246,9 @@ export declare class AnalyticsService {
         } & {
             id: string;
             createdAt: Date;
+            userId: string | null;
             ipAddress: string;
             userAgent: string;
-            userId: string | null;
             affiliateId: string;
             referrer: string | null;
             conversionId: string | null;
@@ -258,8 +258,8 @@ export declare class AnalyticsService {
             device: string | null;
             browser: string | null;
             os: string | null;
-            source: string | null;
             converted: boolean;
+            source: string | null;
             timestamp: Date;
         };
         lastClick: {
@@ -278,12 +278,12 @@ export declare class AnalyticsService {
                     startDate: Date;
                     endDate: Date | null;
                     category: string;
-                    accountId: string;
-                    categoryId: string | null;
                     terms: string | null;
                     requirements: string | null;
-                    tags: string[];
                     totalRevenue: number;
+                    accountId: string;
+                    categoryId: string | null;
+                    tags: string[];
                 };
             } & {
                 id: string;
@@ -303,9 +303,9 @@ export declare class AnalyticsService {
         } & {
             id: string;
             createdAt: Date;
+            userId: string | null;
             ipAddress: string;
             userAgent: string;
-            userId: string | null;
             affiliateId: string;
             referrer: string | null;
             conversionId: string | null;
@@ -315,8 +315,8 @@ export declare class AnalyticsService {
             device: string | null;
             browser: string | null;
             os: string | null;
-            source: string | null;
             converted: boolean;
+            source: string | null;
             timestamp: Date;
         };
     }>;

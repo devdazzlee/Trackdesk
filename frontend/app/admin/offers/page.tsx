@@ -36,6 +36,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   LinkIcon,
   Plus,
@@ -46,6 +47,10 @@ import {
   TrendingUp,
   MousePointer,
   Target,
+  Users,
+  Image,
+  Eye,
+  Download,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -56,42 +61,139 @@ import {
 import { toast } from "sonner";
 import { config } from "@/config/config";
 
+interface Affiliate {
+  id: string;
+  name: string;
+  email: string;
+  tier: string;
+  status: string;
+}
+
+interface Creative {
+  id: string;
+  name: string;
+  type: string;
+  size: string;
+  format: string;
+  url: string;
+  downloadUrl: string;
+  createdAt: string;
+}
+
 interface Offer {
   id: string;
   name: string;
   description: string;
-  commissionType: string;
-  commissionValue: number;
   category: string;
+  commissionRate: number;
   status: string;
   startDate: string;
-  endDate: string;
-  clicks: number;
-  conversions: number;
-  revenue: number;
-  affiliatesCount: number;
+  endDate: string | null;
+  terms: string | null;
+  requirements: string | null;
+  tags: string[];
+  totalClicks: number;
+  totalConversions: number;
+  totalRevenue: number;
+  totalCommissions: number;
   conversionRate: number;
+  affiliatesCount: number;
+  creativesCount: number;
+  applications: Array<{
+    id: string;
+    affiliateId: string;
+    affiliateName: string;
+    affiliateEmail: string;
+    status: string;
+    appliedAt: string;
+  }>;
+  creatives: Creative[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface OffersSummary {
+  total: number;
+  totalRevenue: number;
+  totalCommissions: number;
+  active: number;
+  paused: number;
+  ended: number;
 }
 
 export default function OffersManagementPage() {
   const [offers, setOffers] = useState<Offer[]>([]);
+  const [affiliates, setAffiliates] = useState<Affiliate[]>([]);
+  const [summary, setSummary] = useState<OffersSummary>({
+    total: 0,
+    totalRevenue: 0,
+    totalCommissions: 0,
+    active: 0,
+    paused: 0,
+    ended: 0,
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingOffer, setEditingOffer] = useState<Offer | null>(null);
+  const [selectedOfferId, setSelectedOfferId] = useState<string | null>(null);
+  const [creativesDialogOpen, setCreativesDialogOpen] = useState(false);
+  const [offerCreatives, setOfferCreatives] = useState<Creative[]>([]);
+  const [isLoadingCreatives, setIsLoadingCreatives] = useState(false);
+  const [editCreativeDialogOpen, setEditCreativeDialogOpen] = useState(false);
+  const [isEditingCreative, setIsEditingCreative] = useState(false);
+  const [editingCreative, setEditingCreative] = useState<Creative | null>(null);
 
   const [newOffer, setNewOffer] = useState({
     name: "",
     description: "",
-    commissionType: "Percentage",
-    commissionValue: 10,
     category: "Software",
+    commissionRate: 10,
     startDate: new Date().toISOString().split("T")[0],
     endDate: "",
+    terms: "",
+    requirements: "",
+    tags: [] as string[],
+    affiliateIds: [] as string[],
+  });
+
+  const [newCreative, setNewCreative] = useState({
+    name: "",
+    type: "banner",
+    size: "",
+    format: "",
+    url: "",
+    downloadUrl: "",
+  });
+
+  const [editOffer, setEditOffer] = useState({
+    name: "",
+    description: "",
+    category: "Software",
+    commissionRate: 10,
+    startDate: new Date().toISOString().split("T")[0],
+    endDate: "",
+    terms: "",
+    requirements: "",
+    tags: [] as string[],
+    status: "active",
+  });
+
+  const [editCreative, setEditCreative] = useState({
+    name: "",
+    type: "banner",
+    size: "",
+    format: "",
+    url: "",
+    downloadUrl: "",
   });
 
   useEffect(() => {
     fetchOffers();
+    fetchAffiliates();
   }, []);
 
   const fetchOffers = async () => {
@@ -104,6 +206,7 @@ export default function OffersManagementPage() {
       if (response.ok) {
         const data = await response.json();
         setOffers(data.data || []);
+        setSummary(data.summary || summary);
       } else {
         console.error("Failed to fetch offers:", response.status);
         toast.error("Failed to load offers");
@@ -113,6 +216,48 @@ export default function OffersManagementPage() {
       toast.error("Failed to load offers");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchAffiliates = async () => {
+    try {
+      const response = await fetch(`${config.apiUrl}/admin/offers/affiliates`, {
+        credentials: "include",
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAffiliates(data.affiliates || []);
+      } else {
+        console.error("Failed to fetch affiliates:", response.status);
+      }
+    } catch (error) {
+      console.error("Error fetching affiliates:", error);
+    }
+  };
+
+  const fetchOfferCreatives = async (offerId: string) => {
+    setIsLoadingCreatives(true);
+    try {
+      const response = await fetch(
+        `${config.apiUrl}/admin/offers/${offerId}/creatives`,
+        {
+          credentials: "include",
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setOfferCreatives(data.creatives || []);
+      } else {
+        console.error("Failed to fetch creatives:", response.status);
+        toast.error("Failed to load creatives");
+      }
+    } catch (error) {
+      console.error("Error fetching creatives:", error);
+      toast.error("Failed to load creatives");
+    } finally {
+      setIsLoadingCreatives(false);
     }
   };
 
@@ -140,16 +285,20 @@ export default function OffersManagementPage() {
       });
 
       if (response.ok) {
-        toast.success("Offer created successfully");
+        const data = await response.json();
+        toast.success(data.message || "Offer created successfully");
         setCreateDialogOpen(false);
         setNewOffer({
           name: "",
           description: "",
-          commissionType: "Percentage",
-          commissionValue: 10,
           category: "Software",
+          commissionRate: 10,
           startDate: new Date().toISOString().split("T")[0],
           endDate: "",
+          terms: "",
+          requirements: "",
+          tags: [],
+          affiliateIds: [],
         });
         fetchOffers();
       } else {
@@ -165,7 +314,12 @@ export default function OffersManagementPage() {
   };
 
   const handleDeleteOffer = async (offerId: string) => {
-    if (!confirm("Are you sure you want to delete this offer?")) return;
+    if (
+      !confirm(
+        "Are you sure you want to delete this offer? This will also delete all associated creatives and applications."
+      )
+    )
+      return;
 
     try {
       const response = await fetch(`${config.apiUrl}/admin/offers/${offerId}`, {
@@ -185,6 +339,208 @@ export default function OffersManagementPage() {
     }
   };
 
+  const handleAddCreative = async () => {
+    if (!selectedOfferId || !newCreative.name || !newCreative.url) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${config.apiUrl}/admin/offers/${selectedOfferId}/creatives`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(newCreative),
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        toast.success(data.message || "Creative added successfully");
+        setNewCreative({
+          name: "",
+          type: "banner",
+          size: "",
+          format: "",
+          url: "",
+          downloadUrl: "",
+        });
+        fetchOfferCreatives(selectedOfferId);
+        fetchOffers(); // Refresh offers to update creative count
+      } else {
+        const error = await response.json();
+        toast.error(error.error || "Failed to add creative");
+      }
+    } catch (error) {
+      console.error("Error adding creative:", error);
+      toast.error("Failed to add creative");
+    }
+  };
+
+  const handleDeleteCreative = async (creativeId: string) => {
+    if (
+      !selectedOfferId ||
+      !confirm("Are you sure you want to delete this creative?")
+    )
+      return;
+
+    try {
+      const response = await fetch(
+        `${config.apiUrl}/admin/offers/${selectedOfferId}/creatives/${creativeId}`,
+        {
+          method: "DELETE",
+          credentials: "include",
+        }
+      );
+
+      if (response.ok) {
+        toast.success("Creative deleted successfully");
+        fetchOfferCreatives(selectedOfferId);
+        fetchOffers(); // Refresh offers to update creative count
+      } else {
+        toast.error("Failed to delete creative");
+      }
+    } catch (error) {
+      console.error("Error deleting creative:", error);
+      toast.error("Failed to delete creative");
+    }
+  };
+
+  const openCreativesDialog = (offerId: string) => {
+    setSelectedOfferId(offerId);
+    setCreativesDialogOpen(true);
+    fetchOfferCreatives(offerId);
+  };
+
+  const handleAffiliateSelection = (affiliateId: string, checked: boolean) => {
+    if (checked) {
+      setNewOffer({
+        ...newOffer,
+        affiliateIds: [...newOffer.affiliateIds, affiliateId],
+      });
+    } else {
+      setNewOffer({
+        ...newOffer,
+        affiliateIds: newOffer.affiliateIds.filter((id) => id !== affiliateId),
+      });
+    }
+  };
+
+  const openEditDialog = (offer: Offer) => {
+    setEditingOffer(offer);
+    setEditOffer({
+      name: offer.name,
+      description: offer.description,
+      category: offer.category,
+      commissionRate: offer.commissionRate,
+      startDate: offer.startDate,
+      endDate: offer.endDate || "",
+      terms: offer.terms || "",
+      requirements: offer.requirements || "",
+      tags: offer.tags || [],
+      status: offer.status,
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleUpdateOffer = async () => {
+    if (!editingOffer || !editOffer.name || !editOffer.description) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    setIsEditing(true);
+
+    try {
+      const response = await fetch(
+        `${config.apiUrl}/admin/offers/${editingOffer.id}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            ...editOffer,
+            status: editOffer.status.toUpperCase(), // Convert to uppercase for backend
+          }),
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        toast.success(data.message || "Offer updated successfully");
+        setEditDialogOpen(false);
+        setEditingOffer(null);
+        fetchOffers();
+      } else {
+        const error = await response.json();
+        toast.error(error.error || "Failed to update offer");
+      }
+    } catch (error) {
+      console.error("Error updating offer:", error);
+      toast.error("Failed to update offer");
+    } finally {
+      setIsEditing(false);
+    }
+  };
+
+  const openEditCreativeDialog = (creative: Creative) => {
+    setEditingCreative(creative);
+    setEditCreative({
+      name: creative.name,
+      type: creative.type,
+      size: creative.size,
+      format: creative.format,
+      url: creative.url,
+      downloadUrl: creative.downloadUrl,
+    });
+    setEditCreativeDialogOpen(true);
+  };
+
+  const handleUpdateCreative = async () => {
+    if (
+      !selectedOfferId ||
+      !editingCreative ||
+      !editCreative.name ||
+      !editCreative.url
+    ) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    setIsEditingCreative(true);
+
+    try {
+      const response = await fetch(
+        `${config.apiUrl}/admin/offers/${selectedOfferId}/creatives/${editingCreative.id}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(editCreative),
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        toast.success(data.message || "Creative updated successfully");
+        setEditCreativeDialogOpen(false);
+        setEditingCreative(null);
+        fetchOfferCreatives(selectedOfferId);
+        fetchOffers(); // Refresh offers to update creative count
+      } else {
+        const error = await response.json();
+        toast.error(error.error || "Failed to update creative");
+      }
+    } catch (error) {
+      console.error("Error updating creative:", error);
+      toast.error("Failed to update creative");
+    } finally {
+      setIsEditingCreative(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -200,7 +556,7 @@ export default function OffersManagementPage() {
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold">Offers & Creatives</h1>
           <p className="text-muted-foreground">
-            Manage promotional offers and campaigns
+            Manage promotional offers and creative assets for affiliates
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
@@ -233,8 +589,10 @@ export default function OffersManagementPage() {
             <LinkIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{offers.length}</div>
-            <p className="text-xs text-muted-foreground">Active campaigns</p>
+            <div className="text-2xl font-bold">{summary.total}</div>
+            <p className="text-xs text-muted-foreground">
+              {summary.active} active, {summary.paused} paused
+            </p>
           </CardContent>
         </Card>
         <Card>
@@ -244,7 +602,9 @@ export default function OffersManagementPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {offers.reduce((sum, o) => sum + o.clicks, 0).toLocaleString()}
+              {offers
+                .reduce((sum, o) => sum + o.totalClicks, 0)
+                .toLocaleString()}
             </div>
             <p className="text-xs text-muted-foreground">Across all offers</p>
           </CardContent>
@@ -256,7 +616,7 @@ export default function OffersManagementPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {offers.reduce((sum, o) => sum + o.conversions, 0)}
+              {offers.reduce((sum, o) => sum + o.totalConversions, 0)}
             </div>
             <p className="text-xs text-muted-foreground">Total conversions</p>
           </CardContent>
@@ -268,7 +628,7 @@ export default function OffersManagementPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ${offers.reduce((sum, o) => sum + o.revenue, 0).toFixed(2)}
+              ${summary.totalRevenue.toFixed(2)}
             </div>
             <p className="text-xs text-muted-foreground">Generated revenue</p>
           </CardContent>
@@ -279,7 +639,7 @@ export default function OffersManagementPage() {
       <Card>
         <CardHeader>
           <CardTitle>Offers List</CardTitle>
-          <CardDescription>{offers.length} offers configured</CardDescription>
+          <CardDescription>{summary.total} offers configured</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="rounded-md border overflow-x-auto">
@@ -290,6 +650,8 @@ export default function OffersManagementPage() {
                   <TableHead>Commission</TableHead>
                   <TableHead>Category</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Affiliates</TableHead>
+                  <TableHead>Creatives</TableHead>
                   <TableHead>Clicks</TableHead>
                   <TableHead>Conversions</TableHead>
                   <TableHead>Revenue</TableHead>
@@ -300,7 +662,7 @@ export default function OffersManagementPage() {
                 {offers.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={8}
+                      colSpan={10}
                       className="text-center py-8 text-muted-foreground"
                     >
                       No offers found. Create your first offer to get started.
@@ -318,11 +680,7 @@ export default function OffersManagementPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">
-                          {offer.commissionType === "Percentage"
-                            ? `${offer.commissionValue}%`
-                            : `$${offer.commissionValue}`}
-                        </Badge>
+                        <Badge variant="outline">{offer.commissionRate}%</Badge>
                       </TableCell>
                       <TableCell>{offer.category}</TableCell>
                       <TableCell>
@@ -334,10 +692,24 @@ export default function OffersManagementPage() {
                           {offer.status}
                         </Badge>
                       </TableCell>
-                      <TableCell>{offer.clicks.toLocaleString()}</TableCell>
-                      <TableCell>{offer.conversions}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Users className="h-4 w-4 text-muted-foreground" />
+                          {offer.affiliatesCount}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Image className="h-4 w-4 text-muted-foreground" />
+                          {offer.creativesCount}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {offer.totalClicks.toLocaleString()}
+                      </TableCell>
+                      <TableCell>{offer.totalConversions}</TableCell>
                       <TableCell className="font-medium">
-                        ${offer.revenue.toFixed(2)}
+                        ${offer.totalRevenue.toFixed(2)}
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>
@@ -347,9 +719,17 @@ export default function OffersManagementPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => openEditDialog(offer)}
+                            >
                               <Edit className="w-4 h-4 mr-2" />
                               Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => openCreativesDialog(offer.id)}
+                            >
+                              <Image className="w-4 h-4 mr-2" />
+                              Manage Creatives
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => handleDeleteOffer(offer.id)}
@@ -372,96 +752,172 @@ export default function OffersManagementPage() {
 
       {/* Create Offer Dialog */}
       <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Create New Offer</DialogTitle>
             <DialogDescription>
-              Add a new promotional offer for affiliates
+              Add a new promotional offer and assign it to specific affiliates
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Offer Name *</Label>
-              <Input
-                id="name"
-                placeholder="Premium Plan Promotion"
-                value={newOffer.name}
-                onChange={(e) =>
-                  setNewOffer({ ...newOffer, name: e.target.value })
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="description">Description *</Label>
-              <Textarea
-                id="description"
-                placeholder="30% commission on all premium plan sales..."
-                value={newOffer.description}
-                onChange={(e) =>
-                  setNewOffer({ ...newOffer, description: e.target.value })
-                }
-                rows={3}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="commissionType">Commission Type *</Label>
-                <Select
-                  value={newOffer.commissionType}
-                  onValueChange={(value) =>
-                    setNewOffer({ ...newOffer, commissionType: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Percentage">Percentage</SelectItem>
-                    <SelectItem value="Fixed">Fixed Amount</SelectItem>
-                  </SelectContent>
-                </Select>
+          <div className="space-y-6">
+            {/* Basic Information */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Basic Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Offer Name *</Label>
+                  <Input
+                    id="name"
+                    placeholder="Premium Plan Promotion"
+                    value={newOffer.name}
+                    onChange={(e) =>
+                      setNewOffer({ ...newOffer, name: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="category">Category *</Label>
+                  <Select
+                    value={newOffer.category}
+                    onValueChange={(value) =>
+                      setNewOffer({ ...newOffer, category: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Software">Software</SelectItem>
+                      <SelectItem value="E-commerce">E-commerce</SelectItem>
+                      <SelectItem value="SaaS">SaaS</SelectItem>
+                      <SelectItem value="Digital Products">
+                        Digital Products
+                      </SelectItem>
+                      <SelectItem value="Services">Services</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="commissionValue">
-                  Commission Value * (
-                  {newOffer.commissionType === "Percentage" ? "%" : "$"})
-                </Label>
-                <Input
-                  id="commissionValue"
-                  type="number"
-                  min="0"
-                  value={newOffer.commissionValue}
+                <Label htmlFor="description">Description *</Label>
+                <Textarea
+                  id="description"
+                  placeholder="30% commission on all premium plan sales..."
+                  value={newOffer.description}
                   onChange={(e) =>
-                    setNewOffer({
-                      ...newOffer,
-                      commissionValue: parseFloat(e.target.value),
-                    })
+                    setNewOffer({ ...newOffer, description: e.target.value })
                   }
+                  rows={3}
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="category">Category</Label>
-                <Input
-                  id="category"
-                  placeholder="Software"
-                  value={newOffer.category}
-                  onChange={(e) =>
-                    setNewOffer({ ...newOffer, category: e.target.value })
-                  }
-                />
+
+            {/* Commission Settings */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Commission Settings</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="commissionRate">Commission Rate (%) *</Label>
+                  <Input
+                    id="commissionRate"
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={newOffer.commissionRate}
+                    onChange={(e) =>
+                      setNewOffer({
+                        ...newOffer,
+                        commissionRate: parseFloat(e.target.value),
+                      })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="endDate">End Date (Optional)</Label>
+                  <Input
+                    id="endDate"
+                    type="date"
+                    value={newOffer.endDate}
+                    onChange={(e) =>
+                      setNewOffer({ ...newOffer, endDate: e.target.value })
+                    }
+                  />
+                </div>
               </div>
+            </div>
+
+            {/* Terms and Requirements */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Terms & Requirements</h3>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="terms">Terms & Conditions</Label>
+                  <Textarea
+                    id="terms"
+                    placeholder="Commission will be paid monthly..."
+                    value={newOffer.terms}
+                    onChange={(e) =>
+                      setNewOffer({ ...newOffer, terms: e.target.value })
+                    }
+                    rows={3}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="requirements">Requirements</Label>
+                  <Textarea
+                    id="requirements"
+                    placeholder="Affiliates must maintain minimum sales..."
+                    value={newOffer.requirements}
+                    onChange={(e) =>
+                      setNewOffer({ ...newOffer, requirements: e.target.value })
+                    }
+                    rows={3}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Affiliate Assignment */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Assign to Affiliates</h3>
               <div className="space-y-2">
-                <Label htmlFor="endDate">End Date (Optional)</Label>
-                <Input
-                  id="endDate"
-                  type="date"
-                  value={newOffer.endDate}
-                  onChange={(e) =>
-                    setNewOffer({ ...newOffer, endDate: e.target.value })
-                  }
-                />
+                <Label>Select Affiliates (Optional)</Label>
+                <div className="max-h-40 overflow-y-auto border rounded-md p-3 space-y-2">
+                  {affiliates.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      No active affiliates found
+                    </p>
+                  ) : (
+                    affiliates.map((affiliate) => (
+                      <div
+                        key={affiliate.id}
+                        className="flex items-center space-x-2"
+                      >
+                        <Checkbox
+                          id={affiliate.id}
+                          checked={newOffer.affiliateIds.includes(affiliate.id)}
+                          onCheckedChange={(checked) =>
+                            handleAffiliateSelection(
+                              affiliate.id,
+                              checked as boolean
+                            )
+                          }
+                        />
+                        <Label
+                          htmlFor={affiliate.id}
+                          className="text-sm font-normal cursor-pointer"
+                        >
+                          {affiliate.name} ({affiliate.email}) -{" "}
+                          {affiliate.tier}
+                        </Label>
+                      </div>
+                    ))
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Selected: {newOffer.affiliateIds.length} affiliate(s)
+                </p>
               </div>
             </div>
           </div>
@@ -474,6 +930,474 @@ export default function OffersManagementPage() {
             </Button>
             <Button onClick={handleCreateOffer} disabled={isCreating}>
               {isCreating ? "Creating..." : "Create Offer"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Offer Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Offer</DialogTitle>
+            <DialogDescription>
+              Update the offer details and settings
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6">
+            {/* Basic Information */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Basic Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="editName">Offer Name *</Label>
+                  <Input
+                    id="editName"
+                    placeholder="Premium Plan Promotion"
+                    value={editOffer.name}
+                    onChange={(e) =>
+                      setEditOffer({ ...editOffer, name: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="editCategory">Category *</Label>
+                  <Select
+                    value={editOffer.category}
+                    onValueChange={(value) =>
+                      setEditOffer({ ...editOffer, category: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Software">Software</SelectItem>
+                      <SelectItem value="E-commerce">E-commerce</SelectItem>
+                      <SelectItem value="SaaS">SaaS</SelectItem>
+                      <SelectItem value="Digital Products">
+                        Digital Products
+                      </SelectItem>
+                      <SelectItem value="Services">Services</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editDescription">Description *</Label>
+                <Textarea
+                  id="editDescription"
+                  placeholder="30% commission on all premium plan sales..."
+                  value={editOffer.description}
+                  onChange={(e) =>
+                    setEditOffer({ ...editOffer, description: e.target.value })
+                  }
+                  rows={3}
+                />
+              </div>
+            </div>
+
+            {/* Commission Settings */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Commission Settings</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="editCommissionRate">
+                    Commission Rate (%) *
+                  </Label>
+                  <Input
+                    id="editCommissionRate"
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={editOffer.commissionRate}
+                    onChange={(e) =>
+                      setEditOffer({
+                        ...editOffer,
+                        commissionRate: parseFloat(e.target.value),
+                      })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="editStatus">Status</Label>
+                  <Select
+                    value={editOffer.status}
+                    onValueChange={(value) =>
+                      setEditOffer({ ...editOffer, status: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="paused">Paused</SelectItem>
+                      <SelectItem value="ended">Ended</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="editStartDate">Start Date *</Label>
+                  <Input
+                    id="editStartDate"
+                    type="date"
+                    value={editOffer.startDate}
+                    onChange={(e) =>
+                      setEditOffer({ ...editOffer, startDate: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="editEndDate">End Date (Optional)</Label>
+                  <Input
+                    id="editEndDate"
+                    type="date"
+                    value={editOffer.endDate}
+                    onChange={(e) =>
+                      setEditOffer({ ...editOffer, endDate: e.target.value })
+                    }
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Terms and Requirements */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Terms & Requirements</h3>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="editTerms">Terms & Conditions</Label>
+                  <Textarea
+                    id="editTerms"
+                    placeholder="Commission will be paid monthly..."
+                    value={editOffer.terms}
+                    onChange={(e) =>
+                      setEditOffer({ ...editOffer, terms: e.target.value })
+                    }
+                    rows={3}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="editRequirements">Requirements</Label>
+                  <Textarea
+                    id="editRequirements"
+                    placeholder="Affiliates must maintain minimum sales..."
+                    value={editOffer.requirements}
+                    onChange={(e) =>
+                      setEditOffer({
+                        ...editOffer,
+                        requirements: e.target.value,
+                      })
+                    }
+                    rows={3}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleUpdateOffer} disabled={isEditing}>
+              {isEditing ? "Updating..." : "Update Offer"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Creatives Management Dialog */}
+      <Dialog open={creativesDialogOpen} onOpenChange={setCreativesDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Manage Creatives</DialogTitle>
+            <DialogDescription>
+              Add and manage creative assets for this offer
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* Add New Creative */}
+          <div className="space-y-4 border-b pb-4">
+            <h3 className="text-lg font-semibold">Add New Creative</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="creativeName">Creative Name *</Label>
+                <Input
+                  id="creativeName"
+                  placeholder="Banner Ad 728x90"
+                  value={newCreative.name}
+                  onChange={(e) =>
+                    setNewCreative({ ...newCreative, name: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="creativeType">Type *</Label>
+                <Select
+                  value={newCreative.type}
+                  onValueChange={(value) =>
+                    setNewCreative({ ...newCreative, type: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="banner">Banner</SelectItem>
+                    <SelectItem value="email">Email</SelectItem>
+                    <SelectItem value="social">Social Media</SelectItem>
+                    <SelectItem value="landing">Landing Page</SelectItem>
+                    <SelectItem value="video">Video</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="creativeSize">Size</Label>
+                <Input
+                  id="creativeSize"
+                  placeholder="728x90"
+                  value={newCreative.size}
+                  onChange={(e) =>
+                    setNewCreative({ ...newCreative, size: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="creativeFormat">Format</Label>
+                <Input
+                  id="creativeFormat"
+                  placeholder="PNG, JPG, HTML"
+                  value={newCreative.format}
+                  onChange={(e) =>
+                    setNewCreative({ ...newCreative, format: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="creativeUrl">Preview URL *</Label>
+                <Input
+                  id="creativeUrl"
+                  placeholder="https://example.com/preview"
+                  value={newCreative.url}
+                  onChange={(e) =>
+                    setNewCreative({ ...newCreative, url: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="creativeDownloadUrl">Download URL *</Label>
+                <Input
+                  id="creativeDownloadUrl"
+                  placeholder="https://example.com/download"
+                  value={newCreative.downloadUrl}
+                  onChange={(e) =>
+                    setNewCreative({
+                      ...newCreative,
+                      downloadUrl: e.target.value,
+                    })
+                  }
+                />
+              </div>
+            </div>
+            <Button onClick={handleAddCreative} className="w-full">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Creative
+            </Button>
+          </div>
+
+          {/* Existing Creatives */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Existing Creatives</h3>
+            {isLoadingCreatives ? (
+              <div className="text-center py-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
+              </div>
+            ) : offerCreatives.length === 0 ? (
+              <p className="text-muted-foreground text-center py-4">
+                No creatives found. Add your first creative above.
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {offerCreatives.map((creative) => (
+                  <Card key={creative.id}>
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-base">
+                          {creative.name}
+                        </CardTitle>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <MoreVertical className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() =>
+                                window.open(creative.url, "_blank")
+                              }
+                            >
+                              <Eye className="w-4 h-4 mr-2" />
+                              Preview
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                window.open(creative.downloadUrl, "_blank")
+                              }
+                            >
+                              <Download className="w-4 h-4 mr-2" />
+                              Download
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => openEditCreativeDialog(creative)}
+                            >
+                              <Edit className="w-4 h-4 mr-2" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleDeleteCreative(creative.id)}
+                              className="text-red-600"
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline">{creative.type}</Badge>
+                        {creative.size && (
+                          <Badge variant="secondary">{creative.size}</Badge>
+                        )}
+                      </div>
+                      {creative.format && (
+                        <p className="text-sm text-muted-foreground">
+                          Format: {creative.format}
+                        </p>
+                      )}
+                      <p className="text-xs text-muted-foreground">
+                        Added: {creative.createdAt}
+                      </p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Creative Dialog */}
+      <Dialog
+        open={editCreativeDialogOpen}
+        onOpenChange={setEditCreativeDialogOpen}
+      >
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Creative</DialogTitle>
+            <DialogDescription>
+              Update the creative asset details
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="editCreativeName">Creative Name *</Label>
+                <Input
+                  id="editCreativeName"
+                  placeholder="Banner Ad 728x90"
+                  value={editCreative.name}
+                  onChange={(e) =>
+                    setEditCreative({ ...editCreative, name: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editCreativeType">Type *</Label>
+                <Select
+                  value={editCreative.type}
+                  onValueChange={(value) =>
+                    setEditCreative({ ...editCreative, type: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="banner">Banner</SelectItem>
+                    <SelectItem value="email">Email</SelectItem>
+                    <SelectItem value="social">Social Media</SelectItem>
+                    <SelectItem value="landing">Landing Page</SelectItem>
+                    <SelectItem value="video">Video</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editCreativeSize">Size</Label>
+                <Input
+                  id="editCreativeSize"
+                  placeholder="728x90"
+                  value={editCreative.size}
+                  onChange={(e) =>
+                    setEditCreative({ ...editCreative, size: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editCreativeFormat">Format</Label>
+                <Input
+                  id="editCreativeFormat"
+                  placeholder="PNG, JPG, HTML"
+                  value={editCreative.format}
+                  onChange={(e) =>
+                    setEditCreative({ ...editCreative, format: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editCreativeUrl">Preview URL *</Label>
+                <Input
+                  id="editCreativeUrl"
+                  placeholder="https://example.com/preview"
+                  value={editCreative.url}
+                  onChange={(e) =>
+                    setEditCreative({ ...editCreative, url: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editCreativeDownloadUrl">Download URL *</Label>
+                <Input
+                  id="editCreativeDownloadUrl"
+                  placeholder="https://example.com/download"
+                  value={editCreative.downloadUrl}
+                  onChange={(e) =>
+                    setEditCreative({
+                      ...editCreative,
+                      downloadUrl: e.target.value,
+                    })
+                  }
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setEditCreativeDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleUpdateCreative} disabled={isEditingCreative}>
+              {isEditingCreative ? "Updating..." : "Update Creative"}
             </Button>
           </DialogFooter>
         </DialogContent>

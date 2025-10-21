@@ -70,6 +70,20 @@ router.get(
 
           const conversionRate = clicks > 0 ? (conversions / clicks) * 100 : 0;
 
+          // Get last login from Activity table
+          const lastLoginActivity = await prisma.activity.findFirst({
+            where: {
+              userId: affiliate.userId,
+              action: "user_login",
+            },
+            orderBy: {
+              createdAt: "desc",
+            },
+            select: {
+              createdAt: true,
+            },
+          });
+
           return {
             id: affiliate.id,
             name:
@@ -83,8 +97,12 @@ router.get(
             totalClicks: clicks,
             totalConversions: conversions,
             conversionRate: Math.round(conversionRate * 10) / 10,
-            lastActivity:
-              affiliate.lastActivityAt?.toISOString().split("T")[0] || "N/A",
+            lastActivity: lastLoginActivity?.createdAt
+              ? lastLoginActivity.createdAt
+                  .toISOString()
+                  .replace("T", " ")
+                  .split(".")[0]
+              : "Never",
             paymentMethod: affiliate.paymentMethod,
             country: "Unknown", // Add to schema if needed
           };
@@ -158,6 +176,20 @@ router.get(
         }),
       ]);
 
+      // Get last login from Activity table
+      const lastLoginActivity = await prisma.activity.findFirst({
+        where: {
+          userId: affiliate.userId,
+          action: "user_login",
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+        select: {
+          createdAt: true,
+        },
+      });
+
       res.json({
         affiliate: {
           ...affiliate,
@@ -167,6 +199,12 @@ router.get(
             totalConversions: conversions,
             totalClicks: clicks,
             conversionRate: clicks > 0 ? (conversions / clicks) * 100 : 0,
+            lastLogin: lastLoginActivity?.createdAt
+              ? lastLoginActivity.createdAt
+                  .toISOString()
+                  .replace("T", " ")
+                  .split(".")[0]
+              : "Never",
           },
           referralCodes: 0, // Will be updated when referral codes are properly tracked
         },

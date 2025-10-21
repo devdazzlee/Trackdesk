@@ -51,6 +51,12 @@ import {
   Trash2,
 } from "lucide-react";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -58,6 +64,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { config } from "@/config/config";
+import { formatLastActivity, formatRelativeTime } from "@/lib/date-utils";
 
 interface Affiliate {
   id: string;
@@ -447,7 +454,20 @@ export default function AffiliatesManagementPage() {
                       </TableCell>
                       <TableCell>{affiliate.totalConversions}</TableCell>
                       <TableCell className="text-sm">
-                        {affiliate.lastActivity}
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="cursor-help">
+                                {formatLastActivity(affiliate.lastActivity)}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>
+                                {formatRelativeTime(affiliate.lastActivity)}
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>

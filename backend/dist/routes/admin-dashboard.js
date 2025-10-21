@@ -72,25 +72,39 @@ router.get("/overview", auth_1.authenticateToken, (0, auth_1.requireRole)(["ADMI
             });
         }
         const topAffiliates = await Promise.all(affiliates.slice(0, 10).map(async (affiliate) => {
-            const earnings = await prisma.affiliateOrder.aggregate({
-                where: {
-                    affiliateId: affiliate.id,
-                    createdAt: { gte: thirtyDaysAgo },
-                },
-                _sum: { commissionAmount: true },
-            });
-            const conversions = await prisma.affiliateOrder.count({
-                where: {
-                    affiliateId: affiliate.id,
-                    createdAt: { gte: thirtyDaysAgo },
-                },
-            });
-            const clicks = await prisma.affiliateClick.count({
-                where: {
-                    affiliateId: affiliate.id,
-                    createdAt: { gte: thirtyDaysAgo },
-                },
-            });
+            const [earnings, conversions, clicks, lastLoginActivity] = await Promise.all([
+                prisma.affiliateOrder.aggregate({
+                    where: {
+                        affiliateId: affiliate.id,
+                        createdAt: { gte: thirtyDaysAgo },
+                    },
+                    _sum: { commissionAmount: true },
+                }),
+                prisma.affiliateOrder.count({
+                    where: {
+                        affiliateId: affiliate.id,
+                        createdAt: { gte: thirtyDaysAgo },
+                    },
+                }),
+                prisma.affiliateClick.count({
+                    where: {
+                        affiliateId: affiliate.id,
+                        createdAt: { gte: thirtyDaysAgo },
+                    },
+                }),
+                prisma.activity.findFirst({
+                    where: {
+                        userId: affiliate.userId,
+                        action: "user_login",
+                    },
+                    orderBy: {
+                        createdAt: "desc",
+                    },
+                    select: {
+                        createdAt: true,
+                    },
+                }),
+            ]);
             return {
                 id: affiliate.id,
                 name: `${affiliate.user?.firstName || ""} ${affiliate.user?.lastName || ""}`.trim() ||
@@ -101,7 +115,12 @@ router.get("/overview", auth_1.authenticateToken, (0, auth_1.requireRole)(["ADMI
                 totalEarnings: earnings._sum.commissionAmount || 0,
                 totalConversions: conversions,
                 totalClicks: clicks,
-                lastActivity: affiliate.lastActivityAt,
+                lastActivity: lastLoginActivity?.createdAt
+                    ? lastLoginActivity.createdAt
+                        .toISOString()
+                        .replace("T", " ")
+                        .split(".")[0]
+                    : "Never",
             };
         }));
         const sortedTopAffiliates = topAffiliates

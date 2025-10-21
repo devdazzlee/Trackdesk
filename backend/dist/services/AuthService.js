@@ -1,4 +1,37 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -7,12 +40,9 @@ exports.AuthService = void 0;
 const client_1 = require("@prisma/client");
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
+const EmailService_1 = __importStar(require("./EmailService"));
 const crypto_1 = __importDefault(require("crypto"));
-const EmailService_1 = require("./EmailService");
-const SecurityService_1 = require("./SecurityService");
 const prisma = new client_1.PrismaClient();
-const emailService = new EmailService_1.EmailService();
-const securityService = new SecurityService_1.SecurityService();
 class AuthService {
     async register(data) {
         const existingUser = await prisma.user.findUnique({
@@ -22,6 +52,8 @@ class AuthService {
             throw new Error("User already exists");
         }
         const hashedPassword = await bcryptjs_1.default.hash(data.password, parseInt(process.env.BCRYPT_ROUNDS || "12"));
+        const verificationToken = EmailService_1.EmailService.generateToken();
+        const verificationTokenExpiry = EmailService_1.EmailService.generateTokenExpiry();
         const user = await prisma.user.create({
             data: {
                 email: data.email,
@@ -29,6 +61,9 @@ class AuthService {
                 firstName: data.firstName,
                 lastName: data.lastName,
                 role: data.role || "AFFILIATE",
+                verificationToken,
+                verificationTokenExpiry,
+                emailVerified: false,
             },
         });
         if (data.role === "AFFILIATE" || !data.role) {
@@ -58,6 +93,13 @@ class AuthService {
                 userAgent: "Trackdesk API",
             },
         });
+        try {
+            await EmailService_1.default.sendVerificationEmail(user.email, user.firstName, verificationToken);
+            console.log(`Verification email sent to ${user.email}`);
+        }
+        catch (error) {
+            console.error("Failed to send verification email:", error);
+        }
         return {
             token,
             user: {
@@ -66,7 +108,10 @@ class AuthService {
                 firstName: user.firstName,
                 lastName: user.lastName,
                 role: user.role,
+                avatar: user.avatar || null,
+                emailVerified: user.emailVerified,
             },
+            message: "Registration successful! Please check your email to verify your account.",
         };
     }
     async login(data, ipAddress, userAgent) {
@@ -83,6 +128,9 @@ class AuthService {
         const validPassword = await bcryptjs_1.default.compare(data.password, user.password);
         if (!validPassword) {
             throw new Error("Invalid credentials");
+        }
+        if (!user.emailVerified) {
+            throw new Error("Please verify your email before logging in. Check your inbox for the verification link.");
         }
         await prisma.user.update({
             where: { id: user.id },
@@ -107,10 +155,82 @@ class AuthService {
                 firstName: user.firstName,
                 lastName: user.lastName,
                 role: user.role,
+                avatar: user.avatar || null,
                 affiliateProfile: user.affiliateProfile,
                 adminProfile: user.adminProfile,
             },
         };
+    }
+    async verifyEmail(token) {
+        const user = await prisma.user.findFirst({
+            where: {
+                verificationToken: token,
+                verificationTokenExpiry: {
+                    gt: new Date(),
+                },
+            },
+        });
+        if (!user) {
+            throw new Error("Invalid or expired verification token");
+        }
+        await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                emailVerified: true,
+                verificationToken: null,
+                verificationTokenExpiry: null,
+            },
+        });
+        await prisma.activity.create({
+            data: {
+                userId: user.id,
+                action: "email_verified",
+                resource: "User Account",
+                details: "Email successfully verified",
+                ipAddress: "127.0.0.1",
+                userAgent: "Trackdesk API",
+            },
+        });
+        try {
+            await EmailService_1.default.sendWelcomeEmail(user.email, user.firstName);
+            console.log(`Welcome email sent to ${user.email}`);
+        }
+        catch (error) {
+            console.error("Failed to send welcome email:", error);
+        }
+        return {
+            message: "Email verified successfully! You can now log in.",
+        };
+    }
+    async resendVerificationEmail(email) {
+        const user = await prisma.user.findUnique({
+            where: { email },
+        });
+        if (!user) {
+            throw new Error("User not found");
+        }
+        if (user.emailVerified) {
+            throw new Error("Email is already verified");
+        }
+        const verificationToken = EmailService_1.EmailService.generateToken();
+        const verificationTokenExpiry = EmailService_1.EmailService.generateTokenExpiry();
+        await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                verificationToken,
+                verificationTokenExpiry,
+            },
+        });
+        try {
+            await EmailService_1.default.sendVerificationEmail(user.email, user.firstName, verificationToken);
+            return {
+                message: "Verification email sent! Please check your inbox.",
+            };
+        }
+        catch (error) {
+            console.error("Failed to send verification email:", error);
+            throw new Error("Failed to send verification email");
+        }
     }
     async logout(userId) {
         await prisma.session.deleteMany({
@@ -136,14 +256,19 @@ class AuthService {
         if (!user) {
             throw new Error("User not found");
         }
-        return {
+        console.log("🔍 AuthService.getProfile - Raw user from DB:", {
+            id: user.id,
+            email: user.email,
+            avatar: user.avatar,
+        });
+        const response = {
             id: user.id,
             email: user.email,
             firstName: user.firstName,
             lastName: user.lastName,
             role: user.role,
             status: user.status,
-            avatar: user.avatar,
+            avatar: user.avatar || null,
             phone: user.phone,
             timezone: user.timezone,
             language: user.language,
@@ -153,6 +278,12 @@ class AuthService {
             affiliateProfile: user.affiliateProfile,
             adminProfile: user.adminProfile,
         };
+        console.log("📤 AuthService.getProfile - Response being sent:", {
+            id: response.id,
+            email: response.email,
+            avatar: response.avatar,
+        });
+        return response;
     }
     async updateProfile(userId, data) {
         const user = await prisma.user.update({
@@ -217,7 +348,7 @@ class AuthService {
             where: { id: user.id },
             data: {},
         });
-        await emailService.sendPasswordResetEmail(email, resetToken);
+        await EmailService_1.default.sendPasswordResetEmail(email, user.firstName, resetToken);
     }
     async resetPassword(token, newPassword) {
         const hashedPassword = await bcryptjs_1.default.hash(newPassword, parseInt(process.env.BCRYPT_ROUNDS || "12"));

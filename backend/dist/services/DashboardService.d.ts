@@ -39,12 +39,12 @@ export declare class DashboardService {
     } & {
         id: string;
         createdAt: Date;
+        userId: string;
         action: string;
         resource: string;
         details: import("@prisma/client/runtime/library").JsonValue | null;
         ipAddress: string | null;
         userAgent: string | null;
-        userId: string;
     })[]>;
     getPerformanceChart(userId: string, userRole: string, params: PerformanceChartParams): Promise<any[]>;
     getTopOffers(userId: string, userRole: string, limit: number): Promise<{
@@ -58,9 +58,9 @@ export declare class DashboardService {
     }[]>;
     getNotifications(userId: string, page: number, limit: number, unreadOnly: boolean): Promise<{
         notifications: {
-            data: import("@prisma/client/runtime/library").JsonValue | null;
             id: string;
             createdAt: Date;
+            data: import("@prisma/client/runtime/library").JsonValue | null;
             userId: string;
             message: string;
             type: import(".prisma/client").$Enums.NotificationType;
