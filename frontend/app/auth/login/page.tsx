@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,7 +14,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Eye, EyeOff, ArrowLeft, AlertCircle } from "lucide-react";
+import { Eye, EyeOff, ArrowLeft, AlertCircle, CheckCircle, Mail } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
@@ -28,6 +28,15 @@ export default function LoginPage() {
 
   const { login, isAuthenticated, user } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const verified = searchParams.get("verified");
+
+  // Show success message if email was verified
+  useEffect(() => {
+    if (verified === "true") {
+      toast.success("Email verified successfully! You can now log in.");
+    }
+  }, [verified]);
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -87,9 +96,17 @@ export default function LoginPage() {
           </CardHeader>
           <CardContent>
             {error && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md flex items-center space-x-2">
-                <AlertCircle className="h-4 w-4 text-red-600" />
-                <span className="text-sm text-red-600">{error}</span>
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                <div className="flex items-center space-x-2 mb-2">
+                  <AlertCircle className="h-4 w-4 text-red-600" />
+                  <span className="text-sm text-red-600">{error}</span>
+                </div>
+                {error.toLowerCase().includes("verify") && (
+                  <Link href="/auth/resend-verification" className="text-sm text-blue-600 hover:underline flex items-center mt-2">
+                    <Mail className="h-3 w-3 mr-1" />
+                    Resend verification email
+                  </Link>
+                )}
               </div>
             )}
 

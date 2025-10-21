@@ -1,12 +1,11 @@
 import { Request, Response } from "express";
 import { AuthService } from "../services/AuthService";
-import { EmailService } from "../services/EmailService";
+import emailService from "../services/EmailService";
 import { SecurityService } from "../services/SecurityService";
 import { setAuthCookies, clearAuthCookies } from "../middleware/auth";
 import { z } from "zod";
 
 const authService = new AuthService();
-const emailService = new EmailService();
 const securityService = new SecurityService();
 
 // Validation schemas
@@ -49,18 +48,15 @@ export class AuthController {
   async register(req: Request, res: Response) {
     try {
       const data = registerSchema.parse(req.body);
+      console.log("🚀 ~ AuthController ~ register ~ data:", data)
       const result = await authService.register(data as any);
 
-      // Send welcome email
-      await emailService.sendWelcomeEmail(data.email, data.firstName);
-
-      // Set authentication cookies
-      setAuthCookies(res, result.token, result.user);
+      // Note: Welcome email will be sent after email verification
+      // Don't set auth cookies here - user must verify email first
 
       res.status(201).json({
-        message: "User created successfully",
-        token: result.token,
-        user: result.user,
+        message: result.message || "Registration successful! Please check your email to verify your account.",
+        // Don't return token or user until email is verified
       });
     } catch (error: any) {
       if (error.name === "ZodError") {
@@ -226,6 +222,36 @@ export class AuthController {
       res.json({ codes });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
+    }
+  }
+
+  async verifyEmail(req: Request, res: Response) {
+    try {
+      const { token } = req.body;
+
+      if (!token) {
+        return res.status(400).json({ error: "Verification token is required" });
+      }
+
+      const result = await authService.verifyEmail(token);
+      res.json(result);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+
+  async resendVerificationEmail(req: Request, res: Response) {
+    try {
+      const { email } = req.body;
+
+      if (!email) {
+        return res.status(400).json({ error: "Email is required" });
+      }
+
+      const result = await authService.resendVerificationEmail(email);
+      res.json(result);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
     }
   }
 }

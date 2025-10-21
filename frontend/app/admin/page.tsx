@@ -2,6 +2,7 @@
 
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
+import { DataLoading, ErrorState } from "@/components/ui/loading";
 import { KPITile } from "@/components/dashboard/kpi-tile";
 import { LineChartComponent } from "@/components/charts/line-chart";
 import { BarChartComponent } from "@/components/charts/bar-chart";
@@ -363,43 +364,28 @@ export default function AdminDashboardPage() {
   };
 
   if (isLoading || isDataLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
-      </div>
-    );
+    return <DataLoading message="Loading admin dashboard..." />;
   }
 
   if (!user) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">
-            Authentication Required
-          </h2>
-          <p className="text-gray-600">
-            Please log in to access the admin dashboard.
-          </p>
-        </div>
-      </div>
+      <ErrorState
+        title="Authentication Required"
+        message="Please log in to access the admin dashboard."
+        actionText="Go to Login"
+        onAction={() => router.push("/auth/login")}
+      />
     );
   }
 
   if (!dashboardData) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">
-            No Data Available
-          </h2>
-          <Button onClick={handleRefresh} disabled={isRefreshing}>
-            <RefreshCw
-              className={`w-4 h-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`}
-            />
-            Try Again
-          </Button>
-        </div>
-      </div>
+      <ErrorState
+        title="No Data Available"
+        message="Unable to load admin dashboard data."
+        actionText="Try Again"
+        onAction={handleRefresh}
+      />
     );
   }
 

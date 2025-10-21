@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { DataLoading, ErrorState } from "@/components/ui/loading";
 import {
   Card,
   CardContent,
@@ -147,7 +148,7 @@ export default function AdminProfileSettingsPage() {
       formData.append("avatar", file);
 
       const response = await fetch(
-        `${config.apiUrl}/admin/settings/profile/avatar`,
+        `${config.apiUrl}/upload/avatar`,
         {
           method: "POST",
           credentials: "include",
@@ -157,8 +158,13 @@ export default function AdminProfileSettingsPage() {
 
       if (response.ok) {
         toast.success("Avatar updated successfully");
-        fetchProfile(); // Refresh profile data
-        refreshUser(); // Refresh auth context
+        
+        // Refresh profile to show new avatar in this page
+        await fetchProfile();
+        
+        // Immediately refresh auth context to update navbar/sidebar
+        // This ensures the avatar is synced across all components
+        await refreshUser();
       } else {
         const error = await response.json();
         toast.error(error.error || "Failed to upload avatar");
@@ -174,7 +180,7 @@ export default function AdminProfileSettingsPage() {
   const handleRemoveAvatar = async () => {
     try {
       const response = await fetch(
-        `${config.apiUrl}/admin/settings/profile/avatar`,
+        `${config.apiUrl}/upload/avatar`,
         {
           method: "DELETE",
           credentials: "include",
@@ -183,8 +189,13 @@ export default function AdminProfileSettingsPage() {
 
       if (response.ok) {
         toast.success("Avatar removed successfully");
-        fetchProfile(); // Refresh profile data
-        refreshUser(); // Refresh auth context
+        
+        // Refresh profile to show changes in this page
+        await fetchProfile();
+        
+        // Immediately refresh auth context to update navbar/sidebar
+        // This ensures the avatar is synced across all components
+        await refreshUser();
       } else {
         const error = await response.json();
         toast.error(error.error || "Failed to remove avatar");
@@ -203,27 +214,18 @@ export default function AdminProfileSettingsPage() {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="flex items-center space-x-2">
-          <RefreshCw className="h-4 w-4 animate-spin" />
-          <span>Loading profile...</span>
-        </div>
-      </div>
-    );
+    return <DataLoading message="Loading admin profile..." minHeight="screen" />;
   }
 
   if (!profile) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <User className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <h2 className="text-xl font-semibold mb-2">Profile Not Found</h2>
-          <p className="text-muted-foreground">
-            Unable to load your profile information.
-          </p>
-        </div>
-      </div>
+      <ErrorState
+        title="Profile Not Found"
+        message="Unable to load your profile information."
+        actionText="Try Again"
+        onAction={fetchProfile}
+        minHeight="screen"
+      />
     );
   }
 

@@ -6,7 +6,7 @@ export interface User {
   firstName: string;
   lastName: string;
   role: "ADMIN" | "AFFILIATE" | "MANAGER";
-  avatar?: string;
+  avatar: string | null;
 }
 
 export interface AuthResponse {
@@ -97,12 +97,22 @@ export class AuthClient {
   }
 
   public getUser(): User | null {
+    // Always try to reload from cookies if user is null but cookies exist
+    if (!this.user && typeof window !== "undefined") {
+      this.loadUserFromCookies();
+    }
     return this.user;
   }
 
+  public reloadUserFromCookies(): void {
+    this.loadUserFromCookies();
+  }
+
   public isAuthenticated(): boolean {
-    const token = this.getCookie(COOKIE_NAMES.ACCESS_TOKEN);
-    return !!token && !!this.user;
+    // Note: accessToken is httpOnly and can't be read by JavaScript
+    // So we just check if we have user data in memory or cookies
+    // The actual authentication is validated on the server side
+    return !!this.user || !!this.getCookie(COOKIE_NAMES.USER_DATA);
   }
 
   public getToken(): string | null {
@@ -110,7 +120,12 @@ export class AuthClient {
   }
 
   public setAuth(token: string, user: User): void {
-    this.setCookie(COOKIE_NAMES.ACCESS_TOKEN, token);
+    // Note: accessToken is httpOnly and set by the server
+    // We only update the userData cookie here
+    // Only try to set accessToken if we actually have a token value
+    if (token) {
+      this.setCookie(COOKIE_NAMES.ACCESS_TOKEN, token);
+    }
     this.setCookie(COOKIE_NAMES.USER_DATA, JSON.stringify(user));
     this.user = user;
   }
@@ -227,10 +242,15 @@ export class AuthClient {
       }
 
       const data = await response.json();
-      console.log("getProfile API response:", data); // Debug log
+      
+      console.log("🔍 AuthClient.getProfile - Raw response from /auth/me:", {
+        id: data.id,
+        email: data.email,
+        avatar: data.avatar,
+      });
       
       // Ensure we return a properly formatted User object
-      return {
+      const user = {
         id: data.id,
         email: data.email,
         firstName: data.firstName,
@@ -238,6 +258,14 @@ export class AuthClient {
         role: data.role,
         avatar: data.avatar,
       };
+      
+      console.log("📦 AuthClient.getProfile - User object being returned:", {
+        id: user.id,
+        email: user.email,
+        avatar: user.avatar,
+      });
+      
+      return user;
     } catch (error) {
       console.error("Get profile error:", error);
       throw error;

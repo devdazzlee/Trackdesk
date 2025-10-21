@@ -49,15 +49,21 @@ router.post(
         select: { avatar: true },
       });
 
+      console.log("🖼️ Uploading avatar for user:", userId);
+
       // Upload new image to Cloudinary
       const base64Image = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
       const uploadResult = await uploadImage(base64Image, 'trackdesk/profiles');
+      
+      console.log("☁️ Cloudinary upload successful:", uploadResult.url);
 
       // Update user avatar in database
-      await prisma.user.update({
+      const updatedUser = await prisma.user.update({
         where: { id: userId },
         data: { avatar: uploadResult.url },
       });
+      
+      console.log("💾 Database updated - User avatar:", updatedUser.avatar);
 
       // Delete old avatar from Cloudinary if it exists
       if (user?.avatar && user.avatar.includes('cloudinary.com')) {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { DataLoading } from "@/components/ui/loading";
 import {
   Card,
   CardContent,
@@ -199,11 +200,7 @@ export default function ReferralsPage() {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
-    );
+    return <DataLoading message="Loading referrals..." />;
   }
 
   return (

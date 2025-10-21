@@ -1,13 +1,10 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import emailService, { EmailService } from "./EmailService";
 import crypto from "crypto";
-import { EmailService } from "./EmailService";
-import { SecurityService } from "./SecurityService";
 
 const prisma = new PrismaClient();
-const emailService = new EmailService();
-const securityService = new SecurityService();
 
 export interface RegisterData {
   email: string;
@@ -47,6 +44,10 @@ export class AuthService {
       parseInt(process.env.BCRYPT_ROUNDS || "12")
     );
 
+    // Generate verification token
+    const verificationToken = EmailService.generateToken();
+    const verificationTokenExpiry = EmailService.generateTokenExpiry();
+
     // Create user
     const user = await prisma.user.create({
       data: {
@@ -55,6 +56,9 @@ export class AuthService {
         firstName: data.firstName,
         lastName: data.lastName,
         role: data.role || "AFFILIATE",
+        verificationToken,
+        verificationTokenExpiry,
+        emailVerified: false,
       },
     });
 
@@ -94,6 +98,19 @@ export class AuthService {
       },
     });
 
+    // Send verification email
+    try {
+      await emailService.sendVerificationEmail(
+        user.email,
+        user.firstName,
+        verificationToken
+      );
+      console.log(`Verification email sent to ${user.email}`);
+    } catch (error) {
+      console.error("Failed to send verification email:", error);
+      // Don't fail registration if email fails, but log it
+    }
+
     return {
       token,
       user: {
@@ -102,7 +119,10 @@ export class AuthService {
         firstName: user.firstName,
         lastName: user.lastName,
         role: user.role,
+        avatar: user.avatar || null,
+        emailVerified: user.emailVerified,
       },
+      message: "Registration successful! Please check your email to verify your account.",
     };
   }
 
@@ -124,6 +144,11 @@ export class AuthService {
     const validPassword = await bcrypt.compare(data.password, user.password);
     if (!validPassword) {
       throw new Error("Invalid credentials");
+    }
+
+    // Check if email is verified
+    if (!user.emailVerified) {
+      throw new Error("Please verify your email before logging in. Check your inbox for the verification link.");
     }
 
     // Update last login
@@ -159,10 +184,105 @@ export class AuthService {
         firstName: user.firstName,
         lastName: user.lastName,
         role: user.role,
+        avatar: user.avatar || null,
         affiliateProfile: user.affiliateProfile,
         adminProfile: user.adminProfile,
       },
     };
+  }
+
+  async verifyEmail(token: string) {
+    // Find user with the verification token
+    const user = await prisma.user.findFirst({
+      where: {
+        verificationToken: token,
+        verificationTokenExpiry: {
+          gt: new Date(), // Token must not be expired
+        },
+      },
+    });
+
+    if (!user) {
+      throw new Error("Invalid or expired verification token");
+    }
+
+    // Update user to mark email as verified
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        emailVerified: true,
+        verificationToken: null,
+        verificationTokenExpiry: null,
+      },
+    });
+
+    // Log activity
+    await prisma.activity.create({
+      data: {
+        userId: user.id,
+        action: "email_verified",
+        resource: "User Account",
+        details: "Email successfully verified",
+        ipAddress: "127.0.0.1",
+        userAgent: "Trackdesk API",
+      },
+    });
+
+    // Send welcome email after successful verification
+    try {
+      await emailService.sendWelcomeEmail(user.email, user.firstName);
+      console.log(`Welcome email sent to ${user.email}`);
+    } catch (error) {
+      console.error("Failed to send welcome email:", error);
+      // Don't fail verification if welcome email fails
+    }
+
+    return {
+      message: "Email verified successfully! You can now log in.",
+    };
+  }
+
+  async resendVerificationEmail(email: string) {
+    // Find user
+    const user = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    if (user.emailVerified) {
+      throw new Error("Email is already verified");
+    }
+
+    // Generate new verification token
+    const verificationToken = EmailService.generateToken();
+    const verificationTokenExpiry = EmailService.generateTokenExpiry();
+
+    // Update user with new token
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        verificationToken,
+        verificationTokenExpiry,
+      },
+    });
+
+    // Send verification email
+    try {
+      await emailService.sendVerificationEmail(
+        user.email,
+        user.firstName,
+        verificationToken
+      );
+      return {
+        message: "Verification email sent! Please check your inbox.",
+      };
+    } catch (error) {
+      console.error("Failed to send verification email:", error);
+      throw new Error("Failed to send verification email");
+    }
   }
 
   async logout(userId: string) {
@@ -195,14 +315,20 @@ export class AuthService {
       throw new Error("User not found");
     }
 
-    return {
+    console.log("🔍 AuthService.getProfile - Raw user from DB:", {
+      id: user.id,
+      email: user.email,
+      avatar: user.avatar,
+    });
+
+    const response = {
       id: user.id,
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
       role: user.role,
       status: user.status,
-      avatar: user.avatar,
+      avatar: user.avatar || null, // Ensure avatar field is always present
       phone: user.phone,
       timezone: user.timezone,
       language: user.language,
@@ -212,6 +338,14 @@ export class AuthService {
       affiliateProfile: user.affiliateProfile,
       adminProfile: user.adminProfile,
     };
+
+    console.log("📤 AuthService.getProfile - Response being sent:", {
+      id: response.id,
+      email: response.email,
+      avatar: response.avatar,
+    });
+
+    return response;
   }
 
   async updateProfile(userId: string, data: UpdateProfileData) {
@@ -309,7 +443,7 @@ export class AuthService {
     });
 
     // Send reset email
-    await emailService.sendPasswordResetEmail(email, resetToken);
+    await emailService.sendPasswordResetEmail(email, user.firstName, resetToken);
   }
 
   async resetPassword(token: string, newPassword: string) {
@@ -384,4 +518,5 @@ export class AuthService {
 
     return codes;
   }
+
 }

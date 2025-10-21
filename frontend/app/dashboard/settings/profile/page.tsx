@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { DataLoading, ErrorState } from "@/components/ui/loading";
 import {
   Card,
   CardContent,
@@ -76,6 +77,7 @@ export default function ProfileSettingsPage() {
 
       if (response.ok) {
         const data = await response.json();
+        console.log("🚀 ~ fetchProfile ~ data:", data)
         setProfile(data);
         setFormData({
           firstName: data.user.firstName || "",
@@ -156,8 +158,13 @@ export default function ProfileSettingsPage() {
       if (response.ok) {
         const data = await response.json();
         toast.success("Avatar uploaded successfully!", { id: "avatar-upload" });
-        fetchProfile(); // Refresh profile to show new avatar
-        await refreshUser(); // Refresh auth context to update navbar/sidebar
+        
+        // Refresh profile to show new avatar in this page
+        await fetchProfile();
+        
+        // Immediately refresh auth context to update navbar/sidebar
+        // This ensures the avatar is synced across all components
+        await refreshUser();
       } else {
         const error = await response.json();
         toast.error(error.error || "Failed to upload avatar", { id: "avatar-upload" });
@@ -200,24 +207,17 @@ export default function ProfileSettingsPage() {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
-    );
+    return <DataLoading message="Loading profile..." />;
   }
 
   if (!profile) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">Unable to Load Profile</h2>
-          <Button onClick={fetchProfile}>
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Try Again
-          </Button>
-        </div>
-      </div>
+      <ErrorState
+        title="Unable to Load Profile"
+        message="Failed to load your profile information."
+        actionText="Try Again"
+        onAction={fetchProfile}
+      />
     );
   }
 

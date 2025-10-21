@@ -32,6 +32,8 @@ export default function RegisterPage() {
     confirmPassword: "",
   });
   const [error, setError] = useState("");
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
+  const [registrationEmail, setRegistrationEmail] = useState("");
 
   const { register, isAuthenticated, user } = useAuth();
   const router = useRouter();
@@ -99,8 +101,11 @@ export default function RegisterPage() {
         password: formData.password,
         role: "AFFILIATE",
       });
-      toast.success("Registration successful! Welcome to Trackdesk.");
-      router.push("/dashboard");
+      
+      // Show success message instead of logging in
+      setRegistrationSuccess(true);
+      setRegistrationEmail(formData.email);
+      toast.success("Registration successful! Please check your email to verify your account.");
     } catch (error: any) {
       setError(error.message || "Registration failed. Please try again.");
       toast.error(error.message || "Registration failed. Please try again.");
@@ -125,24 +130,68 @@ export default function RegisterPage() {
 
         {/* Registration Card */}
         <Card className="shadow-xl border-0">
-          <CardHeader className="space-y-2 text-center">
-            <div className="mx-auto w-12 h-12 bg-gradient-to-r from-blue-600 to-teal-600 rounded-lg flex items-center justify-center mb-4">
-              <span className="text-white font-bold text-xl">A</span>
-            </div>
-            <CardTitle className="text-2xl font-bold">
-              Join Our Affiliate Program
-            </CardTitle>
-            <CardDescription>
-              Start earning commissions by promoting our products
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {error && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md flex items-center space-x-2">
-                <AlertCircle className="h-4 w-4 text-red-600" />
-                <span className="text-sm text-red-600">{error}</span>
-              </div>
-            )}
+          {registrationSuccess ? (
+            <>
+              <CardHeader className="space-y-2 text-center">
+                <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                  <Check className="h-8 w-8 text-green-600" />
+                </div>
+                <CardTitle className="text-2xl font-bold">
+                  Check Your Email
+                </CardTitle>
+                <CardDescription>
+                  We've sent a verification link to{" "}
+                  <strong className="text-slate-900">{registrationEmail}</strong>
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-md">
+                  <p className="text-sm text-blue-900">
+                    <strong>Next Steps:</strong>
+                  </p>
+                  <ol className="mt-2 text-sm text-blue-800 list-decimal list-inside space-y-1">
+                    <li>Check your email inbox</li>
+                    <li>Click the verification link we sent you</li>
+                    <li>Log in to start earning commissions</li>
+                  </ol>
+                </div>
+                
+                <p className="text-xs text-center text-slate-600">
+                  Didn't receive the email? Check your spam folder or{" "}
+                  <Link href="/auth/verify-email" className="text-blue-600 hover:underline">
+                    resend verification email
+                  </Link>
+                </p>
+                
+                <Button
+                  onClick={() => router.push("/auth/login")}
+                  className="w-full"
+                  variant="outline"
+                >
+                  Go to Login
+                </Button>
+              </CardContent>
+            </>
+          ) : (
+            <>
+              <CardHeader className="space-y-2 text-center">
+                <div className="mx-auto w-12 h-12 bg-gradient-to-r from-blue-600 to-teal-600 rounded-lg flex items-center justify-center mb-4">
+                  <span className="text-white font-bold text-xl">A</span>
+                </div>
+                <CardTitle className="text-2xl font-bold">
+                  Join Our Affiliate Program
+                </CardTitle>
+                <CardDescription>
+                  Start earning commissions by promoting our products
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {error && (
+                  <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md flex items-center space-x-2">
+                    <AlertCircle className="h-4 w-4 text-red-600" />
+                    <span className="text-sm text-red-600">{error}</span>
+                  </div>
+                )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -330,6 +379,8 @@ export default function RegisterPage() {
               </p>
             </div>
           </CardContent>
+            </>
+          )}
         </Card>
 
         {/* Benefits Section */}
