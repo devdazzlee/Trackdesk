@@ -260,7 +260,11 @@ export default function AdminProfileSettingsPage() {
                 <div className="relative">
                   <Avatar className="h-24 w-24">
                     <AvatarImage
-                      src={profile.user.avatar || ""}
+                      src={
+                        profile.user.avatar
+                          ? `http://localhost:3003${profile.user.avatar}`
+                          : ""
+                      }
                       alt={`${profile.user.firstName} ${profile.user.lastName}`}
                     />
                     <AvatarFallback className="text-lg">

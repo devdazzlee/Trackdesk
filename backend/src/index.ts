@@ -7,6 +7,7 @@ import { createServer } from "http";
 import { Server } from "socket.io";
 import dotenv from "dotenv";
 import winston from "winston";
+import path from "path";
 
 // Import routes
 import authRoutes from "./routes/auth";
@@ -140,6 +141,9 @@ app.use(
 app.use(cookieParser());
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
+
+// Serve static files (uploads folder for avatars, etc.)
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 // Handle preflight requests
 app.options("*", cors());
