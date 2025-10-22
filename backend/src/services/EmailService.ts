@@ -704,6 +704,363 @@ The Trackdesk Team
     });
   }
 
+  // Send offer creation email to affiliate
+  async sendOfferCreatedEmail(
+    email: string,
+    firstName: string,
+    offerDetails: {
+      offerName: string;
+      offerDescription: string;
+      commissionRate: number;
+      startDate: string;
+      endDate: string;
+      referralCodes: string[];
+      terms: string;
+      requirements: string;
+    }
+  ): Promise<void> {
+    const dashboardUrl = `${process.env.FRONTEND_URL || "http://localhost:3000"}/dashboard/links`;
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>New Offer Available - Trackdesk</title>
+          <style>
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+              line-height: 1.6;
+              color: #374151;
+              background-color: #f9fafb;
+              margin: 0;
+              padding: 0;
+            }
+            .container {
+              max-width: 600px;
+              margin: 0 auto;
+              background-color: #ffffff;
+              border-radius: 8px;
+              overflow: hidden;
+              box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            }
+            .header {
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              color: white;
+              padding: 30px 20px;
+              text-align: center;
+            }
+            .logo {
+              font-size: 24px;
+              font-weight: bold;
+              margin-bottom: 10px;
+            }
+            .offer-icon {
+              font-size: 48px;
+              margin-bottom: 15px;
+            }
+            h1 {
+              margin: 0;
+              font-size: 28px;
+              font-weight: 600;
+            }
+            .subtitle {
+              margin: 10px 0 0 0;
+              opacity: 0.9;
+              font-size: 16px;
+            }
+            .content {
+              padding: 30px 20px;
+            }
+            .offer-box {
+              background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+              border: 2px solid #0ea5e9;
+              border-radius: 12px;
+              padding: 25px;
+              margin: 25px 0;
+              text-align: center;
+            }
+            .offer-name {
+              font-size: 24px;
+              font-weight: bold;
+              color: #0c4a6e;
+              margin-bottom: 10px;
+            }
+            .commission-rate {
+              font-size: 32px;
+              font-weight: bold;
+              color: #059669;
+              margin: 15px 0;
+            }
+            .referral-code {
+              background: #1f2937;
+              color: white;
+              padding: 12px 20px;
+              border-radius: 8px;
+              font-family: 'Courier New', monospace;
+              font-size: 18px;
+              font-weight: bold;
+              margin: 15px 0;
+              display: inline-block;
+            }
+            .details-section {
+              background: #f8fafc;
+              border-radius: 8px;
+              padding: 20px;
+              margin: 25px 0;
+            }
+            .details-title {
+              font-size: 18px;
+              font-weight: 600;
+              color: #1f2937;
+              margin-bottom: 15px;
+              border-bottom: 2px solid #e5e7eb;
+              padding-bottom: 8px;
+            }
+            .detail-row {
+              display: flex;
+              justify-content: space-between;
+              margin: 12px 0;
+              padding: 8px 0;
+              border-bottom: 1px solid #e5e7eb;
+            }
+            .detail-row:last-child {
+              border-bottom: none;
+            }
+            .detail-label {
+              font-weight: 600;
+              color: #374151;
+            }
+            .detail-value {
+              color: #6b7280;
+              text-align: right;
+            }
+            .button {
+              display: inline-block;
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              color: white;
+              padding: 15px 30px;
+              text-decoration: none;
+              border-radius: 8px;
+              font-weight: 600;
+              font-size: 16px;
+              margin: 20px 0;
+              transition: transform 0.2s;
+            }
+            .button:hover {
+              transform: translateY(-2px);
+            }
+            .info-box {
+              background: #fef3c7;
+              border: 1px solid #f59e0b;
+              border-radius: 8px;
+              padding: 20px;
+              margin: 25px 0;
+            }
+            .info-box-title {
+              font-weight: 600;
+              color: #92400e;
+              margin-bottom: 10px;
+              font-size: 16px;
+            }
+            .info-box-content {
+              color: #92400e;
+              line-height: 1.6;
+            }
+            .footer {
+              background: #f8fafc;
+              padding: 20px;
+              text-align: center;
+              border-top: 1px solid #e5e7eb;
+            }
+            .footer-text {
+              margin: 8px 0;
+              color: #6b7280;
+            }
+            .social-links {
+              margin: 15px 0;
+            }
+            .social-links a {
+              color: #667eea;
+              text-decoration: none;
+              margin: 0 10px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <div class="logo">🎯 Trackdesk</div>
+              <div class="offer-icon">🎁</div>
+              <h1>New Offer Available!</h1>
+              <p class="subtitle">You've been assigned a new promotional offer</p>
+            </div>
+            
+            <div class="content">
+              <p style="font-size: 16px; color: #374151;">
+                Hi <strong>${firstName}</strong>,
+              </p>
+              
+              <p style="font-size: 16px; color: #374151;">
+                Great news! We've created a new promotional offer specifically for you. This offer is now available in your dashboard and ready to start promoting.
+              </p>
+              
+              <div class="offer-box">
+                <div class="offer-name">${offerDetails.offerName}</div>
+                <div class="commission-rate">${offerDetails.commissionRate}% Commission</div>
+                ${
+                  offerDetails.referralCodes.length > 0
+                    ? `
+                  <div style="margin: 15px 0;">
+                    <p style="color: #0c4a6e; font-size: 14px; margin-bottom: 10px;">
+                      Your Referral Codes:
+                    </p>
+                    ${offerDetails.referralCodes
+                      .map(
+                        (code) => `
+                      <div class="referral-code" style="margin: 8px 0;">${code}</div>
+                    `
+                      )
+                      .join("")}
+                    <p style="margin: 15px 0 0 0; color: #0c4a6e; font-size: 14px;">
+                      Use these referral codes when promoting this offer
+                    </p>
+                  </div>
+                `
+                    : `
+                  <div class="referral-code">No referral codes assigned</div>
+                  <p style="margin: 15px 0 0 0; color: #0c4a6e; font-size: 14px;">
+                    Contact support to get referral codes for this offer
+                  </p>
+                `
+                }
+              </div>
+              
+              <div class="details-section">
+                <div class="details-title">Offer Details</div>
+                
+                <div class="detail-row">
+                  <span class="detail-label">Offer Name</span>
+                  <span class="detail-value">${offerDetails.offerName}</span>
+                </div>
+                
+                <div class="detail-row">
+                  <span class="detail-label">Commission Rate</span>
+                  <span class="detail-value">${offerDetails.commissionRate}%</span>
+                </div>
+                
+                <div class="detail-row">
+                  <span class="detail-label">Start Date</span>
+                  <span class="detail-value">${offerDetails.startDate}</span>
+                </div>
+                
+                <div class="detail-row">
+                  <span class="detail-label">End Date</span>
+                  <span class="detail-value">${offerDetails.endDate}</span>
+                </div>
+                
+                <div class="detail-row">
+                  <span class="detail-label">Your Referral Codes</span>
+                  <span class="detail-value" style="font-family: 'Courier New', monospace; font-weight: bold;">
+                    ${offerDetails.referralCodes.length > 0 ? offerDetails.referralCodes.join(", ") : "None assigned"}
+                  </span>
+                </div>
+              </div>
+              
+              <div style="text-align: center;">
+                <a href="${dashboardUrl}" class="button">
+                  View Offer in Dashboard →
+                </a>
+              </div>
+              
+              <div class="info-box">
+                <div class="info-box-title">📋 Terms & Conditions</div>
+                <div class="info-box-content">
+                  ${offerDetails.terms}
+                </div>
+              </div>
+              
+              <div class="info-box">
+                <div class="info-box-title">📝 Requirements</div>
+                <div class="info-box-content">
+                  ${offerDetails.requirements}
+                </div>
+              </div>
+              
+              <p style="font-size: 16px; color: #374151; margin-top: 30px;">
+                <strong>Ready to start earning?</strong> Log into your dashboard to access all promotional materials, track your performance, and start promoting this offer to your audience.
+              </p>
+              
+              <p style="font-size: 14px; color: #6b7280;">
+                If you have any questions about this offer or need assistance, please don't hesitate to contact our support team.
+              </p>
+              
+              <div class="footer">
+                <p class="footer-text">
+                  <strong>Happy promoting! 🚀</strong>
+                </p>
+                <p class="footer-text">
+                  The Trackdesk Team
+                </p>
+                <div class="social-links">
+                  <a href="#">Help Center</a> • 
+                  <a href="#">Contact Support</a> • 
+                  <a href="#">Dashboard</a>
+                </div>
+                <p style="font-size: 12px; color: #9ca3af; margin-top: 20px;">
+                  This email was sent to <strong>${email}</strong> regarding your affiliate account.<br>
+                  © ${new Date().getFullYear()} Trackdesk. All rights reserved.
+                </p>
+                <p style="font-size: 11px; color: #d1d5db; margin-top: 10px;">
+                  This is an automated email notification. Please do not reply to this message.
+                </p>
+              </div>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    const text = `
+      New Offer Available - Trackdesk
+
+      Hi ${firstName},
+
+      Great news! We've created a new promotional offer specifically for you. This offer is now available in your dashboard and ready to start promoting.
+
+      OFFER DETAILS:
+      - Offer Name: ${offerDetails.offerName}
+      - Commission Rate: ${offerDetails.commissionRate}%
+      - Start Date: ${offerDetails.startDate}
+      - End Date: ${offerDetails.endDate}
+      - Your Referral Codes: ${offerDetails.referralCodes.length > 0 ? offerDetails.referralCodes.join(", ") : "None assigned"}
+
+      TERMS & CONDITIONS:
+      ${offerDetails.terms}
+
+      REQUIREMENTS:
+      ${offerDetails.requirements}
+
+      Ready to start earning? Log into your dashboard to access all promotional materials, track your performance, and start promoting this offer to your audience.
+
+      View your dashboard: ${dashboardUrl}
+
+      If you have any questions about this offer or need assistance, please don't hesitate to contact our support team.
+
+      Happy promoting! 🚀
+
+      The Trackdesk Team
+    `.trim();
+
+    await this.sendEmail({
+      to: email,
+      subject: `🎁 New Offer Available: ${offerDetails.offerName} - ${offerDetails.commissionRate}% Commission`,
+      html,
+      text,
+    });
+  }
+
   // Generate a secure random token
   static generateToken(): string {
     return crypto.randomBytes(32).toString("hex");

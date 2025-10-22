@@ -62,7 +62,9 @@ router.get("/", auth_1.authenticateToken, async (req, res) => {
             approvalPeriod: 30,
             cookieDuration: 30,
         };
-        if (settings.general && typeof settings.general === 'object' && 'commissionSettings' in settings.general) {
+        if (settings.general &&
+            typeof settings.general === "object" &&
+            "commissionSettings" in settings.general) {
             commissionSettings = settings.general.commissionSettings;
         }
         const affiliateSettings = {
@@ -156,7 +158,9 @@ router.post("/commission/preview", auth_1.authenticateToken, async (req, res) =>
             where: { accountId: ACCOUNT_ID },
         });
         let currentDefaultRate = 5;
-        if (currentSettings?.general && typeof currentSettings.general === 'object' && 'commissionSettings' in currentSettings.general) {
+        if (currentSettings?.general &&
+            typeof currentSettings.general === "object" &&
+            "commissionSettings" in currentSettings.general) {
             const general = currentSettings.general;
             if (general.commissionSettings?.defaultRate) {
                 currentDefaultRate = general.commissionSettings.defaultRate;
@@ -230,7 +234,9 @@ router.put("/commission", auth_1.authenticateToken, async (req, res) => {
             where: { accountId: ACCOUNT_ID },
         });
         let currentDefaultRate = 5;
-        if (currentSettings?.general && typeof currentSettings.general === 'object' && 'commissionSettings' in currentSettings.general) {
+        if (currentSettings?.general &&
+            typeof currentSettings.general === "object" &&
+            "commissionSettings" in currentSettings.general) {
             const general = currentSettings.general;
             if (general.commissionSettings?.defaultRate) {
                 currentDefaultRate = general.commissionSettings.defaultRate;
@@ -257,7 +263,7 @@ router.put("/commission", auth_1.authenticateToken, async (req, res) => {
         const existingSettings = await prisma.systemSettings.findUnique({
             where: { accountId: ACCOUNT_ID },
         });
-        const existingGeneral = (existingSettings?.general && typeof existingSettings.general === 'object')
+        const existingGeneral = existingSettings?.general && typeof existingSettings.general === "object"
             ? existingSettings.general
             : {};
         const settings = await prisma.systemSettings.upsert({

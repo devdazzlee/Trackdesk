@@ -63,12 +63,20 @@ import {
 import { toast } from "sonner";
 import { config } from "@/config/config";
 
+interface ReferralCode {
+  id: string;
+  code: string;
+  type: string;
+  commissionRate: number;
+}
+
 interface Affiliate {
   id: string;
   name: string;
   email: string;
   tier: string;
   status: string;
+  referralCodes: ReferralCode[];
 }
 
 interface Creative {
@@ -159,7 +167,8 @@ export default function OffersManagementPage() {
     terms: "",
     requirements: "",
     tags: [] as string[],
-    affiliateIds: [] as string[],
+    affiliateId: "",
+    referralCodeIds: [] as string[],
   });
 
   const [newCreative, setNewCreative] = useState({
@@ -182,6 +191,8 @@ export default function OffersManagementPage() {
     requirements: "",
     tags: [] as string[],
     status: "active",
+    affiliateId: "",
+    referralCodeIds: [] as string[],
   });
 
   const [editCreative, setEditCreative] = useState({
@@ -271,8 +282,10 @@ export default function OffersManagementPage() {
   };
 
   const handleCreateOffer = async () => {
-    if (!newOffer.name || !newOffer.description) {
-      toast.error("Please fill in all required fields");
+    if (!newOffer.name || !newOffer.description || !newOffer.affiliateId) {
+      toast.error(
+        "Please fill in all required fields including affiliate selection"
+      );
       return;
     }
 
@@ -288,7 +301,9 @@ export default function OffersManagementPage() {
 
       if (response.ok) {
         const data = await response.json();
-        toast.success(data.message || "Offer created successfully");
+        toast.success(
+          data.message || "Offer created successfully and assigned to affiliate"
+        );
         setCreateDialogOpen(false);
         setNewOffer({
           name: "",
@@ -300,7 +315,8 @@ export default function OffersManagementPage() {
           terms: "",
           requirements: "",
           tags: [],
-          affiliateIds: [],
+          affiliateId: "",
+          referralCodeIds: [],
         });
         fetchOffers();
       } else {
@@ -416,16 +432,56 @@ export default function OffersManagementPage() {
     fetchOfferCreatives(offerId);
   };
 
-  const handleAffiliateSelection = (affiliateId: string, checked: boolean) => {
+  const handleAffiliateSelection = (affiliateId: string) => {
+    setNewOffer({
+      ...newOffer,
+      affiliateId: affiliateId,
+      referralCodeIds: [], // Reset referral codes when affiliate changes
+    });
+  };
+
+  const handleReferralCodeSelection = (
+    referralCodeId: string,
+    checked: boolean
+  ) => {
     if (checked) {
       setNewOffer({
         ...newOffer,
-        affiliateIds: [...newOffer.affiliateIds, affiliateId],
+        referralCodeIds: [...newOffer.referralCodeIds, referralCodeId],
       });
     } else {
       setNewOffer({
         ...newOffer,
-        affiliateIds: newOffer.affiliateIds.filter((id) => id !== affiliateId),
+        referralCodeIds: newOffer.referralCodeIds.filter(
+          (id) => id !== referralCodeId
+        ),
+      });
+    }
+  };
+
+  const handleEditAffiliateSelection = (affiliateId: string) => {
+    setEditOffer({
+      ...editOffer,
+      affiliateId: affiliateId,
+      referralCodeIds: [], // Reset referral codes when affiliate changes
+    });
+  };
+
+  const handleEditReferralCodeSelection = (
+    referralCodeId: string,
+    checked: boolean
+  ) => {
+    if (checked) {
+      setEditOffer({
+        ...editOffer,
+        referralCodeIds: [...editOffer.referralCodeIds, referralCodeId],
+      });
+    } else {
+      setEditOffer({
+        ...editOffer,
+        referralCodeIds: editOffer.referralCodeIds.filter(
+          (id) => id !== referralCodeId
+        ),
       });
     }
   };
@@ -443,13 +499,22 @@ export default function OffersManagementPage() {
       requirements: offer.requirements || "",
       tags: offer.tags || [],
       status: offer.status,
+      affiliateId: offer.applications?.[0]?.affiliateId || "",
+      referralCodeIds: [], // Will be populated when affiliate is selected
     });
     setEditDialogOpen(true);
   };
 
   const handleUpdateOffer = async () => {
-    if (!editingOffer || !editOffer.name || !editOffer.description) {
-      toast.error("Please fill in all required fields");
+    if (
+      !editingOffer ||
+      !editOffer.name ||
+      !editOffer.description ||
+      !editOffer.affiliateId
+    ) {
+      toast.error(
+        "Please fill in all required fields including affiliate selection"
+      );
       return;
     }
 
@@ -754,48 +819,24 @@ export default function OffersManagementPage() {
           <DialogHeader>
             <DialogTitle>Create New Offer</DialogTitle>
             <DialogDescription>
-              Add a new promotional offer and assign it to specific affiliates
+              Create a new promotional offer and assign it to a specific
+              affiliate with their referral codes
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-6">
             {/* Basic Information */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Basic Information</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Offer Name *</Label>
-                  <Input
-                    id="name"
-                    placeholder="Premium Plan Promotion"
-                    value={newOffer.name}
-                    onChange={(e) =>
-                      setNewOffer({ ...newOffer, name: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="category">Category *</Label>
-                  <Select
-                    value={newOffer.category}
-                    onValueChange={(value) =>
-                      setNewOffer({ ...newOffer, category: value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Software">Software</SelectItem>
-                      <SelectItem value="E-commerce">E-commerce</SelectItem>
-                      <SelectItem value="SaaS">SaaS</SelectItem>
-                      <SelectItem value="Digital Products">
-                        Digital Products
-                      </SelectItem>
-                      <SelectItem value="Services">Services</SelectItem>
-                      <SelectItem value="Other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="name">Offer Name *</Label>
+                <Input
+                  id="name"
+                  placeholder="Premium Plan Promotion"
+                  value={newOffer.name}
+                  onChange={(e) =>
+                    setNewOffer({ ...newOffer, name: e.target.value })
+                  }
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="description">Description *</Label>
@@ -808,6 +849,29 @@ export default function OffersManagementPage() {
                   }
                   rows={3}
                 />
+              </div>
+            </div>
+
+            {/* Affiliate Selection */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Affiliate Selection</h3>
+              <div className="space-y-2">
+                <Label htmlFor="affiliate">Select Affiliate *</Label>
+                <Select
+                  value={newOffer.affiliateId}
+                  onValueChange={handleAffiliateSelection}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose an affiliate" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {affiliates.map((affiliate) => (
+                      <SelectItem key={affiliate.id} value={affiliate.id}>
+                        {affiliate.name} ({affiliate.email}) - {affiliate.tier}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -876,48 +940,91 @@ export default function OffersManagementPage() {
               </div>
             </div>
 
-            {/* Affiliate Assignment */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Assign to Affiliates</h3>
-              <div className="space-y-2">
-                <Label>Select Affiliates (Optional)</Label>
-                <div className="max-h-40 overflow-y-auto border rounded-md p-3 space-y-2">
-                  {affiliates.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">
-                      No active affiliates found
-                    </p>
-                  ) : (
-                    affiliates.map((affiliate) => (
-                      <div
-                        key={affiliate.id}
-                        className="flex items-center space-x-2"
-                      >
-                        <Checkbox
-                          id={affiliate.id}
-                          checked={newOffer.affiliateIds.includes(affiliate.id)}
-                          onCheckedChange={(checked) =>
-                            handleAffiliateSelection(
-                              affiliate.id,
-                              checked as boolean
-                            )
-                          }
-                        />
-                        <Label
-                          htmlFor={affiliate.id}
-                          className="text-sm font-normal cursor-pointer"
-                        >
-                          {affiliate.name} ({affiliate.email}) -{" "}
-                          {affiliate.tier}
-                        </Label>
+            {/* Selected Affiliate Info */}
+            {newOffer.affiliateId && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Selected Affiliate</h3>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  {(() => {
+                    const selectedAffiliate = affiliates.find(
+                      (aff) => aff.id === newOffer.affiliateId
+                    );
+                    return selectedAffiliate ? (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-semibold text-blue-900">
+                              {selectedAffiliate.name}
+                            </p>
+                            <p className="text-sm text-blue-700">
+                              {selectedAffiliate.email} •{" "}
+                              {selectedAffiliate.tier}
+                            </p>
+                          </div>
+                          <Badge
+                            variant="secondary"
+                            className="bg-blue-100 text-blue-800"
+                          >
+                            {selectedAffiliate.status}
+                          </Badge>
+                        </div>
+
+                        {/* Referral Codes Selection */}
+                        {selectedAffiliate.referralCodes.length > 0 ? (
+                          <div className="bg-white border border-blue-300 rounded-md p-3">
+                            <p className="text-sm font-medium text-blue-900 mb-3">
+                              Select Referral Codes:
+                            </p>
+                            <div className="space-y-2">
+                              {selectedAffiliate.referralCodes.map((code) => (
+                                <div
+                                  key={code.id}
+                                  className="flex items-center space-x-2"
+                                >
+                                  <Checkbox
+                                    id={code.id}
+                                    checked={newOffer.referralCodeIds.includes(
+                                      code.id
+                                    )}
+                                    onCheckedChange={(checked) =>
+                                      handleReferralCodeSelection(
+                                        code.id,
+                                        checked as boolean
+                                      )
+                                    }
+                                  />
+                                  <Label
+                                    htmlFor={code.id}
+                                    className="text-sm font-normal cursor-pointer flex-1"
+                                  >
+                                    <code className="text-sm font-mono font-bold text-blue-800 bg-blue-100 px-2 py-1 rounded mr-2">
+                                      {code.code}
+                                    </code>
+                                    <span className="text-blue-700">
+                                      ({code.type} - {code.commissionRate}%)
+                                    </span>
+                                  </Label>
+                                </div>
+                              ))}
+                            </div>
+                            <p className="text-xs text-blue-600 mt-2">
+                              Selected: {newOffer.referralCodeIds.length}{" "}
+                              referral code(s)
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="bg-white border border-blue-300 rounded-md p-3">
+                            <p className="text-sm text-blue-700">
+                              No referral codes available for this affiliate
+                            </p>
+                          </div>
+                        )}
                       </div>
-                    ))
-                  )}
+                    ) : null;
+                  })()}
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Selected: {newOffer.affiliateIds.length} affiliate(s)
-                </p>
               </div>
-            </div>
+            )}
           </div>
           <DialogFooter>
             <Button
@@ -939,48 +1046,23 @@ export default function OffersManagementPage() {
           <DialogHeader>
             <DialogTitle>Edit Offer</DialogTitle>
             <DialogDescription>
-              Update the offer details and settings
+              Update the offer details, affiliate assignment, and referral codes
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-6">
             {/* Basic Information */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Basic Information</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="editName">Offer Name *</Label>
-                  <Input
-                    id="editName"
-                    placeholder="Premium Plan Promotion"
-                    value={editOffer.name}
-                    onChange={(e) =>
-                      setEditOffer({ ...editOffer, name: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="editCategory">Category *</Label>
-                  <Select
-                    value={editOffer.category}
-                    onValueChange={(value) =>
-                      setEditOffer({ ...editOffer, category: value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Software">Software</SelectItem>
-                      <SelectItem value="E-commerce">E-commerce</SelectItem>
-                      <SelectItem value="SaaS">SaaS</SelectItem>
-                      <SelectItem value="Digital Products">
-                        Digital Products
-                      </SelectItem>
-                      <SelectItem value="Services">Services</SelectItem>
-                      <SelectItem value="Other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="editName">Offer Name *</Label>
+                <Input
+                  id="editName"
+                  placeholder="Premium Plan Promotion"
+                  value={editOffer.name}
+                  onChange={(e) =>
+                    setEditOffer({ ...editOffer, name: e.target.value })
+                  }
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="editDescription">Description *</Label>
@@ -995,6 +1077,115 @@ export default function OffersManagementPage() {
                 />
               </div>
             </div>
+
+            {/* Affiliate Selection */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Affiliate Selection</h3>
+              <div className="space-y-2">
+                <Label htmlFor="editAffiliate">Select Affiliate *</Label>
+                <Select
+                  value={editOffer.affiliateId}
+                  onValueChange={handleEditAffiliateSelection}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose an affiliate" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {affiliates.map((affiliate) => (
+                      <SelectItem key={affiliate.id} value={affiliate.id}>
+                        {affiliate.name} ({affiliate.email}) - {affiliate.tier}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Selected Affiliate Info */}
+            {editOffer.affiliateId && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Selected Affiliate</h3>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  {(() => {
+                    const selectedAffiliate = affiliates.find(
+                      (aff) => aff.id === editOffer.affiliateId
+                    );
+                    return selectedAffiliate ? (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-semibold text-blue-900">
+                              {selectedAffiliate.name}
+                            </p>
+                            <p className="text-sm text-blue-700">
+                              {selectedAffiliate.email} •{" "}
+                              {selectedAffiliate.tier}
+                            </p>
+                          </div>
+                          <Badge
+                            variant="secondary"
+                            className="bg-blue-100 text-blue-800"
+                          >
+                            {selectedAffiliate.status}
+                          </Badge>
+                        </div>
+
+                        {/* Referral Codes Selection */}
+                        {selectedAffiliate.referralCodes.length > 0 ? (
+                          <div className="bg-white border border-blue-300 rounded-md p-3">
+                            <p className="text-sm font-medium text-blue-900 mb-3">
+                              Select Referral Codes:
+                            </p>
+                            <div className="space-y-2">
+                              {selectedAffiliate.referralCodes.map((code) => (
+                                <div
+                                  key={code.id}
+                                  className="flex items-center space-x-2"
+                                >
+                                  <Checkbox
+                                    id={`edit-${code.id}`}
+                                    checked={editOffer.referralCodeIds.includes(
+                                      code.id
+                                    )}
+                                    onCheckedChange={(checked) =>
+                                      handleEditReferralCodeSelection(
+                                        code.id,
+                                        checked as boolean
+                                      )
+                                    }
+                                  />
+                                  <Label
+                                    htmlFor={`edit-${code.id}`}
+                                    className="text-sm font-normal cursor-pointer flex-1"
+                                  >
+                                    <code className="text-sm font-mono font-bold text-blue-800 bg-blue-100 px-2 py-1 rounded mr-2">
+                                      {code.code}
+                                    </code>
+                                    <span className="text-blue-700">
+                                      ({code.type} - {code.commissionRate}%)
+                                    </span>
+                                  </Label>
+                                </div>
+                              ))}
+                            </div>
+                            <p className="text-xs text-blue-600 mt-2">
+                              Selected: {editOffer.referralCodeIds.length}{" "}
+                              referral code(s)
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="bg-white border border-blue-300 rounded-md p-3">
+                            <p className="text-sm text-blue-700">
+                              No referral codes available for this affiliate
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    ) : null;
+                  })()}
+                </div>
+              </div>
+            )}
 
             {/* Commission Settings */}
             <div className="space-y-4">

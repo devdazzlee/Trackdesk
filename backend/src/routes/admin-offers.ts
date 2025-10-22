@@ -2,6 +2,7 @@ import express, { Router } from "express";
 import { authenticateToken, requireRole } from "../middleware/auth";
 import { PrismaClient } from "@prisma/client";
 import { z } from "zod";
+import emailService from "../services/EmailService";
 
 const router: Router = express.Router();
 const prisma = new PrismaClient();
@@ -158,7 +159,7 @@ router.get(
   }
 );
 
-// Get all affiliates for dropdown
+// Get all affiliates for dropdown with referral codes
 router.get(
   "/affiliates",
   authenticateToken,
@@ -177,6 +178,20 @@ router.get(
               email: true,
             },
           },
+          referralCodes: {
+            where: {
+              isActive: true,
+            },
+            select: {
+              id: true,
+              code: true,
+              type: true,
+              commissionRate: true,
+            },
+            orderBy: {
+              createdAt: "desc",
+            },
+          },
         },
         orderBy: {
           user: {
@@ -191,6 +206,12 @@ router.get(
         email: affiliate.user.email,
         tier: affiliate.tier,
         status: affiliate.status,
+        referralCodes: affiliate.referralCodes.map((code) => ({
+          id: code.id,
+          code: code.code,
+          type: code.type,
+          commissionRate: code.commissionRate,
+        })),
       }));
 
       res.json({
@@ -204,7 +225,7 @@ router.get(
   }
 );
 
-// Create new offer
+// Create new offer for specific affiliate
 router.post(
   "/",
   authenticateToken,
@@ -221,7 +242,8 @@ router.post(
         terms,
         requirements,
         tags,
-        affiliateIds, // Array of affiliate IDs to assign this offer to
+        affiliateId, // Single affiliate ID to assign this offer to
+        referralCodeIds, // Array of referral code IDs to associate with this offer
       } = req.body;
 
       // Validate input
@@ -240,7 +262,8 @@ router.post(
         terms: z.string().optional(),
         requirements: z.string().optional(),
         tags: z.array(z.string()).optional(),
-        affiliateIds: z.array(z.string()).optional(),
+        affiliateId: z.string().min(1, "Affiliate selection is required"),
+        referralCodeIds: z.array(z.string()).optional(),
       });
 
       const validatedData = schema.parse({
@@ -253,8 +276,37 @@ router.post(
         terms,
         requirements,
         tags: tags || [],
-        affiliateIds: affiliateIds || [],
+        affiliateId,
+        referralCodeIds: referralCodeIds || [],
       });
+
+      // Verify affiliate exists and get their details
+      const affiliate = await prisma.affiliateProfile.findUnique({
+        where: { id: validatedData.affiliateId },
+        include: {
+          user: {
+            select: {
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
+          },
+          referralCodes: {
+            where: {
+              isActive: true,
+            },
+            select: {
+              id: true,
+              code: true,
+              type: true,
+            },
+          },
+        },
+      });
+
+      if (!affiliate) {
+        return res.status(404).json({ error: "Affiliate not found" });
+      }
 
       // Create the offer
       const offer = await prisma.offer.create({
@@ -274,81 +326,86 @@ router.post(
         },
       });
 
-      // Create offer applications for selected affiliates
-      if (validatedData.affiliateIds.length > 0) {
-        const applications = await Promise.all(
-          validatedData.affiliateIds.map((affiliateId) =>
-            prisma.offerApplication.create({
-              data: {
-                affiliateId,
-                offerId: offer.id,
-                status: "APPROVED", // Auto-approve when admin creates
-              },
-            })
-          )
+      // Create offer application for the selected affiliate
+      const application = await prisma.offerApplication.create({
+        data: {
+          affiliateId: validatedData.affiliateId,
+          offerId: offer.id,
+          status: "APPROVED", // Auto-approve when admin creates
+        },
+      });
+
+      // Log activity
+      await prisma.activity.create({
+        data: {
+          userId: req.user.id,
+          action: "offer_created",
+          resource: "offer",
+          details: {
+            offerId: offer.id,
+            offerName: offer.name,
+            assignedAffiliate: affiliate.id,
+            affiliateName: `${affiliate.user.firstName} ${affiliate.user.lastName}`,
+            referralCode: affiliate.referralCodes[0]?.code || null,
+          },
+        },
+      });
+
+      // Send email notification to the affiliate
+      try {
+        // Get selected referral codes
+        const selectedReferralCodes = affiliate.referralCodes.filter((code) =>
+          validatedData.referralCodeIds.includes(code.id)
         );
 
-        // Log activity
-        await prisma.activity.create({
-          data: {
-            userId: req.user.id,
-            action: "offer_created",
-            resource: "offer",
-            details: {
-              offerId: offer.id,
-              offerName: offer.name,
-              assignedAffiliates: validatedData.affiliateIds.length,
-              affiliateIds: validatedData.affiliateIds,
-            },
-          },
-        });
-
-        res.json({
-          success: true,
-          message: `Offer created successfully and assigned to ${applications.length} affiliate(s)`,
-          offer: {
-            id: offer.id,
-            name: offer.name,
-            description: offer.description,
-            category: offer.category,
+        await emailService.sendOfferCreatedEmail(
+          affiliate.user.email,
+          affiliate.user.firstName,
+          {
+            offerName: offer.name,
+            offerDescription: offer.description,
             commissionRate: offer.commissionRate,
-            status: offer.status.toLowerCase(),
             startDate: offer.startDate.toISOString().split("T")[0],
-            endDate: offer.endDate?.toISOString().split("T")[0] || null,
-            assignedAffiliates: applications.length,
-          },
-        });
-      } else {
-        // Log activity for offer without assignments
-        await prisma.activity.create({
-          data: {
-            userId: req.user.id,
-            action: "offer_created",
-            resource: "offer",
-            details: {
-              offerId: offer.id,
-              offerName: offer.name,
-              assignedAffiliates: 0,
-            },
-          },
-        });
-
-        res.json({
-          success: true,
-          message: "Offer created successfully (no affiliates assigned yet)",
-          offer: {
-            id: offer.id,
-            name: offer.name,
-            description: offer.description,
-            category: offer.category,
-            commissionRate: offer.commissionRate,
-            status: offer.status.toLowerCase(),
-            startDate: offer.startDate.toISOString().split("T")[0],
-            endDate: offer.endDate?.toISOString().split("T")[0] || null,
-            assignedAffiliates: 0,
-          },
-        });
+            endDate:
+              offer.endDate?.toISOString().split("T")[0] || "No end date",
+            referralCodes: selectedReferralCodes.map((code) => code.code),
+            terms: offer.terms || "Standard terms apply",
+            requirements: offer.requirements || "No specific requirements",
+          }
+        );
+      } catch (emailError) {
+        console.error("Failed to send offer creation email:", emailError);
+        // Don't fail the request if email fails
       }
+
+      res.status(201).json({
+        success: true,
+        message: "Offer created successfully and assigned to affiliate",
+        offer: {
+          id: offer.id,
+          name: offer.name,
+          description: offer.description,
+          category: offer.category,
+          commissionRate: offer.commissionRate,
+          status: offer.status.toLowerCase(),
+          startDate: offer.startDate.toISOString().split("T")[0],
+          endDate: offer.endDate?.toISOString().split("T")[0] || null,
+          terms: offer.terms,
+          requirements: offer.requirements,
+          tags: offer.tags,
+          createdAt: offer.createdAt,
+          assignedAffiliate: {
+            id: affiliate.id,
+            name: `${affiliate.user.firstName} ${affiliate.user.lastName}`,
+            email: affiliate.user.email,
+            referralCodes: affiliate.referralCodes.map((code) => ({
+              id: code.id,
+              code: code.code,
+              type: code.type,
+            })),
+          },
+        },
+      });
     } catch (error) {
       console.error("Error creating offer:", error);
       if (error instanceof z.ZodError) {

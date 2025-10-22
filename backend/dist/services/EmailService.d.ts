@@ -20,6 +20,16 @@ declare class EmailService {
         paidDate: string;
         paymentMethod: string;
     }): Promise<void>;
+    sendOfferCreatedEmail(email: string, firstName: string, offerDetails: {
+        offerName: string;
+        offerDescription: string;
+        commissionRate: number;
+        startDate: string;
+        endDate: string;
+        referralCodes: string[];
+        terms: string;
+        requirements: string;
+    }): Promise<void>;
     static generateToken(): string;
     static generateTokenExpiry(): Date;
 }
