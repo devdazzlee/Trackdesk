@@ -365,27 +365,11 @@ export default function AdminDashboardPage() {
   };
 
   if (isLoading || isDataLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600"></div>
-        <p>Loading dashboard data...</p>
-      </div>
-    );
+    return <AdminLoading message="Loading admin dashboard..." />;
   }
 
   if (!user) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">
-            Authentication Required
-          </h2>
-          <p className="text-gray-600">
-            Please log in to access the admin dashboard.
-          </p>
-        </div>
-      </div>
-    );
+    return <AuthRequired message="Admin Access Required" actionText="Go to Login" actionUrl="/auth/login" />;
   }
 
   if (!dashboardData) {

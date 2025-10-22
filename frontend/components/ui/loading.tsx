@@ -4,21 +4,34 @@ import { ReactNode } from "react";
 import { Loader2 } from "lucide-react";
 
 interface LoadingSpinnerProps {
-  size?: "sm" | "md" | "lg" | "xl";
+  size?: "xs" | "sm" | "md" | "lg" | "xl" | "2xl";
   className?: string;
+  color?: "blue" | "gray" | "white";
 }
 
-export function LoadingSpinner({ size = "md", className = "" }: LoadingSpinnerProps) {
+export function LoadingSpinner({ 
+  size = "md", 
+  className = "",
+  color = "blue"
+}: LoadingSpinnerProps) {
   const sizeClasses = {
+    xs: "h-3 w-3",
     sm: "h-4 w-4",
     md: "h-8 w-8", 
     lg: "h-12 w-12",
-    xl: "h-16 w-16"
+    xl: "h-16 w-16",
+    "2xl": "h-32 w-32"
+  };
+
+  const colorClasses = {
+    blue: "text-blue-600",
+    gray: "text-gray-600",
+    white: "text-white"
   };
 
   return (
     <Loader2 
-      className={`animate-spin text-blue-600 ${sizeClasses[size]} ${className}`}
+      className={`animate-spin ${colorClasses[color]} ${sizeClasses[size]} ${className}`}
     />
   );
 }
@@ -87,6 +100,62 @@ interface AuthLoadingProps {
 export function AuthLoading({ message = "Authenticating..." }: AuthLoadingProps) {
   return (
     <LoadingContainer size="xl" minHeight="screen" message={message} />
+  );
+}
+
+// Standardized page loading components
+interface PageLoadingProps {
+  message?: string;
+  minHeight?: "sm" | "md" | "lg" | "xl" | "screen";
+  showBackground?: boolean;
+}
+
+export function StandardPageLoading({ 
+  message = "Loading...", 
+  minHeight = "md",
+  showBackground = false
+}: PageLoadingProps) {
+  const backgroundClass = showBackground 
+    ? "bg-gradient-to-br from-blue-50 via-white to-teal-50" 
+    : "";
+    
+  return (
+    <div className={`min-h-screen flex items-center justify-center ${backgroundClass}`}>
+      <div className="text-center">
+        <LoadingSpinner size="xl" />
+        <p className="mt-4 text-gray-600">{message}</p>
+      </div>
+    </div>
+  );
+}
+
+interface DashboardLoadingProps {
+  message?: string;
+}
+
+export function DashboardLoading({ message = "Loading dashboard..." }: DashboardLoadingProps) {
+  return (
+    <LoadingContainer size="lg" minHeight="md" message={message} />
+  );
+}
+
+interface AdminLoadingProps {
+  message?: string;
+}
+
+export function AdminLoading({ message = "Loading admin panel..." }: AdminLoadingProps) {
+  return (
+    <LoadingContainer size="lg" minHeight="md" message={message} />
+  );
+}
+
+interface ManagerLoadingProps {
+  message?: string;
+}
+
+export function ManagerLoading({ message = "Loading manager dashboard..." }: ManagerLoadingProps) {
+  return (
+    <LoadingContainer size="lg" minHeight="md" message={message} />
   );
 }
 

@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DashboardLoading } from "@/components/ui/loading";
 import {
   BarChart3,
   TrendingUp,
@@ -282,11 +283,7 @@ export default function DashboardPage() {
   };
 
   if (isLoading || isDataLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
-      </div>
-    );
+    return <DashboardLoading message="Loading dashboard..." />;
   }
 
   if (!user) {
