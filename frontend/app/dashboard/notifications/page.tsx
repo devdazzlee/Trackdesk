@@ -13,6 +13,7 @@ import {
   CheckCircle,
 } from "lucide-react";
 import { config } from "@/config/config";
+import { DataLoading } from "@/components/ui/loading";
 
 interface Notification {
   id: string;
@@ -326,9 +327,7 @@ export default function NotificationsPage() {
 
       {/* Notifications List */}
       {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        </div>
+        <DataLoading message="Loading notifications..." />
       ) : filteredNotifications.length === 0 ? (
         <div className="text-center py-12">
           <Bell className="h-16 w-16 text-gray-300 mx-auto mb-4" />

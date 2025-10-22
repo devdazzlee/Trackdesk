@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import  { AdminLoading, ErrorState } from "@/components/ui/loading";
 import {
   Card,
   CardContent,
@@ -203,27 +204,17 @@ export default function AdminProfileSettingsPage() {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="flex items-center space-x-2">
-          <RefreshCw className="h-4 w-4 animate-spin" />
-          <span>Loading profile...</span>
-        </div>
-      </div>
-    );
+    return <AdminLoading message="Loading profile..." />;
   }
 
   if (!profile) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <User className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <h2 className="text-xl font-semibold mb-2">Profile Not Found</h2>
-          <p className="text-muted-foreground">
-            Unable to load your profile information.
-          </p>
-        </div>
-      </div>
+      <ErrorState
+        title="Profile Not Found"
+        message="Unable to load your profile information."
+        actionText="Try Again"
+        onAction={fetchProfile}
+      />
     );
   }
 

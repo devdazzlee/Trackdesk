@@ -227,6 +227,9 @@ export class AuthClient {
 
   public async getProfile(): Promise<User> {
     try {
+      console.log("🌐 AuthClient.getProfile - Making request to /auth/me");
+      console.log("🌐 AuthClient.getProfile - Current cookies:", document.cookie);
+      
       const response = await fetch(`${API_BASE_URL}/auth/me`, {
         method: "GET",
         headers: {
@@ -234,6 +237,9 @@ export class AuthClient {
         },
         credentials: "include", // This will send httpOnly cookies
       });
+
+      console.log("🌐 AuthClient.getProfile - Response status:", response.status);
+      console.log("🌐 AuthClient.getProfile - Response headers:", Object.fromEntries(response.headers.entries()));
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: "Failed to fetch profile" }));

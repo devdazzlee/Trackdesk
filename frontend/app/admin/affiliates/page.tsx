@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { AdminLoading } from "@/components/ui/loading";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -261,11 +262,7 @@ export default function AffiliatesManagementPage() {
   );
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
-    );
+    return <AdminLoading message="Loading affiliates..." />;
   }
 
   return (
