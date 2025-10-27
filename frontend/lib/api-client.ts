@@ -5,18 +5,23 @@ import { toast } from "sonner";
 // Create axios instance with base configuration
 const apiClient = axios.create({
   baseURL: config.apiUrl,
-  withCredentials: true,
+  withCredentials: false, // Using localStorage now
   headers: {
     "Content-Type": "application/json",
   },
   timeout: 30000, // 30 seconds
 });
 
-// Request interceptor - Add auth token if available
+// Request interceptor - Add auth token from localStorage
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    // Cookies are automatically sent with credentials: true
-    // You can add any custom headers here if needed
+    // Get token from localStorage
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("accessToken");
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    }
     return config;
   },
   (error: any) => {

@@ -119,51 +119,51 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const refreshUser = async (): Promise<void> => {
     try {
-      // Don't check for token - it's httpOnly and JavaScript can't read it
-      // Just try to call the API with credentials:include
-      // If the httpOnly cookie exists, the request will succeed
-      
       const userData = await authClient.getProfile();
       console.log("✅ AuthContext.refreshUser - Received user data:", {
         id: userData.id,
         email: userData.email,
         avatar: userData.avatar,
       });
-      
+
       // Validate that we received the required user fields
-      if (!userData || !userData.id || !userData.email || !userData.firstName || !userData.lastName) {
+      if (
+        !userData ||
+        !userData.id ||
+        !userData.email ||
+        !userData.firstName ||
+        !userData.lastName
+      ) {
         console.error("Invalid user data received:", userData);
         throw new Error("Invalid user data structure");
       }
-      
-      // Update state first
+
+      // Update state - token is already in localStorage from getProfile
       setUser(userData);
-      console.log("🔄 AuthContext.refreshUser - State updated with avatar:", userData.avatar);
-      
-      // Update cookies to persist the new user data (including avatar)
-      // Note: We don't have access to the httpOnly token, but we can update userData cookie
-      const token = authClient.getToken();
-      if (token) {
-        authClient.setAuth(token, userData);
-      } else {
-        // Just update the userData cookie even without token
-        document.cookie = `userData=${JSON.stringify(userData)};path=/;max-age=${7 * 24 * 60 * 60}`;
-      }
-      console.log("🍪 AuthContext.refreshUser - Cookies updated with avatar:", userData.avatar);
+      console.log(
+        "🔄 AuthContext.refreshUser - State updated with avatar:",
+        userData.avatar
+      );
     } catch (error) {
       console.error("Refresh user error:", error);
-      
-      // Try to load from cookies as fallback
+
+      // Try to load from localStorage as fallback
       const existingUser = authClient.getUser();
       if (existingUser && !user) {
-        console.log("Loading user from cookies after refresh error");
+        console.log("Loading user from localStorage after refresh error");
         setUser(existingUser);
       }
-      
+
       // Only clear if we're certain the session is invalid (401/403 error)
-      if (error instanceof Error && (error.message.includes("authentication") || error.message.includes("401") || error.message.includes("403"))) {
+      if (
+        error instanceof Error &&
+        (error.message.includes("authentication") ||
+          error.message.includes("401") ||
+          error.message.includes("403"))
+      ) {
         console.log("Session invalid, clearing user");
         setUser(null);
+        authClient.clearAuth();
       }
     }
   };
@@ -172,7 +172,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     if (user) {
       const updatedUser = { ...user, ...userData };
       setUser(updatedUser);
-      // Update cookie as well
+      // Update localStorage with new user data
       authClient.setAuth(authClient.getToken() || "", updatedUser);
     }
   };
