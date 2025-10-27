@@ -174,7 +174,19 @@ export const optionalAuth = async (
 };
 
 // Cookie utility functions
-export const setAuthCookies = (res: Response, token: string, user: any) => {
+export const setAuthCookies = (res: Response, token: string, user: any, req?: Request) => {
+  // Check if this is a cross-domain request
+  const origin = req?.headers?.origin;
+  const host = req?.headers?.host;
+  const isCrossDomain = origin && host && !origin.includes(host);
+  
+  // In production cross-domain scenario, don't set cookies
+  // The frontend Next.js API route will set cookies for its own domain
+  if (isCrossDomain && (isVercel || isProduction)) {
+    console.log("Cross-domain request detected, skipping cookie setting");
+    return;
+  }
+
   // Set access token cookie
   res.cookie("accessToken", token, COOKIE_CONFIG);
 

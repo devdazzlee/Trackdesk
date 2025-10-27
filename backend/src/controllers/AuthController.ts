@@ -77,8 +77,8 @@ export class AuthController {
         req.get("User-Agent")
       );
 
-      // Set authentication cookies
-      setAuthCookies(res, result.token, result.user);
+      // Set authentication cookies (will skip if cross-domain)
+      setAuthCookies(res, result.token, result.user, req);
 
       res.json({
         message: "Login successful",

@@ -154,6 +154,7 @@ export class AuthClient {
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include", // Include cookies in request
         body: JSON.stringify({ email, password }),
       });
 
