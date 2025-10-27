@@ -37,6 +37,11 @@ const adminRoutes = [
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Skip API routes
+  if (pathname.startsWith("/api")) {
+    return NextResponse.next();
+  }
+
   // Get cookies
   const accessToken = request.cookies.get("accessToken")?.value;
   const userData = request.cookies.get("userData")?.value;
@@ -69,6 +74,7 @@ export function middleware(request: NextRequest) {
 
   // If accessing a protected route without authentication
   if (isProtectedRoute && !accessToken) {
+    console.log("Middleware: No accessToken, redirecting to unauthorized");
     return NextResponse.redirect(new URL("/unauthorized", request.url));
   }
 
@@ -76,6 +82,10 @@ export function middleware(request: NextRequest) {
   if (isAuthRoute && accessToken && user) {
     const redirectParam = request.nextUrl.searchParams.get("redirect");
     const redirectUrl = redirectParam || "/dashboard";
+    console.log(
+      "Middleware: Auth route with token, redirecting to:",
+      redirectUrl
+    );
     return NextResponse.redirect(new URL(redirectUrl, request.url));
   }
 
@@ -84,6 +94,9 @@ export function middleware(request: NextRequest) {
     isAdminRoute &&
     (!accessToken || !user || !["ADMIN", "MANAGER"].includes(user.role))
   ) {
+    console.log(
+      "Middleware: Admin route without privileges, redirecting to unauthorized"
+    );
     return NextResponse.redirect(new URL("/unauthorized", request.url));
   }
 
@@ -92,6 +105,9 @@ export function middleware(request: NextRequest) {
     pathname.startsWith("/manager") &&
     (!accessToken || !user || !["ADMIN", "MANAGER"].includes(user.role))
   ) {
+    console.log(
+      "Middleware: Manager route without privileges, redirecting to unauthorized"
+    );
     return NextResponse.redirect(new URL("/unauthorized", request.url));
   }
 
@@ -102,6 +118,9 @@ export function middleware(request: NextRequest) {
     user &&
     !["AFFILIATE", "ADMIN", "MANAGER"].includes(user.role)
   ) {
+    console.log(
+      "Middleware: Dashboard route without proper role, redirecting to unauthorized"
+    );
     return NextResponse.redirect(new URL("/unauthorized", request.url));
   }
 
@@ -109,17 +128,24 @@ export function middleware(request: NextRequest) {
   if (pathname === "/") {
     if (accessToken && user) {
       // Role-based redirects for authenticated users
+      let redirectPath = "/";
       if (user.role === "ADMIN") {
-        return NextResponse.redirect(new URL("/admin", request.url));
+        redirectPath = "/admin";
       } else if (user.role === "MANAGER") {
-        return NextResponse.redirect(new URL("/manager", request.url));
+        redirectPath = "/manager";
       } else if (user.role === "AFFILIATE") {
-        return NextResponse.redirect(new URL("/dashboard", request.url));
+        redirectPath = "/dashboard";
       } else {
-        return NextResponse.redirect(new URL("/dashboard", request.url));
+        redirectPath = "/dashboard";
       }
+      console.log(
+        "Middleware: Root path with auth, redirecting to:",
+        redirectPath
+      );
+      return NextResponse.redirect(new URL(redirectPath, request.url));
     } else {
       // Allow guest users to see the home page
+      console.log("Middleware: Root path without auth, allowing access");
       return NextResponse.next();
     }
   }
