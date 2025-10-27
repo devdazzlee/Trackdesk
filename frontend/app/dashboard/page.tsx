@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import { getFullName } from "@/lib/auth-client";
 import { toast } from "sonner";
+import apiClient from "@/lib/api-client";
 import { config } from "@/config/config";
 
 interface DashboardOverview {
@@ -97,20 +98,11 @@ export default function DashboardPage() {
 
   const fetchDashboardData = async () => {
     try {
-      const response = await fetch(`${config.apiUrl}/dashboard/overview`, {
-        credentials: "include",
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setDashboardData(data);
-      } else {
-        console.error("Failed to fetch dashboard data:", response.status);
-        toast.error("Failed to load dashboard data");
-      }
+      const response = await apiClient.get("/dashboard/overview");
+      setDashboardData(response.data);
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
-      toast.error("Failed to load dashboard data");
+      // Error toast already handled by interceptor
     } finally {
       setIsDataLoading(false);
     }
@@ -118,19 +110,11 @@ export default function DashboardPage() {
 
   const fetchRealTimeStats = async () => {
     try {
-      const response = await fetch(
-        `${config.apiUrl}/dashboard/real-time-stats`,
-        {
-          credentials: "include",
-        }
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        setRealTimeStats(data);
-      }
+      const response = await apiClient.get("/dashboard/real-time-stats");
+      setRealTimeStats(response.data);
     } catch (error) {
       console.error("Error fetching real-time stats:", error);
+      // Error toast already handled by interceptor
     }
   };
 

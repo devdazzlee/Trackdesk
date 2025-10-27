@@ -58,10 +58,15 @@ const logger = winston_1.default.createLogger({
     level: process.env.LOG_LEVEL || "info",
     format: winston_1.default.format.combine(winston_1.default.format.timestamp(), winston_1.default.format.errors({ stack: true }), winston_1.default.format.json()),
     transports: [
-        ...(!isVercel && !isProduction ? [
-            new winston_1.default.transports.File({ filename: "logs/error.log", level: "error" }),
-            new winston_1.default.transports.File({ filename: "logs/combined.log" }),
-        ] : []),
+        ...(!isVercel && !isProduction
+            ? [
+                new winston_1.default.transports.File({
+                    filename: "logs/error.log",
+                    level: "error",
+                }),
+                new winston_1.default.transports.File({ filename: "logs/combined.log" }),
+            ]
+            : []),
         new winston_1.default.transports.Console({
             format: winston_1.default.format.simple(),
         }),
@@ -77,6 +82,7 @@ const io = new socket_io_1.Server(server, {
             "http://localhost:3001",
             "http://localhost:8000",
             "https://trackdesk-frontend.vercel.app",
+            "https://trackdesk-t1hm.vercel.app",
             "null",
         ],
         methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
@@ -98,6 +104,7 @@ app.use((0, cors_1.default)({
             "http://localhost:3002",
             "http://localhost:8000",
             "https://trackdesk-frontend.vercel.app",
+            "https://trackdesk-t1hm.vercel.app",
         ];
         if (allowedOrigins.indexOf(origin) !== -1 ||
             origin.startsWith("http://localhost:")) {

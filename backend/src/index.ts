@@ -95,7 +95,7 @@ const io = new Server(server, {
       "http://localhost:3001",
       "http://localhost:8000",
       "https://trackdesk-frontend.vercel.app", // Vercel production frontend
-      "https://trackdesk-t1hm.vercel.app/",
+      "https://trackdesk-t1hm.vercel.app",
       "null", // Allow file:// origins for testing
     ],
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
@@ -125,7 +125,7 @@ app.use(
         "http://localhost:3002",
         "http://localhost:8000",
         "https://trackdesk-frontend.vercel.app", // Vercel production frontend
-        "https://trackdesk-t1hm.vercel.app/",
+        "https://trackdesk-t1hm.vercel.app",
       ];
 
       if (

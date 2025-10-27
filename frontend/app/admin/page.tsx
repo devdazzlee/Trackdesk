@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import { getFullName } from "@/lib/auth-client";
 import { toast } from "sonner";
+import apiClient from "@/lib/api-client";
 import { config } from "@/config/config";
 import { formatLastActivity, formatRelativeTime } from "@/lib/date-utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -336,23 +337,11 @@ export default function AdminDashboardPage() {
 
   const fetchDashboardData = async () => {
     try {
-      const response = await fetch(
-        `${config.apiUrl}/admin/dashboard/overview`,
-        {
-          credentials: "include",
-        }
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        setDashboardData(data);
-      } else {
-        console.error("Failed to fetch admin dashboard data:", response.status);
-        toast.error("Failed to load dashboard data");
-      }
+      const response = await apiClient.get("/admin/dashboard/overview");
+      setDashboardData(response.data);
     } catch (error) {
       console.error("Error fetching admin dashboard data:", error);
-      toast.error("Failed to load dashboard data");
+      // Error toast already handled by interceptor
     } finally {
       setIsDataLoading(false);
     }
@@ -370,7 +359,13 @@ export default function AdminDashboardPage() {
   }
 
   if (!user) {
-    return <AuthRequired message="Admin Access Required" actionText="Go to Login" actionUrl="/auth/login" />;
+    return (
+      <AuthRequired
+        message="Admin Access Required"
+        actionText="Go to Login"
+        actionUrl="/auth/login"
+      />
+    );
   }
 
   if (!dashboardData) {
