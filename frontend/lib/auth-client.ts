@@ -125,14 +125,14 @@ export class AuthClient {
   }
 
   public setAuth(token: string, user: User): void {
-    // Note: accessToken is httpOnly and set by the server
-    // We only update the userData cookie here
-    // Only try to set accessToken if we actually have a token value
-    if (token) {
-      this.setCookie(COOKIE_NAMES.ACCESS_TOKEN, token);
-    }
-    this.setCookie(COOKIE_NAMES.USER_DATA, JSON.stringify(user));
+    // Note: Cookies are now set by the backend with proper SameSite settings
+    // Frontend only stores user data in memory and localStorage for persistence
     this.user = user;
+
+    // Store in localStorage as backup (backend sets the cookies)
+    if (typeof window !== "undefined") {
+      localStorage.setItem("userData", JSON.stringify(user));
+    }
   }
 
   public clearAuth(): void {
