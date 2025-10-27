@@ -53,7 +53,10 @@ import uploadRoutes from "./routes/upload"; // File upload routes
 // Load environment variables
 dotenv.config();
 
-// Initialize logger
+// Initialize logger - Vercel compatible (console only for serverless)
+const isProduction = process.env.NODE_ENV === "production";
+const isVercel = !!process.env.VERCEL;
+
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || "info",
   format: winston.format.combine(
@@ -62,8 +65,17 @@ const logger = winston.createLogger({
     winston.format.json()
   ),
   transports: [
-    new winston.transports.File({ filename: "logs/error.log", level: "error" }),
-    new winston.transports.File({ filename: "logs/combined.log" }),
+    // Only use file transports if not on Vercel/serverless
+    ...(!isVercel && !isProduction
+      ? [
+          new winston.transports.File({
+            filename: "logs/error.log",
+            level: "error",
+          }),
+          new winston.transports.File({ filename: "logs/combined.log" }),
+        ]
+      : []),
+    // Always use console transport
     new winston.transports.Console({
       format: winston.format.simple(),
     }),

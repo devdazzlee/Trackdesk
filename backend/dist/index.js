@@ -52,12 +52,16 @@ const admin_settings_1 = __importDefault(require("./routes/admin-settings"));
 const system_settings_1 = __importDefault(require("./routes/system-settings"));
 const upload_1 = __importDefault(require("./routes/upload"));
 dotenv_1.default.config();
+const isProduction = process.env.NODE_ENV === "production";
+const isVercel = !!process.env.VERCEL;
 const logger = winston_1.default.createLogger({
     level: process.env.LOG_LEVEL || "info",
     format: winston_1.default.format.combine(winston_1.default.format.timestamp(), winston_1.default.format.errors({ stack: true }), winston_1.default.format.json()),
     transports: [
-        new winston_1.default.transports.File({ filename: "logs/error.log", level: "error" }),
-        new winston_1.default.transports.File({ filename: "logs/combined.log" }),
+        ...(!isVercel && !isProduction ? [
+            new winston_1.default.transports.File({ filename: "logs/error.log", level: "error" }),
+            new winston_1.default.transports.File({ filename: "logs/combined.log" }),
+        ] : []),
         new winston_1.default.transports.Console({
             format: winston_1.default.format.simple(),
         }),
