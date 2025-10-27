@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { config } from "@/config/config";
+import { getAuthHeaders } from "@/lib/getAuthHeaders";
 
 interface ClickData {
   id: string;
@@ -148,7 +149,7 @@ export default function StatisticsPage() {
       const response = await fetch(
         `${config.apiUrl}/statistics/clicks?period=${selectedPeriod}`,
         {
-          credentials: "include",
+          headers: getAuthHeaders(),
         }
       );
 
@@ -168,7 +169,7 @@ export default function StatisticsPage() {
       const response = await fetch(
         `${config.apiUrl}/statistics/conversions?period=${selectedPeriod}`,
         {
-          credentials: "include",
+          headers: getAuthHeaders(),
         }
       );
 
@@ -188,7 +189,7 @@ export default function StatisticsPage() {
       const response = await fetch(
         `${config.apiUrl}/statistics/traffic?period=${selectedPeriod}`,
         {
-          credentials: "include",
+          headers: getAuthHeaders(),
         }
       );
 
@@ -208,7 +209,7 @@ export default function StatisticsPage() {
       const response = await fetch(
         `${config.apiUrl}/statistics/performance?period=${selectedPeriod}`,
         {
-          credentials: "include",
+          headers: getAuthHeaders(),
         }
       );
 

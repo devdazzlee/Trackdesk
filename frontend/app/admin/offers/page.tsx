@@ -62,6 +62,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { config } from "@/config/config";
+import { getAuthHeaders } from "@/lib/getAuthHeaders";
 
 interface ReferralCode {
   id: string;
@@ -213,7 +214,7 @@ export default function OffersManagementPage() {
     setIsLoading(true);
     try {
       const response = await fetch(`${config.apiUrl}/admin/offers`, {
-        credentials: "include",
+        headers: getAuthHeaders(),
       });
 
       if (response.ok) {
@@ -235,7 +236,7 @@ export default function OffersManagementPage() {
   const fetchAffiliates = async () => {
     try {
       const response = await fetch(`${config.apiUrl}/admin/offers/affiliates`, {
-        credentials: "include",
+        headers: getAuthHeaders(),
       });
 
       if (response.ok) {
@@ -255,7 +256,7 @@ export default function OffersManagementPage() {
       const response = await fetch(
         `${config.apiUrl}/admin/offers/${offerId}/creatives`,
         {
-          credentials: "include",
+          headers: getAuthHeaders(),
         }
       );
 
@@ -294,8 +295,7 @@ export default function OffersManagementPage() {
     try {
       const response = await fetch(`${config.apiUrl}/admin/offers`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        headers: getAuthHeaders(),
         body: JSON.stringify(newOffer),
       });
 
@@ -342,7 +342,7 @@ export default function OffersManagementPage() {
     try {
       const response = await fetch(`${config.apiUrl}/admin/offers/${offerId}`, {
         method: "DELETE",
-        credentials: "include",
+        headers: getAuthHeaders(),
       });
 
       if (response.ok) {
@@ -368,8 +368,7 @@ export default function OffersManagementPage() {
         `${config.apiUrl}/admin/offers/${selectedOfferId}/creatives`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
+          headers: getAuthHeaders(),
           body: JSON.stringify(newCreative),
         }
       );
@@ -409,7 +408,7 @@ export default function OffersManagementPage() {
         `${config.apiUrl}/admin/offers/${selectedOfferId}/creatives/${creativeId}`,
         {
           method: "DELETE",
-          credentials: "include",
+          headers: getAuthHeaders(),
         }
       );
 
@@ -525,8 +524,7 @@ export default function OffersManagementPage() {
         `${config.apiUrl}/admin/offers/${editingOffer.id}`,
         {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
+          headers: getAuthHeaders(),
           body: JSON.stringify({
             ...editOffer,
             status: editOffer.status.toUpperCase(), // Convert to uppercase for backend
@@ -583,8 +581,7 @@ export default function OffersManagementPage() {
         `${config.apiUrl}/admin/offers/${selectedOfferId}/creatives/${editingCreative.id}`,
         {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
+          headers: getAuthHeaders(),
           body: JSON.stringify(editCreative),
         }
       );

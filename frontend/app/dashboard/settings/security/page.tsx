@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { config } from "@/config/config";
+import { getAuthHeaders } from "@/lib/getAuthHeaders";
 
 interface SecuritySettings {
   email: string;
@@ -64,7 +65,7 @@ export default function SecuritySettingsPage() {
   const fetchSecuritySettings = async () => {
     try {
       const response = await fetch(`${config.apiUrl}/settings/security`, {
-        credentials: "include",
+        headers: getAuthHeaders(),
       });
 
       if (response.ok) {
@@ -102,10 +103,7 @@ export default function SecuritySettingsPage() {
         `${config.apiUrl}/settings/security/change-password`,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
+          headers: getAuthHeaders(),
           body: JSON.stringify(passwordForm),
         }
       );

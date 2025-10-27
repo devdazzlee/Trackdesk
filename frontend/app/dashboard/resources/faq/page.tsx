@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { config } from "@/config/config";
+import { getAuthHeaders } from "@/lib/getAuthHeaders";
 
 interface FAQItem {
   id: string;
@@ -72,7 +73,7 @@ export default function FAQPage() {
       const response = await fetch(
         `${config.apiUrl}/support/faq?${params.toString()}`,
         {
-          credentials: "include",
+          headers: getAuthHeaders(),
         }
       );
 
@@ -103,10 +104,7 @@ export default function FAQPage() {
         `${config.apiUrl}/support/faq/${faqId}/helpful`,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
+          headers: getAuthHeaders(),
           body: JSON.stringify({ helpful }),
         }
       );

@@ -30,6 +30,7 @@ import {
 import { toast } from "sonner";
 import { config } from "@/config/config";
 import { useAuth } from "@/contexts/AuthContext";
+import { getAuthHeaders } from "@/lib/getAuthHeaders";
 
 interface UserProfile {
   user: {
@@ -72,12 +73,12 @@ export default function ProfileSettingsPage() {
   const fetchProfile = async () => {
     try {
       const response = await fetch(`${config.apiUrl}/settings/profile`, {
-        credentials: "include",
+        headers: getAuthHeaders(),
       });
 
       if (response.ok) {
         const data = await response.json();
-        console.log("🚀 ~ fetchProfile ~ data:", data)
+        console.log("🚀 ~ fetchProfile ~ data:", data);
         setProfile(data);
         setFormData({
           firstName: data.user.firstName || "",
@@ -104,10 +105,7 @@ export default function ProfileSettingsPage() {
     try {
       const response = await fetch(`${config.apiUrl}/settings/profile`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
+        headers: getAuthHeaders(),
         body: JSON.stringify(formData),
       });
 
@@ -126,12 +124,14 @@ export default function ProfileSettingsPage() {
     }
   };
 
-  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     // Validate file type
-    if (!file.type.startsWith('image/')) {
+    if (!file.type.startsWith("image/")) {
       toast.error("Please upload an image file");
       return;
     }
@@ -151,23 +151,25 @@ export default function ProfileSettingsPage() {
 
       const response = await fetch(`${config.apiUrl}/upload/avatar`, {
         method: "POST",
-        credentials: "include",
+        headers: getAuthHeaders(),
         body: formData,
       });
 
       if (response.ok) {
         const data = await response.json();
         toast.success("Avatar uploaded successfully!", { id: "avatar-upload" });
-        
+
         // Refresh profile to show new avatar in this page
         await fetchProfile();
-        
+
         // Immediately refresh auth context to update navbar/sidebar
         // This ensures the avatar is synced across all components
         await refreshUser();
       } else {
         const error = await response.json();
-        toast.error(error.error || "Failed to upload avatar", { id: "avatar-upload" });
+        toast.error(error.error || "Failed to upload avatar", {
+          id: "avatar-upload",
+        });
       }
     } catch (error) {
       console.error("Error uploading avatar:", error);
@@ -189,7 +191,7 @@ export default function ProfileSettingsPage() {
     try {
       const response = await fetch(`${config.apiUrl}/upload/avatar`, {
         method: "DELETE",
-        credentials: "include",
+        headers: getAuthHeaders(),
       });
 
       if (response.ok) {
@@ -198,7 +200,9 @@ export default function ProfileSettingsPage() {
         await refreshUser(); // Refresh auth context to update navbar/sidebar
       } else {
         const error = await response.json();
-        toast.error(error.error || "Failed to delete avatar", { id: "avatar-delete" });
+        toast.error(error.error || "Failed to delete avatar", {
+          id: "avatar-delete",
+        });
       }
     } catch (error) {
       console.error("Error deleting avatar:", error);
@@ -241,8 +245,8 @@ export default function ProfileSettingsPage() {
           <div className="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-6">
             <div className="relative group">
               <Avatar className="w-24 h-24 ring-4 ring-white shadow-lg">
-                <AvatarImage 
-                  src={profile.user.avatar || undefined} 
+                <AvatarImage
+                  src={profile.user.avatar || undefined}
                   alt={`${profile.user.firstName} ${profile.user.lastName}`}
                 />
                 <AvatarFallback className="text-2xl bg-gradient-to-br from-blue-500 to-purple-600 text-white">
@@ -294,7 +298,9 @@ export default function ProfileSettingsPage() {
                     variant="outline"
                     size="sm"
                     disabled={isUploadingAvatar}
-                    onClick={() => document.getElementById('avatar-upload')?.click()}
+                    onClick={() =>
+                      document.getElementById("avatar-upload")?.click()
+                    }
                     type="button"
                   >
                     <Upload className="h-4 w-4 mr-2" />

@@ -43,7 +43,8 @@ class AuthController {
             console.log("🚀 ~ AuthController ~ register ~ data:", data);
             const result = await authService.register(data);
             res.status(201).json({
-                message: result.message || "Registration successful! Please check your email to verify your account.",
+                message: result.message ||
+                    "Registration successful! Please check your email to verify your account.",
             });
         }
         catch (error) {
@@ -59,7 +60,7 @@ class AuthController {
         try {
             const data = loginSchema.parse(req.body);
             const result = await authService.login(data, req.ip, req.get("User-Agent"));
-            (0, auth_1.setAuthCookies)(res, result.token, result.user);
+            (0, auth_1.setAuthCookies)(res, result.token, result.user, req);
             res.json({
                 message: "Login successful",
                 token: result.token,
@@ -202,7 +203,9 @@ class AuthController {
         try {
             const { token } = req.body;
             if (!token) {
-                return res.status(400).json({ error: "Verification token is required" });
+                return res
+                    .status(400)
+                    .json({ error: "Verification token is required" });
             }
             const result = await authService.verifyEmail(token);
             res.json(result);

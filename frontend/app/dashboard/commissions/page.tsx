@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { config } from "@/config/config";
+import { getAuthHeaders } from "@/lib/getAuthHeaders";
 
 interface Commission {
   id: string;
@@ -104,7 +105,7 @@ export default function CommissionsPage() {
       const response = await fetch(
         `${config.apiUrl}/commissions/pending?period=${selectedPeriod}`,
         {
-          credentials: "include",
+          headers: getAuthHeaders(),
         }
       );
 
@@ -124,7 +125,7 @@ export default function CommissionsPage() {
   const fetchPayoutHistory = async () => {
     try {
       const response = await fetch(`${config.apiUrl}/commissions/history`, {
-        credentials: "include",
+        headers: getAuthHeaders(),
       });
 
       if (response.ok) {
@@ -143,7 +144,7 @@ export default function CommissionsPage() {
   const fetchPayoutSettings = async () => {
     try {
       const response = await fetch(`${config.apiUrl}/commissions/settings`, {
-        credentials: "include",
+        headers: getAuthHeaders(),
       });
 
       if (response.ok) {
@@ -181,10 +182,7 @@ export default function CommissionsPage() {
         `${config.apiUrl}/commissions/request-payout`,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
+          headers: getAuthHeaders(),
           body: JSON.stringify({
             amount: parseFloat(payoutRequestAmount),
             reason: payoutRequestReason,

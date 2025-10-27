@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { config } from "@/config/config";
+import { getAuthHeaders } from "@/lib/getAuthHeaders";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface SupportTicket {
@@ -136,7 +137,7 @@ export default function ContactSupportPage() {
   const fetchTickets = async () => {
     try {
       const response = await fetch(`${config.apiUrl}/support/tickets`, {
-        credentials: "include",
+        headers: getAuthHeaders(),
       });
 
       if (response.ok) {
@@ -173,10 +174,7 @@ export default function ContactSupportPage() {
     try {
       const response = await fetch(`${config.apiUrl}/support/tickets`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
+        headers: getAuthHeaders(),
         body: JSON.stringify(formData),
       });
 

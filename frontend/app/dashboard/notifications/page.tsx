@@ -13,6 +13,7 @@ import {
   CheckCircle,
 } from "lucide-react";
 import { config } from "@/config/config";
+import { getAuthHeaders } from "@/lib/getAuthHeaders";
 import { DataLoading } from "@/components/ui/loading";
 
 interface Notification {
@@ -38,7 +39,7 @@ export default function NotificationsPage() {
     try {
       setLoading(true);
       const response = await fetch(`${config.apiUrl}/notifications`, {
-        credentials: "include",
+        headers: getAuthHeaders(),
       });
 
       if (response.ok) {
@@ -115,7 +116,7 @@ export default function NotificationsPage() {
         `${config.apiUrl}/notifications/${notificationId}/read`,
         {
           method: "PATCH",
-          credentials: "include",
+          headers: getAuthHeaders(),
         }
       );
 
@@ -139,7 +140,7 @@ export default function NotificationsPage() {
         `${config.apiUrl}/notifications/mark-all-read`,
         {
           method: "POST",
-          credentials: "include",
+          headers: getAuthHeaders(),
         }
       );
 
@@ -159,7 +160,7 @@ export default function NotificationsPage() {
         `${config.apiUrl}/notifications/${notificationId}`,
         {
           method: "DELETE",
-          credentials: "include",
+          headers: getAuthHeaders(),
         }
       );
 

@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { config } from "@/config/config";
+import { getAuthHeaders } from "@/lib/getAuthHeaders";
 
 interface ReferralAnalytics {
   totalReferrals: number;
@@ -64,7 +65,7 @@ export default function ReferralAnalyticsPage() {
       const response = await fetch(
         `${config.apiUrl}/referral/analytics?period=${timeRange}`,
         {
-          credentials: "include",
+          headers: getAuthHeaders(),
         }
       );
 

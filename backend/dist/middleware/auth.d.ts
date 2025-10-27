@@ -23,6 +23,6 @@ export declare const requireRole: (roles: string[]) => (req: AuthenticatedReques
 export declare const requireAffiliate: (req: AuthenticatedRequest, res: Response, next: NextFunction) => Response<any, Record<string, any>>;
 export declare const requireAdmin: (req: AuthenticatedRequest, res: Response, next: NextFunction) => Response<any, Record<string, any>>;
 export declare const optionalAuth: (req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>;
-export declare const setAuthCookies: (res: Response, token: string, user: any) => void;
+export declare const setAuthCookies: (res: Response, token: string, user: any, req?: Request) => void;
 export declare const clearAuthCookies: (res: Response) => void;
 //# sourceMappingURL=auth.d.ts.map

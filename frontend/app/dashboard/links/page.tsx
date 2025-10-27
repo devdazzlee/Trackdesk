@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { config } from "@/config/config";
+import { getAuthHeaders } from "@/lib/getAuthHeaders";
 
 interface AffiliateLink {
   id: string;
@@ -140,7 +141,7 @@ export default function LinksPage() {
       console.log("Fetching links from:", `${config.apiUrl}/links/my-links`);
 
       const response = await fetch(`${config.apiUrl}/links/my-links`, {
-        credentials: "include",
+        headers: getAuthHeaders(),
       });
 
       console.log("Links fetch response status:", response.status);
@@ -179,7 +180,7 @@ export default function LinksPage() {
   const fetchMarketingAssets = async () => {
     try {
       const response = await fetch(`${config.apiUrl}/links/assets/banners`, {
-        credentials: "include",
+        headers: getAuthHeaders(),
       });
 
       if (response.ok) {
@@ -200,7 +201,7 @@ export default function LinksPage() {
   const fetchCoupons = async () => {
     try {
       const response = await fetch(`${config.apiUrl}/links/coupons/available`, {
-        credentials: "include",
+        headers: getAuthHeaders(),
       });
 
       if (response.ok) {
@@ -249,10 +250,7 @@ export default function LinksPage() {
 
       const response = await fetch(`${config.apiUrl}/links/generate`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           url: urlInput,
           campaignName: campaignName || undefined,
@@ -338,7 +336,7 @@ export default function LinksPage() {
       );
       const response = await fetch(`${config.apiUrl}/links/${linkId}`, {
         method: "DELETE",
-        credentials: "include",
+        headers: getAuthHeaders(),
       });
 
       console.log("Delete response status:", response.status);
@@ -378,10 +376,7 @@ export default function LinksPage() {
       );
       const response = await fetch(`${config.apiUrl}/links/${linkId}/status`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
+        headers: getAuthHeaders(),
         body: JSON.stringify({ isActive: newStatus }),
       });
 
@@ -415,7 +410,7 @@ export default function LinksPage() {
         `${config.apiUrl}/links/stats/${linkId}`
       );
       const response = await fetch(`${config.apiUrl}/links/stats/${linkId}`, {
-        credentials: "include",
+        headers: getAuthHeaders(),
       });
 
       console.log("Stats response status:", response.status);
@@ -455,10 +450,7 @@ export default function LinksPage() {
     try {
       const response = await fetch(`${config.apiUrl}/links/coupons/generate`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           description: couponDescription,
           discountType: couponDiscountType,
@@ -517,7 +509,7 @@ export default function LinksPage() {
         `${config.apiUrl}/links/coupons/${couponId}/deactivate`,
         {
           method: "PATCH",
-          credentials: "include",
+          headers: getAuthHeaders(),
         }
       );
 

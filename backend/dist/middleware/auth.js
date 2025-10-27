@@ -41,7 +41,7 @@ const isProduction = process.env.NODE_ENV === "production";
 exports.COOKIE_CONFIG = {
     httpOnly: true,
     secure: isVercel || isProduction,
-    sameSite: (isVercel || isProduction) ? "none" : "lax",
+    sameSite: isVercel || isProduction ? "none" : "lax",
     maxAge: 7 * 24 * 60 * 60 * 1000,
     path: "/",
 };
@@ -154,7 +154,14 @@ const optionalAuth = async (req, res, next) => {
     next();
 };
 exports.optionalAuth = optionalAuth;
-const setAuthCookies = (res, token, user) => {
+const setAuthCookies = (res, token, user, req) => {
+    const origin = req?.headers?.origin;
+    const host = req?.headers?.host;
+    const isCrossDomain = origin && host && !origin.includes(host);
+    if (isCrossDomain && (isVercel || isProduction)) {
+        console.log("Cross-domain request detected, skipping cookie setting");
+        return;
+    }
     res.cookie("accessToken", token, exports.COOKIE_CONFIG);
     const userData = {
         id: user.id,
@@ -174,7 +181,7 @@ const clearAuthCookies = (res) => {
     const clearOptions = {
         httpOnly: true,
         secure: isVercel || isProduction,
-        sameSite: (isVercel || isProduction) ? "none" : "lax",
+        sameSite: isVercel || isProduction ? "none" : "lax",
         path: "/",
     };
     res.clearCookie("accessToken", clearOptions);

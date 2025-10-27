@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import  { AdminLoading, ErrorState } from "@/components/ui/loading";
+import { AdminLoading, ErrorState } from "@/components/ui/loading";
 import {
   Card,
   CardContent,
@@ -31,6 +31,7 @@ import {
 import { toast } from "sonner";
 import { config } from "@/config/config";
 import { useAuth } from "@/contexts/AuthContext";
+import { getAuthHeaders } from "@/lib/getAuthHeaders";
 
 interface UserProfile {
   user: {
@@ -70,7 +71,7 @@ export default function AdminProfileSettingsPage() {
   const fetchProfile = async () => {
     try {
       const response = await fetch(`${config.apiUrl}/admin/settings/profile`, {
-        credentials: "include",
+        headers: getAuthHeaders(),
       });
 
       if (response.ok) {
@@ -100,10 +101,7 @@ export default function AdminProfileSettingsPage() {
     try {
       const response = await fetch(`${config.apiUrl}/admin/settings/profile`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
+        headers: getAuthHeaders(),
         body: JSON.stringify(formData),
       });
 
@@ -151,7 +149,7 @@ export default function AdminProfileSettingsPage() {
         `${config.apiUrl}/admin/settings/profile/avatar`,
         {
           method: "POST",
-          credentials: "include",
+          headers: getAuthHeaders(),
           body: formData,
         }
       );
@@ -178,7 +176,7 @@ export default function AdminProfileSettingsPage() {
         `${config.apiUrl}/admin/settings/profile/avatar`,
         {
           method: "DELETE",
-          credentials: "include",
+          headers: getAuthHeaders(),
         }
       );
 

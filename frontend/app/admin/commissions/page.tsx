@@ -51,6 +51,7 @@ import {
   Edit,
 } from "lucide-react";
 import { toast } from "sonner";
+import { getAuthHeaders } from "@/lib/getAuthHeaders";
 
 interface Commission {
   id: string;
@@ -145,7 +146,7 @@ export default function CommissionsPage() {
       const response = await fetch(
         `http://localhost:3003/api/commission-management?${params}`,
         {
-          credentials: "include",
+          headers: getAuthHeaders(),
         }
       );
 
@@ -177,7 +178,7 @@ export default function CommissionsPage() {
       const response = await fetch(
         "http://localhost:3003/api/commission-management/analytics?period=30d",
         {
-          credentials: "include",
+          headers: getAuthHeaders(),
         }
       );
 
@@ -200,8 +201,7 @@ export default function CommissionsPage() {
         `http://localhost:3003/api/commission-management/${commissionId}/status`,
         {
           method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
+          headers: getAuthHeaders(),
           body: JSON.stringify({ status, notes }),
         }
       );
@@ -229,8 +229,7 @@ export default function CommissionsPage() {
         "http://localhost:3003/api/commission-management/bulk-status",
         {
           method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
+          headers: getAuthHeaders(),
           body: JSON.stringify({
             commissionIds: selectedCommissions,
             status: bulkStatus,

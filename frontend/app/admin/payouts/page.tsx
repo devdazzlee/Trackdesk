@@ -39,6 +39,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { config } from "@/config/config";
+import { getAuthHeaders } from "@/lib/getAuthHeaders";
 
 interface Payout {
   id: string;
@@ -81,7 +82,7 @@ export default function PayoutsManagementPage() {
       const response = await fetch(
         `${config.apiUrl}/admin/payouts?${params.toString()}`,
         {
-          credentials: "include",
+          headers: getAuthHeaders(),
         }
       );
 
@@ -114,8 +115,7 @@ export default function PayoutsManagementPage() {
         `${config.apiUrl}/admin/payouts/${payoutId}/status`,
         {
           method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
+          headers: getAuthHeaders(),
           body: JSON.stringify({ status: "processing" }),
         }
       );
@@ -143,8 +143,7 @@ export default function PayoutsManagementPage() {
         `${config.apiUrl}/admin/payouts/process-bulk`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
+          headers: getAuthHeaders(),
           body: JSON.stringify({ payoutIds: selectedPayouts }),
         }
       );

@@ -66,6 +66,7 @@ import {
 import { toast } from "sonner";
 import { config } from "@/config/config";
 import { formatLastActivity, formatRelativeTime } from "@/lib/date-utils";
+import { getAuthHeaders } from "@/lib/getAuthHeaders";
 
 interface Affiliate {
   id: string;
@@ -116,7 +117,7 @@ export default function AffiliatesManagementPage() {
       const response = await fetch(
         `${config.apiUrl}/admin/affiliates?${params.toString()}`,
         {
-          credentials: "include",
+          headers: getAuthHeaders(),
         }
       );
 
@@ -162,8 +163,7 @@ export default function AffiliatesManagementPage() {
           `${config.apiUrl}/admin/affiliates/${selectedAffiliate.id}/status`,
           {
             method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
+            headers: getAuthHeaders(),
             body: JSON.stringify({ status: editForm.status }),
           }
         );
@@ -182,8 +182,7 @@ export default function AffiliatesManagementPage() {
           `${config.apiUrl}/admin/affiliates/${selectedAffiliate.id}/tier`,
           {
             method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
+            headers: getAuthHeaders(),
             body: JSON.stringify({
               tier: editForm.tier,
               commissionRate: editForm.commissionRate,
@@ -213,7 +212,7 @@ export default function AffiliatesManagementPage() {
         `${config.apiUrl}/admin/affiliates/${affiliateId}`,
         {
           method: "DELETE",
-          credentials: "include",
+          headers: getAuthHeaders(),
         }
       );
 

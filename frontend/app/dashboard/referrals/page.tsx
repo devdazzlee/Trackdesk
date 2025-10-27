@@ -44,6 +44,7 @@ import {
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { config } from "@/config/config";
+import { getAuthHeaders } from "@/lib/getAuthHeaders";
 
 interface ReferralCode {
   id: string;
@@ -105,12 +106,11 @@ export default function ReferralsPage() {
   const fetchReferralData = async () => {
     try {
       const [codesResponse, statsResponse, linksResponse] = await Promise.all([
-        fetch(`${config.apiUrl}/referral/codes`, { credentials: "include" }),
-        fetch(`${config.apiUrl}/referral/stats`, { credentials: "include" }),
+        fetch(`${config.apiUrl}/referral/codes`, { headers: getAuthHeaders() }),
+        fetch(`${config.apiUrl}/referral/stats`, { headers: getAuthHeaders() }),
         fetch(`${config.apiUrl}/referral/shareable-links`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
+          headers: getAuthHeaders(),
           body: JSON.stringify({
             platforms: [
               "facebook",
@@ -150,8 +150,7 @@ export default function ReferralsPage() {
     try {
       const response = await fetch(`${config.apiUrl}/referral/codes`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           ...newCode,
           maxUses: newCode.maxUses ? parseInt(newCode.maxUses) : undefined,

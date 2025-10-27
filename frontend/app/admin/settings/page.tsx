@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { config } from "@/config/config";
+import { getAuthHeaders } from "@/lib/getAuthHeaders";
 import CommissionImpactModal from "@/components/modals/commission-impact-modal";
 
 interface SystemStatus {
@@ -116,7 +117,7 @@ export default function SystemSettingsPage() {
   const fetchSettings = async () => {
     try {
       const response = await fetch(`${config.apiUrl}/system/settings`, {
-        credentials: "include",
+        headers: getAuthHeaders(),
         cache: "no-cache", // Prevent caching
       });
 
@@ -179,7 +180,7 @@ export default function SystemSettingsPage() {
     setIsFetchingStatus(true);
     try {
       const response = await fetch(`${config.apiUrl}/system/settings/status`, {
-        credentials: "include",
+        headers: getAuthHeaders(),
       });
 
       if (response.ok) {
@@ -200,10 +201,7 @@ export default function SystemSettingsPage() {
     try {
       const response = await fetch(`${config.apiUrl}/system/settings/general`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
+        headers: getAuthHeaders(),
         cache: "no-cache", // Prevent caching
         body: JSON.stringify(settings.general),
       });
@@ -249,10 +247,7 @@ export default function SystemSettingsPage() {
         `${config.apiUrl}/system/settings/commission`,
         {
           method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
+          headers: getAuthHeaders(),
           cache: "no-cache",
           body: JSON.stringify({
             ...settings.commission,

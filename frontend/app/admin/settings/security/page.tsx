@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { config } from "@/config/config";
+import { getAuthHeaders } from "@/lib/getAuthHeaders";
 
 export default function SecuritySettingsPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -85,10 +86,7 @@ export default function SecuritySettingsPage() {
         `${config.apiUrl}/admin/settings/security/password`,
         {
           method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
+          headers: getAuthHeaders(),
           body: JSON.stringify({
             currentPassword: passwordForm.currentPassword,
             newPassword: passwordForm.newPassword,

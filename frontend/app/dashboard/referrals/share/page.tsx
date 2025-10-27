@@ -29,6 +29,8 @@ import {
   BarChart3,
 } from "lucide-react";
 import { toast } from "sonner";
+import { config } from "@/config/config";
+import { getAuthHeaders } from "@/lib/getAuthHeaders";
 
 interface ShareableLinks {
   referralCode: string;
@@ -76,11 +78,10 @@ export default function ShareReferralsPage() {
 
     try {
       const response = await fetch(
-        "http://localhost:3003/api/referral/shareable-links",
+        `${config.apiUrl}/referral/shareable-links`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
+          headers: getAuthHeaders(),
           body: JSON.stringify({
             platforms: [
               "facebook",
