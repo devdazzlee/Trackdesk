@@ -11,23 +11,11 @@ const multer_1 = __importDefault(require("multer"));
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
+const cloudinary_1 = require("../lib/cloudinary");
 const router = express_1.default.Router();
 const prisma = new client_1.PrismaClient();
-const storage = multer_1.default.diskStorage({
-    destination: (req, file, cb) => {
-        const uploadDir = path_1.default.join(__dirname, "../../uploads/avatars");
-        if (!fs_1.default.existsSync(uploadDir)) {
-            fs_1.default.mkdirSync(uploadDir, { recursive: true });
-        }
-        cb(null, uploadDir);
-    },
-    filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-        cb(null, `admin-${uniqueSuffix}${path_1.default.extname(file.originalname)}`);
-    },
-});
 const upload = (0, multer_1.default)({
-    storage,
+    storage: multer_1.default.memoryStorage(),
     limits: {
         fileSize: 5 * 1024 * 1024,
     },
@@ -152,15 +140,32 @@ router.post("/profile/avatar", auth_1.authenticateToken, upload.single("avatar")
             return res.status(400).json({ error: "No file uploaded" });
         }
         const userId = req.user.id;
-        const avatarPath = `/uploads/avatars/${req.file.filename}`;
+        const currentUser = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { avatar: true },
+        });
+        const base64Image = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+        const uploadResult = await (0, cloudinary_1.uploadImage)(base64Image, 'trackdesk/admin/profiles');
+        if (currentUser?.avatar && currentUser.avatar.includes('cloudinary.com')) {
+            try {
+                const urlParts = currentUser.avatar.split('/');
+                const filename = urlParts[urlParts.length - 1].split('.')[0];
+                const folder = urlParts[urlParts.length - 2];
+                const publicId = `${folder}/${filename}`;
+                await (0, cloudinary_1.deleteImage)(publicId);
+            }
+            catch (error) {
+                console.error('Error deleting old avatar:', error);
+            }
+        }
         const updatedUser = await prisma.user.update({
             where: { id: userId },
-            data: { avatar: avatarPath },
+            data: { avatar: uploadResult.url },
         });
         res.json({
             success: true,
             message: "Avatar uploaded successfully",
-            avatar: avatarPath,
+            avatar: uploadResult.url,
         });
     }
     catch (error) {

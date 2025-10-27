@@ -9,8 +9,11 @@ import * as fs from "fs";
 const router: Router = Router();
 const prisma = new PrismaClient();
 
-// Configure multer for file uploads
-const upload = multer({ dest: "uploads/" });
+// Configure multer for file uploads - use memory storage for serverless environments
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
+});
 
 // Get coupons with filtering and pagination
 router.get("/", async (req: Request, res: Response) => {

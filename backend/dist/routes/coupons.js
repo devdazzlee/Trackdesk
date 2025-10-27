@@ -45,7 +45,10 @@ const csv_parser_1 = __importDefault(require("csv-parser"));
 const fs = __importStar(require("fs"));
 const router = (0, express_1.Router)();
 const prisma = new client_1.PrismaClient();
-const upload = (0, multer_1.default)({ dest: "uploads/" });
+const upload = (0, multer_1.default)({
+    storage: multer_1.default.memoryStorage(),
+    limits: { fileSize: 10 * 1024 * 1024 }
+});
 router.get("/", async (req, res) => {
     try {
         const { page = 1, limit = 20, search, status, type, affiliateId, } = req.query;

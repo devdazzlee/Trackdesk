@@ -72,6 +72,7 @@ const io = new socket_io_1.Server(server, {
             "http://localhost:3000",
             "http://localhost:3001",
             "http://localhost:8000",
+            "https://trackdesk-frontend.vercel.app",
             "null",
         ],
         methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
@@ -92,6 +93,7 @@ app.use((0, cors_1.default)({
             "http://localhost:3001",
             "http://localhost:3002",
             "http://localhost:8000",
+            "https://trackdesk-frontend.vercel.app",
         ];
         if (allowedOrigins.indexOf(origin) !== -1 ||
             origin.startsWith("http://localhost:")) {
