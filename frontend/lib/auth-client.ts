@@ -15,9 +15,9 @@ export interface AuthResponse {
   user: User;
 }
 
-// API Configuration
+// API Configuration - Use Next.js API routes to avoid CORS issues
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3003/api";
+  process.env.NEXT_PUBLIC_API_URL || "/api";
 
 // Cookie names
 const COOKIE_NAMES = {
@@ -155,7 +155,6 @@ export class AuthClient {
         headers: {
           "Content-Type": "application/json",
         },
-        credentials: "include",
         body: JSON.stringify({ email, password }),
       });
 
@@ -165,7 +164,7 @@ export class AuthClient {
         throw new Error(data.error || "Login failed");
       }
 
-      // Set cookies will be handled by the server response
+      // Set cookies will be handled by the Next.js API route
       this.setAuth(data.token, data.user);
 
       return data;
