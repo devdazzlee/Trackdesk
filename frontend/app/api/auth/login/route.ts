@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3003/api";
+const BACKEND_URL =
+  process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3003";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
     // Forward the request to the backend
-    const response = await fetch(`${BACKEND_URL}/auth/login`, {
+    const response = await fetch(`${BACKEND_URL}/api/auth/login`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -21,31 +22,55 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(data, { status: response.status });
     }
 
-    // Extract cookies from the backend response
-    const setCookieHeader = response.headers.get("set-cookie");
-    
     // Create response with data
     const nextResponse = NextResponse.json(data);
 
-    // Set cookies from backend if they exist
-    if (setCookieHeader) {
-      const cookies = setCookieHeader.split(",");
-      cookies.forEach((cookie) => {
-        const [nameValue, ...rest] = cookie.split(";");
-        const [name, value] = nameValue.trim().split("=");
-        
-        if (name && value) {
-          nextResponse.cookies.set(name, value, {
-            httpOnly: cookie.includes("HttpOnly"),
-            secure: cookie.includes("Secure"),
-            sameSite: cookie.includes("SameSite=None") ? "none" : "lax",
-            path: "/",
-            maxAge: 7 * 24 * 60 * 60, // 7 days
-          });
-        }
-      });
-    }
+    // Extract ALL set-cookie headers from backend response
+    const setCookieHeaders = response.headers.getSetCookie();
 
+    console.log("Backend Set-Cookie headers:", setCookieHeaders);
+
+    // Parse and set each cookie
+    setCookieHeaders.forEach((cookieString) => {
+      // Parse the cookie string
+      const parts = cookieString.split(";").map((p) => p.trim());
+      const [nameValue] = parts;
+      const [name, ...valueParts] = nameValue.split("=");
+      const value = valueParts.join("=");
+
+      if (!name || !value) return;
+
+      // Extract cookie options
+      const httpOnly = parts.some((p) => p.toLowerCase().includes("httponly"));
+      const secure = parts.some((p) => p.toLowerCase().includes("secure"));
+      const sameSite =
+        parts
+          .find((p) => p.toLowerCase().startsWith("samesite"))
+          ?.split("=")[1]
+          ?.toLowerCase() || "lax";
+      const maxAgePart = parts
+        .find((p) => p.toLowerCase().startsWith("max-age"))
+        ?.split("=")[1];
+      const expiresPart = parts.find((p) =>
+        p.toLowerCase().startsWith("expires")
+      );
+
+      console.log(`Setting cookie: ${name}`);
+      console.log(
+        `  httpOnly: ${httpOnly}, secure: ${secure}, sameSite: ${sameSite}`
+      );
+
+      // Set the cookie
+      nextResponse.cookies.set(name, value, {
+        httpOnly,
+        secure: secure || process.env.NODE_ENV === "production",
+        sameSite: sameSite as "strict" | "lax" | "none",
+        path: "/",
+        maxAge: maxAgePart ? parseInt(maxAgePart) : 7 * 24 * 60 * 60,
+      });
+    });
+
+    console.log("Cookies set successfully");
     return nextResponse;
   } catch (error: any) {
     console.error("Login API error:", error);
@@ -55,4 +80,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
