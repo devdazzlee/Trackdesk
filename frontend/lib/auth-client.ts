@@ -16,8 +16,7 @@ export interface AuthResponse {
 }
 
 // API Configuration - Use Next.js API routes to avoid CORS issues
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "/api";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "/api";
 
 // Cookie names
 const COOKIE_NAMES = {
