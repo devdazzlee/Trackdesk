@@ -2,11 +2,14 @@ import { Request, Response, NextFunction } from "express";
 import * as jwt from "jsonwebtoken";
 import { PrismaClient } from "@prisma/client";
 
-// Cookie configuration
+// Cookie configuration - Vercel compatible for cross-domain
+const isVercel = process.env.VERCEL === "1";
+const isProduction = process.env.NODE_ENV === "production";
+
 export const COOKIE_CONFIG = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
-  sameSite: "strict" as const,
+  secure: isVercel || isProduction,
+  sameSite: isVercel || isProduction ? ("none" as const) : ("lax" as const),
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   path: "/",
 };
@@ -194,8 +197,8 @@ export const setAuthCookies = (res: Response, token: string, user: any) => {
 export const clearAuthCookies = (res: Response) => {
   const clearOptions = {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict" as const,
+    secure: isVercel || isProduction,
+    sameSite: isVercel || isProduction ? ("none" as const) : ("lax" as const),
     path: "/",
   };
 

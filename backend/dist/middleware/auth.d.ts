@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from "express";
 export declare const COOKIE_CONFIG: {
     httpOnly: boolean;
     secure: boolean;
-    sameSite: "strict";
+    sameSite: "none" | "lax";
     maxAge: number;
     path: string;
 };

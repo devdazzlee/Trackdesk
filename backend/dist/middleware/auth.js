@@ -36,10 +36,12 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.clearAuthCookies = exports.setAuthCookies = exports.optionalAuth = exports.requireAdmin = exports.requireAffiliate = exports.requireRole = exports.authenticateToken = exports.COOKIE_CONFIG = void 0;
 const jwt = __importStar(require("jsonwebtoken"));
 const client_1 = require("@prisma/client");
+const isVercel = process.env.VERCEL === "1";
+const isProduction = process.env.NODE_ENV === "production";
 exports.COOKIE_CONFIG = {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
+    secure: isVercel || isProduction,
+    sameSite: (isVercel || isProduction) ? "none" : "lax",
     maxAge: 7 * 24 * 60 * 60 * 1000,
     path: "/",
 };
@@ -99,7 +101,7 @@ const requireAffiliate = (req, res, next) => {
         return res.status(401).json({ error: "Authentication required" });
     }
     if (req.user.role !== "AFFILIATE") {
-        return res.status(403).json({ error: "Affiliate access required" });
+        return res.status(403).json({ error: "Affiliate access  q " });
     }
     if (!req.user.affiliateProfile) {
         return res.status(404).json({ error: "Affiliate profile not found" });
@@ -171,8 +173,8 @@ exports.setAuthCookies = setAuthCookies;
 const clearAuthCookies = (res) => {
     const clearOptions = {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
+        secure: isVercel || isProduction,
+        sameSite: (isVercel || isProduction) ? "none" : "lax",
         path: "/",
     };
     res.clearCookie("accessToken", clearOptions);

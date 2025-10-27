@@ -1740,3 +1740,19 @@
 {"level":"info","message":"🚀 Trackdesk Backend Server running on port 3003","timestamp":"2025-10-27T17:54:54.509Z"}
 {"level":"info","message":"📡 WebSocket server running on port 3003","timestamp":"2025-10-27T17:54:54.512Z"}
 {"level":"info","message":"🌐 Environment: development","timestamp":"2025-10-27T17:54:54.512Z"}
+{"level":"info","message":"SIGTERM received, shutting down gracefully","timestamp":"2025-10-27T18:06:56.274Z"}
+{"level":"info","message":"🚀 Trackdesk Backend Server running on port 3003","timestamp":"2025-10-27T18:06:58.712Z"}
+{"level":"info","message":"📡 WebSocket server running on port 3003","timestamp":"2025-10-27T18:06:58.715Z"}
+{"level":"info","message":"🌐 Environment: development","timestamp":"2025-10-27T18:06:58.716Z"}
+{"level":"info","message":"SIGTERM received, shutting down gracefully","timestamp":"2025-10-27T18:07:14.690Z"}
+{"level":"info","message":"🚀 Trackdesk Backend Server running on port 3003","timestamp":"2025-10-27T18:07:16.543Z"}
+{"level":"info","message":"📡 WebSocket server running on port 3003","timestamp":"2025-10-27T18:07:16.548Z"}
+{"level":"info","message":"🌐 Environment: development","timestamp":"2025-10-27T18:07:16.549Z"}
+{"level":"info","message":"SIGTERM received, shutting down gracefully","timestamp":"2025-10-27T18:07:26.171Z"}
+{"level":"info","message":"🚀 Trackdesk Backend Server running on port 3003","timestamp":"2025-10-27T18:07:27.879Z"}
+{"level":"info","message":"📡 WebSocket server running on port 3003","timestamp":"2025-10-27T18:07:27.884Z"}
+{"level":"info","message":"🌐 Environment: development","timestamp":"2025-10-27T18:07:27.885Z"}
+{"level":"info","message":"SIGTERM received, shutting down gracefully","timestamp":"2025-10-27T18:07:52.580Z"}
+{"level":"info","message":"🚀 Trackdesk Backend Server running on port 3003","timestamp":"2025-10-27T18:07:54.755Z"}
+{"level":"info","message":"📡 WebSocket server running on port 3003","timestamp":"2025-10-27T18:07:54.759Z"}
+{"level":"info","message":"🌐 Environment: development","timestamp":"2025-10-27T18:07:54.760Z"}
