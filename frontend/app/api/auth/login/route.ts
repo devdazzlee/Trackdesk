@@ -26,8 +26,9 @@ export async function POST(request: NextRequest) {
     const nextResponse = NextResponse.json(data);
 
     // Check if we're in production/Vercel (cross-domain scenario)
-    const isProduction = process.env.NODE_ENV === "production" || process.env.VERCEL === "1";
-    
+    const isProduction =
+      process.env.NODE_ENV === "production" || process.env.VERCEL === "1";
+
     if (isProduction) {
       // In production, backend won't set cookies for different domain
       // So we set them ourselves from the response data
@@ -74,7 +75,9 @@ export async function POST(request: NextRequest) {
 
         if (!name || !value) return;
 
-        const httpOnly = parts.some((p) => p.toLowerCase().includes("httponly"));
+        const httpOnly = parts.some((p) =>
+          p.toLowerCase().includes("httponly")
+        );
         const secure = parts.some((p) => p.toLowerCase().includes("secure"));
         const sameSite =
           parts

@@ -48,14 +48,16 @@ export class AuthController {
   async register(req: Request, res: Response) {
     try {
       const data = registerSchema.parse(req.body);
-      console.log("🚀 ~ AuthController ~ register ~ data:", data)
+      console.log("🚀 ~ AuthController ~ register ~ data:", data);
       const result = await authService.register(data as any);
 
       // Note: Welcome email will be sent after email verification
       // Don't set auth cookies here - user must verify email first
 
       res.status(201).json({
-        message: result.message || "Registration successful! Please check your email to verify your account.",
+        message:
+          result.message ||
+          "Registration successful! Please check your email to verify your account.",
         // Don't return token or user until email is verified
       });
     } catch (error: any) {
@@ -230,7 +232,9 @@ export class AuthController {
       const { token } = req.body;
 
       if (!token) {
-        return res.status(400).json({ error: "Verification token is required" });
+        return res
+          .status(400)
+          .json({ error: "Verification token is required" });
       }
 
       const result = await authService.verifyEmail(token);
