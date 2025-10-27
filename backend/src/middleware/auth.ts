@@ -99,7 +99,7 @@ export const requireAffiliate = (
   }
 
   if (req.user.role !== "AFFILIATE") {
-    return res.status(403).json({ error: "Affiliate access required" });
+    return res.status(403).json({ error: "Affiliate access  q " });
   }
 
   if (!req.user.affiliateProfile) {

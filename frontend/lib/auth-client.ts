@@ -76,7 +76,12 @@ export class AuthClient {
     const isSecure = window.location.protocol === "https:";
     const secureFlag = isSecure ? ";secure" : "";
 
-    document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/${secureFlag};samesite=lax`;
+    // Use SameSite=None;Secure for Vercel production (cross-origin)
+    // Use SameSite=Lax for local development (same-origin)
+    const sameSite = isSecure ? "none" : "lax";
+    const sameSiteFlag = `;samesite=${sameSite}`;
+
+    document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/${secureFlag}${sameSiteFlag}`;
   }
 
   private deleteCookie(name: string): void {
@@ -228,8 +233,11 @@ export class AuthClient {
   public async getProfile(): Promise<User> {
     try {
       console.log("🌐 AuthClient.getProfile - Making request to /auth/me");
-      console.log("🌐 AuthClient.getProfile - Current cookies:", document.cookie);
-      
+      console.log(
+        "🌐 AuthClient.getProfile - Current cookies:",
+        document.cookie
+      );
+
       const response = await fetch(`${API_BASE_URL}/auth/me`, {
         method: "GET",
         headers: {
@@ -238,23 +246,31 @@ export class AuthClient {
         credentials: "include", // This will send httpOnly cookies
       });
 
-      console.log("🌐 AuthClient.getProfile - Response status:", response.status);
-      console.log("🌐 AuthClient.getProfile - Response headers:", Object.fromEntries(response.headers.entries()));
+      console.log(
+        "🌐 AuthClient.getProfile - Response status:",
+        response.status
+      );
+      console.log(
+        "🌐 AuthClient.getProfile - Response headers:",
+        Object.fromEntries(response.headers.entries())
+      );
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: "Failed to fetch profile" }));
+        const errorData = await response
+          .json()
+          .catch(() => ({ error: "Failed to fetch profile" }));
         console.error("Get profile failed:", response.status, errorData);
         throw new Error(errorData.error || "Failed to fetch profile");
       }
 
       const data = await response.json();
-      
+
       console.log("🔍 AuthClient.getProfile - Raw response from /auth/me:", {
         id: data.id,
         email: data.email,
         avatar: data.avatar,
       });
-      
+
       // Ensure we return a properly formatted User object
       const user = {
         id: data.id,
@@ -264,13 +280,13 @@ export class AuthClient {
         role: data.role,
         avatar: data.avatar,
       };
-      
+
       console.log("📦 AuthClient.getProfile - User object being returned:", {
         id: user.id,
         email: user.email,
         avatar: user.avatar,
       });
-      
+
       return user;
     } catch (error) {
       console.error("Get profile error:", error);
