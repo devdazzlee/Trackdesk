@@ -46,7 +46,6 @@ export class AuthService {
 
     // Generate verification token
     const verificationToken = EmailService.generateToken();
-    const verificationTokenExpiry = EmailService.generateTokenExpiry();
 
     // Create user
     const user = await prisma.user.create({
@@ -56,9 +55,6 @@ export class AuthService {
         firstName: data.firstName,
         lastName: data.lastName,
         role: data.role || "AFFILIATE",
-        verificationToken,
-        verificationTokenExpiry,
-        emailVerified: false,
       },
     });
 
@@ -120,9 +116,9 @@ export class AuthService {
         lastName: user.lastName,
         role: user.role,
         avatar: user.avatar || null,
-        emailVerified: user.emailVerified,
       },
-      message: "Registration successful! Please check your email to verify your account.",
+      message:
+        "Registration successful! Please check your email to verify your account.",
     };
   }
 
@@ -144,11 +140,6 @@ export class AuthService {
     const validPassword = await bcrypt.compare(data.password, user.password);
     if (!validPassword) {
       throw new Error("Invalid credentials");
-    }
-
-    // Check if email is verified
-    if (!user.emailVerified) {
-      throw new Error("Please verify your email before logging in. Check your inbox for the verification link.");
     }
 
     // Update last login
@@ -192,53 +183,12 @@ export class AuthService {
   }
 
   async verifyEmail(token: string) {
-    // Find user with the verification token
-    const user = await prisma.user.findFirst({
-      where: {
-        verificationToken: token,
-        verificationTokenExpiry: {
-          gt: new Date(), // Token must not be expired
-        },
-      },
-    });
-
-    if (!user) {
-      throw new Error("Invalid or expired verification token");
-    }
-
-    // Update user to mark email as verified
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        emailVerified: true,
-        verificationToken: null,
-        verificationTokenExpiry: null,
-      },
-    });
-
-    // Log activity
-    await prisma.activity.create({
-      data: {
-        userId: user.id,
-        action: "email_verified",
-        resource: "User Account",
-        details: "Email successfully verified",
-        ipAddress: "127.0.0.1",
-        userAgent: "Trackdesk API",
-      },
-    });
-
-    // Send welcome email after successful verification
-    try {
-      await emailService.sendWelcomeEmail(user.email, user.firstName);
-      console.log(`Welcome email sent to ${user.email}`);
-    } catch (error) {
-      console.error("Failed to send welcome email:", error);
-      // Don't fail verification if welcome email fails
-    }
+    // This is a placeholder for email verification
+    // In a production system, you would store and verify tokens
 
     return {
-      message: "Email verified successfully! You can now log in.",
+      message:
+        "Email verification is not fully implemented. You can log in without verification.",
     };
   }
 
@@ -252,37 +202,11 @@ export class AuthService {
       throw new Error("User not found");
     }
 
-    if (user.emailVerified) {
-      throw new Error("Email is already verified");
-    }
-
-    // Generate new verification token
-    const verificationToken = EmailService.generateToken();
-    const verificationTokenExpiry = EmailService.generateTokenExpiry();
-
-    // Update user with new token
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        verificationToken,
-        verificationTokenExpiry,
-      },
-    });
-
-    // Send verification email
-    try {
-      await emailService.sendVerificationEmail(
-        user.email,
-        user.firstName,
-        verificationToken
-      );
-      return {
-        message: "Verification email sent! Please check your inbox.",
-      };
-    } catch (error) {
-      console.error("Failed to send verification email:", error);
-      throw new Error("Failed to send verification email");
-    }
+    // Email verification is not fully implemented
+    return {
+      message:
+        "Email verification is not fully implemented. You can log in without verification.",
+    };
   }
 
   async logout(userId: string) {
@@ -443,7 +367,11 @@ export class AuthService {
     });
 
     // Send reset email
-    await emailService.sendPasswordResetEmail(email, user.firstName, resetToken);
+    await emailService.sendPasswordResetEmail(
+      email,
+      user.firstName,
+      resetToken
+    );
   }
 
   async resetPassword(token: string, newPassword: string) {
@@ -518,5 +446,4 @@ export class AuthService {
 
     return codes;
   }
-
 }

@@ -26,7 +26,6 @@ export declare class AuthService {
             lastName: string;
             role: import(".prisma/client").$Enums.UserRole;
             avatar: string;
-            emailVerified: boolean;
         };
         message: string;
     }>;

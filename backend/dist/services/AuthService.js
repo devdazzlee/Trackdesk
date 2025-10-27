@@ -53,7 +53,6 @@ class AuthService {
         }
         const hashedPassword = await bcryptjs_1.default.hash(data.password, parseInt(process.env.BCRYPT_ROUNDS || "12"));
         const verificationToken = EmailService_1.EmailService.generateToken();
-        const verificationTokenExpiry = EmailService_1.EmailService.generateTokenExpiry();
         const user = await prisma.user.create({
             data: {
                 email: data.email,
@@ -61,9 +60,6 @@ class AuthService {
                 firstName: data.firstName,
                 lastName: data.lastName,
                 role: data.role || "AFFILIATE",
-                verificationToken,
-                verificationTokenExpiry,
-                emailVerified: false,
             },
         });
         if (data.role === "AFFILIATE" || !data.role) {
@@ -109,7 +105,6 @@ class AuthService {
                 lastName: user.lastName,
                 role: user.role,
                 avatar: user.avatar || null,
-                emailVerified: user.emailVerified,
             },
             message: "Registration successful! Please check your email to verify your account.",
         };
@@ -128,9 +123,6 @@ class AuthService {
         const validPassword = await bcryptjs_1.default.compare(data.password, user.password);
         if (!validPassword) {
             throw new Error("Invalid credentials");
-        }
-        if (!user.emailVerified) {
-            throw new Error("Please verify your email before logging in. Check your inbox for the verification link.");
         }
         await prisma.user.update({
             where: { id: user.id },
@@ -162,44 +154,8 @@ class AuthService {
         };
     }
     async verifyEmail(token) {
-        const user = await prisma.user.findFirst({
-            where: {
-                verificationToken: token,
-                verificationTokenExpiry: {
-                    gt: new Date(),
-                },
-            },
-        });
-        if (!user) {
-            throw new Error("Invalid or expired verification token");
-        }
-        await prisma.user.update({
-            where: { id: user.id },
-            data: {
-                emailVerified: true,
-                verificationToken: null,
-                verificationTokenExpiry: null,
-            },
-        });
-        await prisma.activity.create({
-            data: {
-                userId: user.id,
-                action: "email_verified",
-                resource: "User Account",
-                details: "Email successfully verified",
-                ipAddress: "127.0.0.1",
-                userAgent: "Trackdesk API",
-            },
-        });
-        try {
-            await EmailService_1.default.sendWelcomeEmail(user.email, user.firstName);
-            console.log(`Welcome email sent to ${user.email}`);
-        }
-        catch (error) {
-            console.error("Failed to send welcome email:", error);
-        }
         return {
-            message: "Email verified successfully! You can now log in.",
+            message: "Email verification is not fully implemented. You can log in without verification.",
         };
     }
     async resendVerificationEmail(email) {
@@ -209,28 +165,9 @@ class AuthService {
         if (!user) {
             throw new Error("User not found");
         }
-        if (user.emailVerified) {
-            throw new Error("Email is already verified");
-        }
-        const verificationToken = EmailService_1.EmailService.generateToken();
-        const verificationTokenExpiry = EmailService_1.EmailService.generateTokenExpiry();
-        await prisma.user.update({
-            where: { id: user.id },
-            data: {
-                verificationToken,
-                verificationTokenExpiry,
-            },
-        });
-        try {
-            await EmailService_1.default.sendVerificationEmail(user.email, user.firstName, verificationToken);
-            return {
-                message: "Verification email sent! Please check your inbox.",
-            };
-        }
-        catch (error) {
-            console.error("Failed to send verification email:", error);
-            throw new Error("Failed to send verification email");
-        }
+        return {
+            message: "Email verification is not fully implemented. You can log in without verification.",
+        };
     }
     async logout(userId) {
         await prisma.session.deleteMany({
