@@ -9,11 +9,11 @@
 (function() {
   'use strict';
 
-  // Configuration
+  // Configuration - will be set by init()
   const TRACKDESK_CONFIG = {
-    apiUrl: 'http://localhost:3003/api', // Change to your API URL
+    apiUrl: '', // Set via init()
     version: '1.0.0',
-    debug: true, // Enable debug for testing
+    debug: false, // Set via init()
     batchSize: 10,
     flushInterval: 5000, // 5 seconds
     maxRetries: 3,
@@ -120,19 +120,30 @@
       // Merge config
       Object.assign(TRACKDESK_CONFIG, config);
       
-      // Generate session ID
-      sessionId = utils.generateId();
-      
-      // Get website ID from script tag
+      // Get website ID from config or script tag
       const script = document.querySelector('script[src*="trackdesk.js"]');
       if (script) {
-        websiteId = script.getAttribute('data-website-id') || script.getAttribute('data-id');
+        websiteId = script.getAttribute('data-website-id') || 
+                   script.getAttribute('data-id') ||
+                   config.websiteId;
+      }
+
+      if (config.websiteId) {
+        websiteId = config.websiteId;
       }
 
       if (!websiteId) {
-        utils.log('Warning: No website ID found. Please add data-website-id to the script tag.');
+        utils.log('Warning: No website ID found. Please set websiteId in init() config or add data-website-id to the script tag.');
         return;
       }
+
+      if (!TRACKDESK_CONFIG.apiUrl) {
+        utils.log('Warning: No API URL configured. Please set apiUrl in init() config.');
+        return;
+      }
+
+      // Generate session ID
+      sessionId = utils.generateId();
 
       isInitialized = true;
       utils.log('Trackdesk initialized', { sessionId, websiteId });

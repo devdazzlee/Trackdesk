@@ -488,30 +488,6 @@ export default function AdminDashboardPage() {
           xAxisKey="affiliate"
           bars={[{ dataKey: "revenue", fill: "#3b82f6", name: "Revenue ($)" }]}
         />
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-            <CardDescription>Common administrative tasks</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Button variant="outline" className="w-full justify-start">
-              <UserPlus className="h-4 w-4 mr-2" />
-              Approve New Affiliates
-            </Button>
-            <Button variant="outline" className="w-full justify-start">
-              <CreditCard className="h-4 w-4 mr-2" />
-              Process Payouts
-            </Button>
-            <Button variant="outline" className="w-full justify-start">
-              <BarChart3 className="h-4 w-4 mr-2" />
-              Generate Reports
-            </Button>
-            <Button variant="outline" className="w-full justify-start">
-              <Bell className="h-4 w-4 mr-2" />
-              Send Announcements
-            </Button>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Data Tables */}

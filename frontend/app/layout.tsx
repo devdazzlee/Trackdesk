@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -24,8 +25,44 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Get configuration from environment variables
+  const apiUrl =
+    process.env.NEXT_PUBLIC_TRACKDESK_API_URL ||
+    process.env.NEXT_PUBLIC_API_URL ||
+    "http://localhost:3003/api";
+  const websiteId = process.env.NEXT_PUBLIC_TRACKDESK_WEBSITE_ID || "";
+  const debugMode =
+    process.env.NEXT_PUBLIC_TRACKDESK_DEBUG === "true" ||
+    process.env.NODE_ENV !== "production";
+
   return (
     <html lang="en">
+      <head>
+        {/* Trackdesk Tracking Script */}
+        <Script
+          id="trackdesk-script"
+          src="/trackdesk.js"
+          strategy="afterInteractive"
+          data-website-id={websiteId}
+          data-auto-init="false"
+        />
+        {/* Initialize Trackdesk with configuration */}
+        <Script id="trackdesk-init" strategy="afterInteractive">
+          {`
+            (function() {
+              if (typeof window !== 'undefined' && window.Trackdesk && window.Trackdesk.init) {
+                window.Trackdesk.init({
+                  apiUrl: '${apiUrl}',
+                  websiteId: '${websiteId}',
+                  debug: ${debugMode},
+                  batchSize: 10,
+                  flushInterval: 5000
+                });
+              }
+            })();
+          `}
+        </Script>
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
