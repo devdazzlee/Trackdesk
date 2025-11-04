@@ -636,6 +636,12 @@ enum PayoutStatus {
   CANCELLED
 }
 
+enum WebsiteStatus {
+  ACTIVE
+  PAUSED
+  INACTIVE
+}
+
 enum CreativeType {
   BANNER
   LOGO
@@ -880,6 +886,23 @@ model SmartLinkConversion {
   event     SmartLinkEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
   @@map("smart_link_conversions")
+}
+
+// Website Management
+model Website {
+  id          String        @id @default(cuid())
+  websiteId   String        @unique // Unique identifier for tracking (e.g., "store-1-production")
+  name        String
+  domain      String
+  description String?
+  status      WebsiteStatus @default(ACTIVE)
+  createdBy   String? // User ID who created it (admin)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("websites")
 }
 
 // Tracking Code Models

@@ -17,6 +17,7 @@ import {
   Lock,
   Settings as SettingsIcon,
   ChevronRight,
+  Globe,
 } from "lucide-react";
 
 const settingsItems = [
@@ -35,6 +36,15 @@ const settingsItems = [
     href: "/dashboard/settings/security",
     color: "text-green-600",
     bgColor: "bg-green-100",
+  },
+  {
+    title: "Websites",
+    description:
+      "Manage your websites and get Website IDs for tracking integration",
+    icon: Globe,
+    href: "/dashboard/settings/websites",
+    color: "text-purple-600",
+    bgColor: "bg-purple-100",
   },
 ];
 
@@ -74,7 +84,9 @@ export default function SettingsPage() {
                       <h3 className="text-lg font-semibold text-gray-900 mb-1">
                         {item.title}
                       </h3>
-                      <p className="text-sm text-gray-600">{item.description}</p>
+                      <p className="text-sm text-gray-600">
+                        {item.description}
+                      </p>
                     </div>
                   </div>
                   <ChevronRight className="h-5 w-5 text-gray-400 mt-2" />
@@ -93,11 +105,10 @@ export default function SettingsPage() {
               <SettingsIcon className="h-5 w-5 text-blue-600" />
             </div>
             <div>
-              <h4 className="font-semibold text-gray-900 mb-2">
-                Need Help?
-              </h4>
+              <h4 className="font-semibold text-gray-900 mb-2">Need Help?</h4>
               <p className="text-sm text-gray-600 mb-3">
-                If you need assistance with your account settings, our support team is here to help.
+                If you need assistance with your account settings, our support
+                team is here to help.
               </p>
               <button
                 onClick={() => router.push("/dashboard/resources/support")}
@@ -112,4 +123,3 @@ export default function SettingsPage() {
     </div>
   );
 }
-

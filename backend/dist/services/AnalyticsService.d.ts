@@ -93,12 +93,12 @@ export declare class AnalyticsService {
                         startDate: Date;
                         endDate: Date | null;
                         category: string;
-                        terms: string | null;
-                        requirements: string | null;
-                        totalRevenue: number;
                         accountId: string;
                         categoryId: string | null;
+                        terms: string | null;
+                        requirements: string | null;
                         tags: string[];
+                        totalRevenue: number;
                     };
                 } & {
                     id: string;
@@ -130,8 +130,8 @@ export declare class AnalyticsService {
                 device: string | null;
                 browser: string | null;
                 os: string | null;
-                converted: boolean;
                 source: string | null;
+                converted: boolean;
                 timestamp: Date;
             };
         } & {
@@ -164,12 +164,12 @@ export declare class AnalyticsService {
                     startDate: Date;
                     endDate: Date | null;
                     category: string;
-                    terms: string | null;
-                    requirements: string | null;
-                    totalRevenue: number;
                     accountId: string;
                     categoryId: string | null;
+                    terms: string | null;
+                    requirements: string | null;
                     tags: string[];
+                    totalRevenue: number;
                 };
             } & {
                 id: string;
@@ -201,8 +201,8 @@ export declare class AnalyticsService {
             device: string | null;
             browser: string | null;
             os: string | null;
-            converted: boolean;
             source: string | null;
+            converted: boolean;
             timestamp: Date;
         })[];
         firstClick: {
@@ -221,12 +221,12 @@ export declare class AnalyticsService {
                     startDate: Date;
                     endDate: Date | null;
                     category: string;
-                    terms: string | null;
-                    requirements: string | null;
-                    totalRevenue: number;
                     accountId: string;
                     categoryId: string | null;
+                    terms: string | null;
+                    requirements: string | null;
                     tags: string[];
+                    totalRevenue: number;
                 };
             } & {
                 id: string;
@@ -258,8 +258,8 @@ export declare class AnalyticsService {
             device: string | null;
             browser: string | null;
             os: string | null;
-            converted: boolean;
             source: string | null;
+            converted: boolean;
             timestamp: Date;
         };
         lastClick: {
@@ -278,12 +278,12 @@ export declare class AnalyticsService {
                     startDate: Date;
                     endDate: Date | null;
                     category: string;
-                    terms: string | null;
-                    requirements: string | null;
-                    totalRevenue: number;
                     accountId: string;
                     categoryId: string | null;
+                    terms: string | null;
+                    requirements: string | null;
                     tags: string[];
+                    totalRevenue: number;
                 };
             } & {
                 id: string;
@@ -315,8 +315,8 @@ export declare class AnalyticsService {
             device: string | null;
             browser: string | null;
             os: string | null;
-            converted: boolean;
             source: string | null;
+            converted: boolean;
             timestamp: Date;
         };
     }>;

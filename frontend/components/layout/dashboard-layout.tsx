@@ -119,6 +119,7 @@ const affiliateNavItems = [
     subItems: [
       { title: "Profile", href: "/dashboard/settings/profile" },
       { title: "Security", href: "/dashboard/settings/security" },
+      { title: "Websites", href: "/dashboard/settings/websites" },
     ],
   },
 ];
@@ -223,6 +224,7 @@ const adminNavItems = [
     subItems: [
       { title: "Profile", href: "/admin/settings/profile" },
       { title: "System Settings", href: "/admin/settings" },
+      { title: "Websites", href: "/admin/settings/websites" },
       { title: "Security", href: "/admin/settings/security" },
     ],
   },

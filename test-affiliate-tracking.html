@@ -321,8 +321,15 @@
             <div class="tracking-info">
                 <p><strong>🔗 Referral Code:</strong> <span id="referral-code">Not detected</span> <span class="badge" id="referral-status">No Affiliate</span></p>
                 <p><strong>👤 Session ID:</strong> <span id="session-id">Loading...</span></p>
-                <p><strong>📊 Website ID:</strong> <span id="website-id">Loading...</span></p>
-                <p><strong>📍 API Endpoint:</strong> <span id="api-endpoint">http://localhost:3003</span></p>
+                <p><strong>📊 Website ID:</strong> <span id="website-id">Loading...</span> 
+                    <span style="color: #718096; font-size: 12px; margin-left: 10px;">
+                        (Get from Dashboard → Settings → Websites)
+                    </span>
+                </p>
+                <p><strong>📍 API Endpoint:</strong> <span id="api-endpoint">http://localhost:3003/api</span></p>
+                <p style="margin-top: 10px; padding: 10px; background: #e6fffa; border-radius: 5px; font-size: 12px;">
+                    <strong>💡 Tip:</strong> Add <code>?websiteId=your-website-id</code> to URL to use your Website ID from dashboard
+                </p>
             </div>
         </div>
 
@@ -432,8 +439,7 @@
 
     <!-- Trackdesk CDN Script -->
     <script src="http://localhost:3000/trackdesk.js" 
-            data-website-id="test-website-001" 
-            data-auto-init="true">
+            data-auto-init="false">
     </script>
 
     <script>
@@ -442,6 +448,19 @@
         let cart = [];
         let referralCode = null;
         let affiliateId = null;
+        let websiteId = null;
+
+        // Get website ID from URL or use default
+        function getWebsiteId() {
+            const urlParams = new URLSearchParams(window.location.search);
+            // Try URL parameter first (e.g., ?websiteId=store-1-production)
+            const urlWebsiteId = urlParams.get('websiteId');
+            if (urlWebsiteId) {
+                return urlWebsiteId;
+            }
+            // Fallback to default test ID
+            return 'test-website-001';
+        }
 
         // Get referral code from URL
         function getReferralCode() {
@@ -465,6 +484,25 @@
 
         // Initialize tracking
         window.addEventListener('load', function() {
+            // Get website ID from URL or use default
+            websiteId = getWebsiteId();
+            
+            // Initialize Trackdesk with website ID
+            if (window.Trackdesk && window.Trackdesk.init) {
+                window.Trackdesk.init({
+                    apiUrl: API_URL,
+                    websiteId: websiteId,
+                    debug: true,
+                    batchSize: 10,
+                    flushInterval: 5000
+                });
+                
+                logEvent('TRACKDESK_INITIALIZED', { 
+                    websiteId: websiteId,
+                    apiUrl: API_URL
+                });
+            }
+
             // Get referral code from URL
             referralCode = getReferralCode();
             
@@ -484,11 +522,13 @@
             // Display session info
             if (window.Trackdesk) {
                 setTimeout(() => {
-                    document.getElementById('session-id').textContent = window.Trackdesk.config.sessionId || 'N/A';
-                    document.getElementById('website-id').textContent = 'test-website-001';
+                    document.getElementById('session-id').textContent = window.Trackdesk.config?.sessionId || 'N/A';
+                    document.getElementById('website-id').textContent = websiteId;
+                    document.getElementById('api-endpoint').textContent = API_URL;
                     logEvent('TRACKING_INITIALIZED', { 
-                        sessionId: window.Trackdesk.config.sessionId,
-                        websiteId: 'test-website-001'
+                        sessionId: window.Trackdesk.config?.sessionId,
+                        websiteId: websiteId,
+                        apiUrl: API_URL
                     });
                 }, 500);
             }
@@ -504,7 +544,7 @@
                     },
                     body: JSON.stringify({
                         referralCode: refCode,
-                        storeId: 'test-store-001',
+                        storeId: websiteId || 'test-store-001', // Use websiteId from URL or default
                         url: window.location.href,
                         referrer: document.referrer,
                         userAgent: navigator.userAgent,
@@ -658,7 +698,7 @@
                     },
                     body: JSON.stringify({
                         referralCode: referralCode,
-                        storeId: 'test-store-001',
+                        storeId: websiteId || 'test-store-001', // Use websiteId from URL or default
                         orderId: 'ORD-' + Date.now(),
                         orderValue: orderValue,
                         currency: 'USD',
@@ -708,11 +748,7 @@
             }
         });
 
-        // Override Trackdesk config
-        if (window.Trackdesk) {
-            window.Trackdesk.config.apiUrl = API_URL;
-            window.Trackdesk.config.debug = true;
-        }
+        // Note: Trackdesk is initialized in window.addEventListener('load') above
     </script>
 </body>
 </html>

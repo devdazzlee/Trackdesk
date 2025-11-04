@@ -86,12 +86,12 @@ export declare class OfferService {
             startDate: Date;
             endDate: Date | null;
             category: string;
-            terms: string | null;
-            requirements: string | null;
-            totalRevenue: number;
             accountId: string;
             categoryId: string | null;
+            terms: string | null;
+            requirements: string | null;
             tags: string[];
+            totalRevenue: number;
         }[];
         pagination: {
             page: number;
@@ -121,6 +121,8 @@ export declare class OfferService {
                 paymentEmail: string | null;
                 taxId: string | null;
                 address: import("@prisma/client/runtime/library").JsonValue | null;
+                bankAccount: string | null;
+                kycVerified: boolean;
                 tier: import(".prisma/client").$Enums.AffiliateTier;
                 commissionRate: number;
                 totalEarnings: number;
@@ -128,8 +130,6 @@ export declare class OfferService {
                 totalConversions: number;
                 conversionRate: number;
                 lastActivityAt: Date | null;
-                bankAccount: string | null;
-                kycVerified: boolean;
                 userId: string;
             };
         } & {
@@ -167,12 +167,12 @@ export declare class OfferService {
         startDate: Date;
         endDate: Date | null;
         category: string;
-        terms: string | null;
-        requirements: string | null;
-        totalRevenue: number;
         accountId: string;
         categoryId: string | null;
+        terms: string | null;
+        requirements: string | null;
         tags: string[];
+        totalRevenue: number;
     }>;
     createOffer(data: CreateOfferData, accountId: string): Promise<{
         name: string;
@@ -188,12 +188,12 @@ export declare class OfferService {
         startDate: Date;
         endDate: Date | null;
         category: string;
-        terms: string | null;
-        requirements: string | null;
-        totalRevenue: number;
         accountId: string;
         categoryId: string | null;
+        terms: string | null;
+        requirements: string | null;
         tags: string[];
+        totalRevenue: number;
     }>;
     updateOffer(id: string, data: UpdateOfferData): Promise<{
         name: string;
@@ -209,12 +209,12 @@ export declare class OfferService {
         startDate: Date;
         endDate: Date | null;
         category: string;
-        terms: string | null;
-        requirements: string | null;
-        totalRevenue: number;
         accountId: string;
         categoryId: string | null;
+        terms: string | null;
+        requirements: string | null;
         tags: string[];
+        totalRevenue: number;
     }>;
     deleteOffer(id: string): Promise<void>;
     getOfferApplications(offerId: string, params: GetOfferApplicationsParams): Promise<{
@@ -238,6 +238,8 @@ export declare class OfferService {
                 paymentEmail: string | null;
                 taxId: string | null;
                 address: import("@prisma/client/runtime/library").JsonValue | null;
+                bankAccount: string | null;
+                kycVerified: boolean;
                 tier: import(".prisma/client").$Enums.AffiliateTier;
                 commissionRate: number;
                 totalEarnings: number;
@@ -245,8 +247,6 @@ export declare class OfferService {
                 totalConversions: number;
                 conversionRate: number;
                 lastActivityAt: Date | null;
-                bankAccount: string | null;
-                kycVerified: boolean;
                 userId: string;
             };
         } & {

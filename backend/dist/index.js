@@ -51,6 +51,7 @@ const admin_offers_1 = __importDefault(require("./routes/admin-offers"));
 const admin_settings_1 = __importDefault(require("./routes/admin-settings"));
 const system_settings_1 = __importDefault(require("./routes/system-settings"));
 const upload_1 = __importDefault(require("./routes/upload"));
+const websites_1 = __importDefault(require("./routes/websites"));
 dotenv_1.default.config();
 const isProduction = process.env.NODE_ENV === "production";
 const isVercel = !!process.env.VERCEL;
@@ -177,6 +178,7 @@ app.use("/api/admin/offers", admin_offers_1.default);
 app.use("/api/admin/settings", admin_settings_1.default);
 app.use("/api/system/settings", system_settings_1.default);
 app.use("/api/upload", upload_1.default);
+app.use("/api/websites", websites_1.default);
 io.on("connection", (socket) => {
     logger.info(`Client connected: ${socket.id}`);
     socket.on("join_affiliate", (affiliateId) => {

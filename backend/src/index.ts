@@ -49,6 +49,7 @@ import adminOffersRoutes from "./routes/admin-offers"; // Admin offers managemen
 import adminSettingsRoutes from "./routes/admin-settings"; // Admin settings routes
 import systemSettingsRoutes from "./routes/system-settings"; // System settings routes
 import uploadRoutes from "./routes/upload"; // File upload routes
+import websitesRoutes from "./routes/websites"; // Website management routes
 
 // Load environment variables
 dotenv.config();
@@ -217,6 +218,7 @@ app.use("/api/admin/offers", adminOffersRoutes); // Admin offers management
 app.use("/api/admin/settings", adminSettingsRoutes); // Admin settings routes
 app.use("/api/system/settings", systemSettingsRoutes); // System settings routes
 app.use("/api/upload", uploadRoutes); // File upload routes
+app.use("/api/websites", websitesRoutes); // Website management routes
 
 // WebSocket connection handling
 io.on("connection", (socket) => {

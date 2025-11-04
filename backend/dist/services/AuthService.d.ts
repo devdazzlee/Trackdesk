@@ -51,6 +51,8 @@ export declare class AuthService {
                 paymentEmail: string | null;
                 taxId: string | null;
                 address: import("@prisma/client/runtime/library").JsonValue | null;
+                bankAccount: string | null;
+                kycVerified: boolean;
                 tier: import(".prisma/client").$Enums.AffiliateTier;
                 commissionRate: number;
                 totalEarnings: number;
@@ -58,8 +60,6 @@ export declare class AuthService {
                 totalConversions: number;
                 conversionRate: number;
                 lastActivityAt: Date | null;
-                bankAccount: string | null;
-                kycVerified: boolean;
                 userId: string;
             };
             adminProfile: {
@@ -106,6 +106,8 @@ export declare class AuthService {
             paymentEmail: string | null;
             taxId: string | null;
             address: import("@prisma/client/runtime/library").JsonValue | null;
+            bankAccount: string | null;
+            kycVerified: boolean;
             tier: import(".prisma/client").$Enums.AffiliateTier;
             commissionRate: number;
             totalEarnings: number;
@@ -113,8 +115,6 @@ export declare class AuthService {
             totalConversions: number;
             conversionRate: number;
             lastActivityAt: Date | null;
-            bankAccount: string | null;
-            kycVerified: boolean;
             userId: string;
         };
         adminProfile: {
@@ -127,14 +127,6 @@ export declare class AuthService {
         };
     }>;
     updateProfile(userId: string, data: UpdateProfileData): Promise<{
-        adminProfile: {
-            id: string;
-            createdAt: Date;
-            updatedAt: Date;
-            userId: string;
-            permissions: string[];
-            department: string | null;
-        };
         affiliateProfile: {
             id: string;
             status: string;
@@ -148,6 +140,8 @@ export declare class AuthService {
             paymentEmail: string | null;
             taxId: string | null;
             address: import("@prisma/client/runtime/library").JsonValue | null;
+            bankAccount: string | null;
+            kycVerified: boolean;
             tier: import(".prisma/client").$Enums.AffiliateTier;
             commissionRate: number;
             totalEarnings: number;
@@ -155,14 +149,19 @@ export declare class AuthService {
             totalConversions: number;
             conversionRate: number;
             lastActivityAt: Date | null;
-            bankAccount: string | null;
-            kycVerified: boolean;
             userId: string;
+        };
+        adminProfile: {
+            id: string;
+            createdAt: Date;
+            updatedAt: Date;
+            userId: string;
+            permissions: string[];
+            department: string | null;
         };
     } & {
         id: string;
         email: string;
-        verificationToken: string | null;
         password: string;
         firstName: string;
         lastName: string;
@@ -177,8 +176,6 @@ export declare class AuthService {
         createdAt: Date;
         updatedAt: Date;
         lastLoginAt: Date | null;
-        emailVerified: boolean;
-        verificationTokenExpiry: Date | null;
     }>;
     changePassword(userId: string, currentPassword: string, newPassword: string): Promise<void>;
     forgotPassword(email: string): Promise<void>;
