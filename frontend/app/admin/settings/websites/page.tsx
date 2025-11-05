@@ -13,10 +13,29 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Globe, Plus, Copy, Check, Trash2, Info, Shield } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Globe,
+  Plus,
+  Copy,
+  Check,
+  Trash2,
+  Info,
+  Shield,
+  Edit,
+} from "lucide-react";
 import { toast } from "sonner";
 import { config } from "@/config/config";
 import { getAuthHeaders } from "@/lib/getAuthHeaders";
+import { DeleteConfirmationModal } from "@/components/modals/delete-confirmation-modal";
 
 interface Website {
   id: string;
@@ -35,7 +54,23 @@ export default function AdminWebsitesSettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [deleteModal, setDeleteModal] = useState<{
+    isOpen: boolean;
+    websiteId: string | null;
+    websiteName: string | null;
+  }>({ isOpen: false, websiteId: null, websiteName: null });
+  const [editModal, setEditModal] = useState<{
+    isOpen: boolean;
+    website: Website | null;
+  }>({ isOpen: false, website: null });
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
+    name: "",
+    domain: "",
+    description: "",
+  });
+  const [editFormData, setEditFormData] = useState({
     name: "",
     domain: "",
     description: "",
@@ -134,16 +169,22 @@ export default function AdminWebsitesSettingsPage() {
     }
   };
 
-  const handleDeleteWebsite = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this website?")) {
-      return;
-    }
+  const handleDeleteClick = (id: string, name: string) => {
+    setDeleteModal({ isOpen: true, websiteId: id, websiteName: name });
+  };
 
+  const handleDeleteConfirm = async () => {
+    if (!deleteModal.websiteId) return;
+
+    setIsDeleting(true);
     try {
-      const response = await fetch(`${config.apiUrl}/websites/${id}`, {
-        method: "DELETE",
-        headers: getAuthHeaders(),
-      });
+      const response = await fetch(
+        `${config.apiUrl}/websites/${deleteModal.websiteId}`,
+        {
+          method: "DELETE",
+          headers: getAuthHeaders(),
+        }
+      );
 
       const data = await response.json();
 
@@ -153,12 +194,69 @@ export default function AdminWebsitesSettingsPage() {
 
       // Reload websites from API
       await loadWebsites();
+      setDeleteModal({ isOpen: false, websiteId: null, websiteName: null });
       toast.success("Website deleted successfully");
     } catch (error: any) {
       console.error("Error deleting website:", error);
       toast.error(
         error.message || "Failed to delete website. Please try again."
       );
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleEditClick = (website: Website) => {
+    setEditFormData({
+      name: website.name,
+      domain: website.domain,
+      description: website.description || "",
+    });
+    setEditModal({ isOpen: true, website });
+  };
+
+  const handleUpdateWebsite = async () => {
+    if (!editModal.website || !editFormData.name || !editFormData.domain) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    setIsEditing(true);
+    try {
+      const response = await fetch(
+        `${config.apiUrl}/websites/${editModal.website.id}`,
+        {
+          method: "PUT",
+          headers: getAuthHeaders(),
+          body: JSON.stringify({
+            name: editFormData.name,
+            domain: editFormData.domain,
+            description: editFormData.description || undefined,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to update website");
+      }
+
+      if (data.success && data.website) {
+        await loadWebsites();
+        setEditModal({ isOpen: false, website: null });
+        setEditFormData({ name: "", domain: "", description: "" });
+        toast.success("Website updated successfully!");
+      } else {
+        throw new Error("Invalid response from server");
+      }
+    } catch (error: any) {
+      console.error("Error updating website:", error);
+      toast.error(
+        error.message || "Failed to update website. Please try again."
+      );
+    } finally {
+      setIsEditing(false);
     }
   };
 
@@ -176,314 +274,442 @@ export default function AdminWebsitesSettingsPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Manage Websites</h1>
-          <p className="text-muted-foreground mt-2">
-            Create and manage all websites. Full admin access to create, edit,
-            and delete websites.
-          </p>
+    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 max-w-7xl">
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex-1">
+            <h1 className="text-2xl sm:text-3xl font-bold">Manage Websites</h1>
+            <p className="text-muted-foreground mt-2 text-sm sm:text-base">
+              Create and manage all websites. Full admin access to create, edit,
+              and delete websites.
+            </p>
+          </div>
+          <Badge
+            variant="default"
+            className="flex items-center gap-2 bg-green-600 w-fit"
+          >
+            <Shield className="h-3 w-3" />
+            Admin - Full Access
+          </Badge>
         </div>
-        <Badge
-          variant="default"
-          className="flex items-center gap-2 bg-green-600"
-        >
-          <Shield className="h-3 w-3" />
-          Admin - Full Access
-        </Badge>
-      </div>
 
-      {/* Info Card */}
-      <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950/20">
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Info className="h-5 w-5 text-blue-600" />
-            <CardTitle className="text-blue-900 dark:text-blue-100">
-              What is a Website ID?
-            </CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-blue-800 dark:text-blue-200">
-            A <strong>Website ID</strong> is a unique identifier for each of
-            your websites that you'll use in your Next.js projects. This ID
-            tells Trackdesk which website the tracking events are coming from.
-          </p>
-          <div className="mt-4 p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 rounded-lg">
-            <p className="text-sm text-green-800 dark:text-green-200 flex items-center gap-2">
-              <Shield className="h-4 w-4" />
-              <strong>Admin Access:</strong> You have full permissions to
-              create, edit, and delete websites. All changes affect all users in
-              the system.
-            </p>
-          </div>
-          <div className="mt-4 space-y-2 text-sm">
-            <p className="font-semibold text-blue-900 dark:text-blue-100">
-              Use this Website ID in your{" "}
-              <code className="bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">
-                .env.local
-              </code>{" "}
-              file:
-            </p>
-            <code className="block bg-blue-100 dark:bg-blue-900 p-3 rounded text-xs">
-              NEXT_PUBLIC_TRACKDESK_WEBSITE_ID=your-website-id-here
-            </code>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Create New Website */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Your Websites</CardTitle>
-              <CardDescription>
-                Manage your websites and get their IDs for integration
-              </CardDescription>
+        {/* Info Card */}
+        <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950/20">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Info className="h-5 w-5 text-blue-600" />
+              <CardTitle className="text-blue-900 dark:text-blue-100">
+                What is a Website ID?
+              </CardTitle>
             </div>
-            <Button
-              onClick={() => setShowCreateForm(!showCreateForm)}
-              variant="outline"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Website
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {showCreateForm && (
-            <div className="mb-6 p-4 border rounded-lg space-y-4">
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-blue-800 dark:text-blue-200">
+              A <strong>Website ID</strong> is a unique identifier for each of
+              your websites that you'll use in your Next.js projects. This ID
+              tells Trackdesk which website the tracking events are coming from.
+            </p>
+            <div className="mt-4 p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 rounded-lg">
+              <p className="text-sm text-green-800 dark:text-green-200 flex items-center gap-2">
+                <Shield className="h-4 w-4" />
+                <strong>Admin Access:</strong> You have full permissions to
+                create, edit, and delete websites. All changes affect all users
+                in the system.
+              </p>
+            </div>
+            <div className="mt-4 space-y-2 text-sm">
+              <p className="font-semibold text-blue-900 dark:text-blue-100">
+                Use this Website ID in your{" "}
+                <code className="bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">
+                  .env.local
+                </code>{" "}
+                file:
+              </p>
+              <code className="block bg-blue-100 dark:bg-blue-900 p-3 rounded text-xs">
+                NEXT_PUBLIC_TRACKDESK_WEBSITE_ID=your-website-id-here
+              </code>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Create New Website */}
+        <Card>
+          <CardHeader>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <CardTitle>Your Websites</CardTitle>
+                <CardDescription>
+                  Manage your websites and get their IDs for integration
+                </CardDescription>
+              </div>
+              <Button
+                onClick={() => setShowCreateForm(!showCreateForm)}
+                variant="outline"
+                className="w-full sm:w-auto"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Website
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {showCreateForm && (
+              <div className="mb-6 p-4 border rounded-lg space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Website Name *</Label>
+                  <Input
+                    id="name"
+                    placeholder="My E-commerce Store"
+                    value={formData.name}
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="domain">Domain *</Label>
+                  <Input
+                    id="domain"
+                    placeholder="https://licorice4good.com or licorice4good.com"
+                    value={formData.domain}
+                    onChange={(e) =>
+                      setFormData({ ...formData, domain: e.target.value })
+                    }
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Enter full URL (e.g., https://licorice4good.com) or domain
+                    name. Full URL will be preserved.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="description">Description (Optional)</Label>
+                  <Input
+                    id="description"
+                    placeholder="Main production store"
+                    value={formData.description}
+                    onChange={(e) =>
+                      setFormData({ ...formData, description: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={handleCreateWebsite}>Create Website</Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowCreateForm(false);
+                      setFormData({ name: "", domain: "", description: "" });
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Websites List */}
+            {isLoading ? (
+              <div className="text-center py-8 text-muted-foreground">
+                Loading websites...
+              </div>
+            ) : websites.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                No websites yet. Click "Add Website" to create one.
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {websites.map((website) => (
+                  <Card key={website.id} className="border">
+                    <CardContent className="p-4 sm:p-6">
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                        <div className="flex-1 space-y-3 min-w-0">
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                              <Globe className="h-5 w-5 text-muted-foreground shrink-0" />
+                              <div className="min-w-0 flex-1">
+                                <h3 className="font-semibold text-base sm:text-lg truncate">
+                                  {website.name}
+                                </h3>
+                                <p className="text-sm text-muted-foreground truncate">
+                                  {website.domain}
+                                </p>
+                              </div>
+                            </div>
+                            <Badge
+                              variant={
+                                website.status === "ACTIVE"
+                                  ? "default"
+                                  : "secondary"
+                              }
+                              className="w-fit shrink-0"
+                            >
+                              {website.status}
+                            </Badge>
+                          </div>
+
+                          {website.description && (
+                            <p className="text-sm text-muted-foreground">
+                              {website.description}
+                            </p>
+                          )}
+
+                          <Separator />
+
+                          {/* Website ID Display */}
+                          <div className="space-y-2">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                              <Label className="text-sm font-semibold">
+                                Website ID:
+                              </Label>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                  handleCopyWebsiteId(website.websiteId)
+                                }
+                                className="w-fit"
+                              >
+                                {copiedId === website.websiteId ? (
+                                  <>
+                                    <Check className="h-4 w-4 mr-2" />
+                                    Copied!
+                                  </>
+                                ) : (
+                                  <>
+                                    <Copy className="h-4 w-4 mr-2" />
+                                    Copy ID
+                                  </>
+                                )}
+                              </Button>
+                            </div>
+                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                              <code className="flex-1 bg-muted px-3 py-2 rounded text-sm font-mono break-all">
+                                {website.websiteId}
+                              </code>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => copyEnvVariable(website.websiteId)}
+                            >
+                              <Copy className="h-4 w-4 mr-2" />
+                              Copy ENV Variable
+                            </Button>
+                          </div>
+
+                          {/* Integration Instructions */}
+                          <div className="mt-4 p-4 bg-muted rounded-lg">
+                            <p className="text-sm font-semibold mb-2">
+                              Integration Steps:
+                            </p>
+                            <ol className="text-xs space-y-1 text-muted-foreground list-decimal list-inside">
+                              <li>
+                                Create <code>.env.local</code> in your Next.js
+                                project
+                              </li>
+                              <li>
+                                Add:{" "}
+                                <code>
+                                  NEXT_PUBLIC_TRACKDESK_WEBSITE_ID=
+                                  {website.websiteId}
+                                </code>
+                              </li>
+                              <li>
+                                Add:{" "}
+                                <code>
+                                  NEXT_PUBLIC_TRACKDESK_API_URL=http://localhost:3003/api
+                                </code>
+                              </li>
+                              <li>Restart your Next.js dev server</li>
+                            </ol>
+                          </div>
+                        </div>
+
+                        <div className="flex sm:flex-col items-end sm:items-start gap-2 shrink-0">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditClick(website)}
+                            className="hover:bg-blue-50"
+                          >
+                            <Edit className="h-4 w-4 mr-1" />
+                            <span className="hidden sm:inline">Edit</span>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              handleDeleteClick(website.id, website.name)
+                            }
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4 mr-1" />
+                            <span className="hidden sm:inline">Delete</span>
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Quick Reference */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Quick Reference</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <h4 className="font-semibold mb-2">1. Get Your Website ID</h4>
+              <p className="text-sm text-muted-foreground">
+                Create a website above and copy its Website ID. Each Next.js
+                project needs its own unique Website ID.
+              </p>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-2">
+                2. Add to Your Next.js Project
+              </h4>
+              <p className="text-sm text-muted-foreground">
+                Create{" "}
+                <code className="bg-muted px-2 py-1 rounded">
+                  frontend/.env.local
+                </code>{" "}
+                and add:
+              </p>
+              <code className="block bg-muted p-3 rounded mt-2 text-xs">
+                NEXT_PUBLIC_TRACKDESK_WEBSITE_ID=your-website-id-here
+                <br />
+                NEXT_PUBLIC_TRACKDESK_API_URL=http://localhost:3003/api
+                <br />
+                NEXT_PUBLIC_TRACKDESK_DEBUG=true
+              </code>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-2">3. Use Referral Codes</h4>
+              <p className="text-sm text-muted-foreground">
+                Affiliates can share links like:{" "}
+                <code className="bg-muted px-2 py-1 rounded">
+                  https://your-website.com/?ref=AFF_0AGXXR
+                </code>
+              </p>
+              <p className="text-sm text-muted-foreground mt-2">
+                The tracking script will automatically capture the referral code
+                and track clicks/orders.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Edit Website Modal */}
+        <Dialog
+          open={editModal.isOpen}
+          onOpenChange={(open) =>
+            setEditModal({
+              isOpen: open,
+              website: open ? editModal.website : null,
+            })
+          }
+        >
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Edit Website</DialogTitle>
+              <DialogDescription>
+                Update website information. Changes will be saved immediately.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Website Name *</Label>
+                <Label htmlFor="editName">Website Name *</Label>
                 <Input
-                  id="name"
+                  id="editName"
                   placeholder="My E-commerce Store"
-                  value={formData.name}
+                  value={editFormData.name}
                   onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
+                    setEditFormData({ ...editFormData, name: e.target.value })
                   }
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="domain">Domain *</Label>
+                <Label htmlFor="editDomain">Domain *</Label>
                 <Input
-                  id="domain"
-                  placeholder="mystore.com or localhost:3000"
-                  value={formData.domain}
+                  id="editDomain"
+                  placeholder="https://licorice4good.com or licorice4good.com"
+                  value={editFormData.domain}
                   onChange={(e) =>
-                    setFormData({ ...formData, domain: e.target.value })
+                    setEditFormData({ ...editFormData, domain: e.target.value })
                   }
                 />
                 <p className="text-xs text-muted-foreground">
-                  Enter your domain (e.g., mystore.com) or localhost URL
+                  Enter full URL (e.g., https://licorice4good.com) or domain
+                  name. Full URL will be preserved.
                 </p>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="description">Description (Optional)</Label>
-                <Input
-                  id="description"
+                <Label htmlFor="editDescription">Description (Optional)</Label>
+                <Textarea
+                  id="editDescription"
                   placeholder="Main production store"
-                  value={formData.description}
+                  value={editFormData.description}
                   onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
+                    setEditFormData({
+                      ...editFormData,
+                      description: e.target.value,
+                    })
                   }
+                  rows={3}
                 />
               </div>
-              <div className="flex gap-2">
-                <Button onClick={handleCreateWebsite}>Create Website</Button>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setShowCreateForm(false);
-                    setFormData({ name: "", domain: "", description: "" });
-                  }}
-                >
-                  Cancel
-                </Button>
-              </div>
             </div>
-          )}
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setEditModal({ isOpen: false, website: null });
+                  setEditFormData({ name: "", domain: "", description: "" });
+                }}
+                disabled={isEditing}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleUpdateWebsite} disabled={isEditing}>
+                {isEditing ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Updating...
+                  </>
+                ) : (
+                  <>
+                    <Check className="h-4 w-4 mr-2" />
+                    Update Website
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
-          {/* Websites List */}
-          {isLoading ? (
-            <div className="text-center py-8 text-muted-foreground">
-              Loading websites...
-            </div>
-          ) : websites.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No websites yet. Click "Add Website" to create one.
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {websites.map((website) => (
-                <Card key={website.id} className="border">
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1 space-y-3">
-                        <div className="flex items-center gap-3">
-                          <Globe className="h-5 w-5 text-muted-foreground" />
-                          <div>
-                            <h3 className="font-semibold text-lg">
-                              {website.name}
-                            </h3>
-                            <p className="text-sm text-muted-foreground">
-                              {website.domain}
-                            </p>
-                          </div>
-                          <Badge
-                            variant={
-                              website.status === "ACTIVE"
-                                ? "default"
-                                : "secondary"
-                            }
-                          >
-                            {website.status}
-                          </Badge>
-                        </div>
-
-                        {website.description && (
-                          <p className="text-sm text-muted-foreground">
-                            {website.description}
-                          </p>
-                        )}
-
-                        <Separator />
-
-                        {/* Website ID Display */}
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <Label className="text-sm font-semibold">
-                              Website ID:
-                            </Label>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() =>
-                                handleCopyWebsiteId(website.websiteId)
-                              }
-                            >
-                              {copiedId === website.websiteId ? (
-                                <>
-                                  <Check className="h-4 w-4 mr-2" />
-                                  Copied!
-                                </>
-                              ) : (
-                                <>
-                                  <Copy className="h-4 w-4 mr-2" />
-                                  Copy ID
-                                </>
-                              )}
-                            </Button>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <code className="flex-1 bg-muted px-3 py-2 rounded text-sm font-mono">
-                              {website.websiteId}
-                            </code>
-                          </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => copyEnvVariable(website.websiteId)}
-                          >
-                            <Copy className="h-4 w-4 mr-2" />
-                            Copy ENV Variable
-                          </Button>
-                        </div>
-
-                        {/* Integration Instructions */}
-                        <div className="mt-4 p-4 bg-muted rounded-lg">
-                          <p className="text-sm font-semibold mb-2">
-                            Integration Steps:
-                          </p>
-                          <ol className="text-xs space-y-1 text-muted-foreground list-decimal list-inside">
-                            <li>
-                              Create <code>.env.local</code> in your Next.js
-                              project
-                            </li>
-                            <li>
-                              Add:{" "}
-                              <code>
-                                NEXT_PUBLIC_TRACKDESK_WEBSITE_ID=
-                                {website.websiteId}
-                              </code>
-                            </li>
-                            <li>
-                              Add:{" "}
-                              <code>
-                                NEXT_PUBLIC_TRACKDESK_API_URL=http://localhost:3003/api
-                              </code>
-                            </li>
-                            <li>Restart your Next.js dev server</li>
-                          </ol>
-                        </div>
-                      </div>
-
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteWebsite(website.id)}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Quick Reference */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Quick Reference</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <h4 className="font-semibold mb-2">1. Get Your Website ID</h4>
-            <p className="text-sm text-muted-foreground">
-              Create a website above and copy its Website ID. Each Next.js
-              project needs its own unique Website ID.
-            </p>
-          </div>
-          <div>
-            <h4 className="font-semibold mb-2">
-              2. Add to Your Next.js Project
-            </h4>
-            <p className="text-sm text-muted-foreground">
-              Create{" "}
-              <code className="bg-muted px-2 py-1 rounded">
-                frontend/.env.local
-              </code>{" "}
-              and add:
-            </p>
-            <code className="block bg-muted p-3 rounded mt-2 text-xs">
-              NEXT_PUBLIC_TRACKDESK_WEBSITE_ID=your-website-id-here
-              <br />
-              NEXT_PUBLIC_TRACKDESK_API_URL=http://localhost:3003/api
-              <br />
-              NEXT_PUBLIC_TRACKDESK_DEBUG=true
-            </code>
-          </div>
-          <div>
-            <h4 className="font-semibold mb-2">3. Use Referral Codes</h4>
-            <p className="text-sm text-muted-foreground">
-              Affiliates can share links like:{" "}
-              <code className="bg-muted px-2 py-1 rounded">
-                https://your-website.com/?ref=AFF_0AGXXR
-              </code>
-            </p>
-            <p className="text-sm text-muted-foreground mt-2">
-              The tracking script will automatically capture the referral code
-              and track clicks/orders.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+        {/* Delete Confirmation Modal */}
+        <DeleteConfirmationModal
+          isOpen={deleteModal.isOpen}
+          onClose={() =>
+            setDeleteModal({
+              isOpen: false,
+              websiteId: null,
+              websiteName: null,
+            })
+          }
+          onConfirm={handleDeleteConfirm}
+          title="Delete Website?"
+          message="Are you sure you want to delete this website?"
+          itemName={deleteModal.websiteName || undefined}
+          description="This action cannot be undone. All associated tracking data will be permanently removed."
+          isLoading={isDeleting}
+        />
+      </div>
     </div>
   );
 }

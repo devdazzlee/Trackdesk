@@ -5,68 +5,195 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const auth_1 = require("../middleware/auth");
-const client_1 = require("@prisma/client");
+const prisma_1 = require("../lib/prisma");
+const zod_1 = require("zod");
 const router = express_1.default.Router();
-const prisma = new client_1.PrismaClient();
+const payoutQuerySchema = zod_1.z.object({
+    page: zod_1.z
+        .string()
+        .optional()
+        .transform((val) => (val ? parseInt(val) : 1)),
+    limit: zod_1.z
+        .string()
+        .optional()
+        .transform((val) => (val ? parseInt(val) : 10)),
+    status: zod_1.z
+        .enum(["PENDING", "PROCESSING", "COMPLETED", "FAILED", "CANCELLED"])
+        .optional(),
+});
 router.get("/", auth_1.authenticateToken, (0, auth_1.requireRole)(["ADMIN"]), async (req, res) => {
     try {
-        const { page = 1, limit = 20, status } = req.query;
-        const payouts = [
-            {
-                id: "PAY-001",
-                affiliateId: "aff-1",
-                affiliateName: "John Doe",
-                amount: 250.0,
-                method: "PayPal",
-                status: "pending",
-                requestDate: "2024-10-10",
-                email: "john@example.com",
-                commissionsCount: 15,
+        let validatedQuery;
+        try {
+            validatedQuery = payoutQuerySchema.parse(req.query);
+        }
+        catch (error) {
+            if (error instanceof zod_1.z.ZodError) {
+                return res.status(400).json({
+                    error: "Invalid query parameters",
+                    details: error.errors.map((err) => ({
+                        field: err.path.join("."),
+                        message: err.message,
+                    })),
+                });
+            }
+            throw error;
+        }
+        const { page, limit, status } = validatedQuery;
+        const formatPaymentMethod = (method) => {
+            const methodMap = {
+                PAYPAL: "PayPal",
+                STRIPE: "Stripe",
+                BANK_TRANSFER: "Bank Transfer",
+                CRYPTO: "Crypto",
+                WISE: "Wise",
+            };
+            return methodMap[method] || method;
+        };
+        const where = {};
+        if (status) {
+            where.status = status;
+        }
+        const paidCommissionsData = await prisma_1.prisma.affiliateOrder.findMany({
+            where: {
+                status: "PAID",
             },
-            {
-                id: "PAY-002",
-                affiliateId: "aff-2",
-                affiliateName: "Sarah Wilson",
-                amount: 180.5,
-                method: "Bank Transfer",
-                status: "processing",
-                requestDate: "2024-10-09",
-                email: "sarah@example.com",
-                commissionsCount: 12,
+            select: {
+                affiliateId: true,
+                commissionAmount: true,
+                createdAt: true,
             },
-            {
-                id: "PAY-003",
-                affiliateId: "aff-3",
-                affiliateName: "Mike Johnson",
-                amount: 420.75,
-                method: "PayPal",
+            orderBy: {
+                createdAt: "desc",
+            },
+        });
+        const paidCommissionsMap = new Map();
+        paidCommissionsData.forEach((pc) => {
+            const existing = paidCommissionsMap.get(pc.affiliateId);
+            if (existing) {
+                existing.totalAmount += pc.commissionAmount;
+                existing.count += 1;
+                if (pc.createdAt > existing.latestDate) {
+                    existing.latestDate = pc.createdAt;
+                }
+            }
+            else {
+                paidCommissionsMap.set(pc.affiliateId, {
+                    totalAmount: pc.commissionAmount,
+                    count: 1,
+                    latestDate: pc.createdAt,
+                });
+            }
+        });
+        const paidCommissions = Array.from(paidCommissionsMap.entries()).map(([affiliateId, data]) => ({
+            affiliateId,
+            _sum: { commissionAmount: data.totalAmount },
+            _count: { id: data.count },
+            latestDate: data.latestDate,
+        }));
+        const affiliateIdsWithPaidCommissions = paidCommissions.map((pc) => pc.affiliateId);
+        const affiliatesWithPaidCommissions = await prisma_1.prisma.affiliateProfile.findMany({
+            where: {
+                id: { in: affiliateIdsWithPaidCommissions },
+            },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        email: true,
+                    },
+                },
+            },
+        });
+        const commissionBasedPayouts = paidCommissions.map((pc) => {
+            const affiliate = affiliatesWithPaidCommissions.find((a) => a.id === pc.affiliateId);
+            return {
+                id: `COMM-${pc.affiliateId}`,
+                affiliateId: pc.affiliateId,
+                affiliateName: affiliate?.user
+                    ? `${affiliate.user.firstName} ${affiliate.user.lastName}`
+                    : "Unknown Affiliate",
+                amount: pc._sum.commissionAmount || 0,
+                method: affiliate?.paymentMethod || "PAYPAL",
                 status: "completed",
-                requestDate: "2024-10-05",
-                email: "mike@example.com",
-                commissionsCount: 25,
-                processedDate: "2024-10-08",
+                requestDate: pc.latestDate.toISOString().split("T")[0],
+                email: affiliate?.user?.email || "",
+                commissionsCount: pc._count.id,
+                source: "commission",
+            };
+        });
+        const actualPayouts = await prisma_1.prisma.payout.findMany({
+            where,
+            include: {
+                affiliate: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                firstName: true,
+                                lastName: true,
+                                email: true,
+                            },
+                        },
+                    },
+                },
             },
+            orderBy: {
+                createdAt: "desc",
+            },
+        });
+        const allPayouts = [
+            ...commissionBasedPayouts,
+            ...actualPayouts.map((payout) => ({
+                id: payout.id,
+                affiliateId: payout.affiliateId,
+                affiliateName: payout.affiliate.user
+                    ? `${payout.affiliate.user.firstName} ${payout.affiliate.user.lastName}`
+                    : "Unknown Affiliate",
+                amount: payout.amount,
+                method: formatPaymentMethod(payout.method),
+                status: payout.status.toLowerCase(),
+                requestDate: payout.createdAt.toISOString().split("T")[0],
+                email: payout.affiliate.user?.email || "",
+                commissionsCount: 0,
+                processedDate: payout.processedAt
+                    ? payout.processedAt.toISOString().split("T")[0]
+                    : undefined,
+                referenceId: payout.referenceId,
+                source: "payout",
+            })),
         ];
-        const filteredPayouts = status
-            ? payouts.filter((p) => p.status === status)
-            : payouts;
-        const skip = (parseInt(page) - 1) * parseInt(limit);
-        const paginatedPayouts = filteredPayouts.slice(skip, skip + parseInt(limit));
+        let filteredPayouts = allPayouts;
+        if (status) {
+            filteredPayouts = allPayouts.filter((p) => p.status === status.toLowerCase());
+        }
+        filteredPayouts.sort((a, b) => new Date(b.requestDate).getTime() - new Date(a.requestDate).getTime());
+        const total = filteredPayouts.length;
+        const skip = (page - 1) * limit;
+        const paginatedPayouts = filteredPayouts.slice(skip, skip + limit);
+        const formattedPayouts = paginatedPayouts;
+        const pendingPayouts = allPayouts.filter((p) => p.status === "pending");
+        const processingPayouts = allPayouts.filter((p) => p.status === "processing");
+        const completedPayouts = allPayouts.filter((p) => p.status === "completed");
+        const pendingCount = pendingPayouts.length;
+        const processingCount = processingPayouts.length;
+        const completedCount = completedPayouts.length;
+        const pendingAmount = pendingPayouts.reduce((sum, p) => sum + (p.amount || 0), 0);
         res.json({
-            data: paginatedPayouts,
+            data: formattedPayouts,
             pagination: {
-                page: parseInt(page),
-                limit: parseInt(limit),
-                total: filteredPayouts.length,
-                pages: Math.ceil(filteredPayouts.length / parseInt(limit)),
+                page,
+                limit,
+                total,
+                pages: Math.ceil(total / limit),
             },
             summary: {
-                pending: payouts.filter((p) => p.status === "pending").length,
-                processing: payouts.filter((p) => p.status === "processing").length,
-                completed: payouts.filter((p) => p.status === "completed").length,
-                totalPendingAmount: payouts
-                    .filter((p) => p.status === "pending")
-                    .reduce((sum, p) => sum + p.amount, 0),
+                pending: pendingCount,
+                processing: processingCount,
+                completed: completedCount,
+                totalPendingAmount: pendingAmount,
             },
         });
     }
@@ -78,37 +205,88 @@ router.get("/", auth_1.authenticateToken, (0, auth_1.requireRole)(["ADMIN"]), as
 router.patch("/:id/status", auth_1.authenticateToken, (0, auth_1.requireRole)(["ADMIN"]), async (req, res) => {
     try {
         const { id } = req.params;
-        const { status, notes } = req.body;
-        const validStatuses = ["pending", "processing", "completed", "failed"];
+        const { status } = req.body;
+        const validStatuses = [
+            "PENDING",
+            "PROCESSING",
+            "COMPLETED",
+            "FAILED",
+            "CANCELLED",
+        ];
         if (!validStatuses.includes(status)) {
             return res.status(400).json({ error: "Invalid status" });
         }
+        const updateData = {
+            status,
+            updatedAt: new Date(),
+        };
+        if (status === "COMPLETED") {
+            updateData.processedAt = new Date();
+        }
+        const payout = await prisma_1.prisma.payout.update({
+            where: { id },
+            data: updateData,
+            include: {
+                affiliate: {
+                    include: {
+                        user: {
+                            select: {
+                                firstName: true,
+                                lastName: true,
+                                email: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
         res.json({
             success: true,
             message: `Payout status updated to ${status}`,
             payout: {
-                id,
-                status,
-                notes,
-                updatedAt: new Date(),
+                id: payout.id,
+                status: payout.status.toLowerCase(),
+                amount: payout.amount,
+                method: payout.method,
+                processedAt: payout.processedAt,
             },
         });
     }
     catch (error) {
+        if (error.code === "P2025") {
+            return res.status(404).json({ error: "Payout not found" });
+        }
         console.error("Error updating payout status:", error);
         res.status(500).json({ error: "Failed to update payout status" });
     }
 });
 router.post("/process-bulk", auth_1.authenticateToken, (0, auth_1.requireRole)(["ADMIN"]), async (req, res) => {
     try {
-        const { payoutIds } = req.body;
+        const { payoutIds, status = "PROCESSING" } = req.body;
         if (!Array.isArray(payoutIds) || payoutIds.length === 0) {
             return res.status(400).json({ error: "Invalid payout IDs" });
         }
+        const validStatuses = ["PROCESSING", "COMPLETED", "FAILED", "CANCELLED"];
+        if (!validStatuses.includes(status)) {
+            return res.status(400).json({ error: "Invalid status" });
+        }
+        const updateData = {
+            status,
+            updatedAt: new Date(),
+        };
+        if (status === "COMPLETED") {
+            updateData.processedAt = new Date();
+        }
+        const result = await prisma_1.prisma.payout.updateMany({
+            where: {
+                id: { in: payoutIds },
+            },
+            data: updateData,
+        });
         res.json({
             success: true,
-            message: `${payoutIds.length} payouts processed successfully`,
-            processedCount: payoutIds.length,
+            message: `${result.count} payouts processed successfully`,
+            processedCount: result.count,
         });
     }
     catch (error) {

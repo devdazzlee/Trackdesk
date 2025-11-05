@@ -253,7 +253,10 @@ router.put("/commission", authenticateToken, async (req: any, res) => {
     }
 
     const schema = z.object({
-      defaultRate: z.number().min(0).max(100, "Rate must be between 0 and 100"),
+      defaultRate: z
+        .number()
+        .min(0, "Commission rate must be greater than or equal to 0%")
+        .max(100, "Commission rate must be less than or equal to 100%"),
       minimumPayout: z.number().min(0, "Minimum payout must be positive"),
       payoutFrequency: z.enum(["Weekly", "Bi-Weekly", "Monthly", "Quarterly"]),
       approvalPeriod: z.number().min(0, "Approval period must be positive"),
@@ -348,9 +351,12 @@ router.put("/commission", authenticateToken, async (req: any, res) => {
 
     let updatedAffiliates = 0;
 
-    // Only update affiliate rates if explicitly requested and there are affected affiliates
+    // Only update affiliate rates if explicitly requested
+    // IMPORTANT: Only update affiliates that are currently using the default rate
+    // Affiliates with custom commission rates should NOT be affected
     if (data.updateAffiliates && affectedAffiliates.length > 0) {
-      // Update affected affiliates to use the new default rate
+      // Update only affiliates that are currently using the default rate
+      // This preserves custom commission rates for affiliates who have been manually set
       const updateResult = await prisma.affiliateProfile.updateMany({
         where: {
           id: {
@@ -364,7 +370,7 @@ router.put("/commission", authenticateToken, async (req: any, res) => {
 
       updatedAffiliates = updateResult.count;
 
-      // Log individual affiliate updates
+      // Log individual affiliate updates for all updated affiliates
       for (const affiliate of affectedAffiliates) {
         await prisma.activity.create({
           data: {
@@ -377,7 +383,8 @@ router.put("/commission", authenticateToken, async (req: any, res) => {
               affiliateEmail: affiliate.user.email,
               oldRate: affiliate.commissionRate,
               newRate: data.defaultRate,
-              reason: "Default commission rate change",
+              reason:
+                "Default commission rate change - only affiliates using default rate were updated",
             },
           },
         });

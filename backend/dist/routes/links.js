@@ -10,13 +10,9 @@ const LinksService_1 = __importDefault(require("../services/LinksService"));
 const router = express_1.default.Router();
 const generateLinkSchema = zod_1.z.object({
     url: zod_1.z.string().url("Invalid URL format"),
+    websiteId: zod_1.z.string().optional(),
+    referralCodeId: zod_1.z.string().optional(),
     campaignName: zod_1.z.string().optional(),
-    customAlias: zod_1.z
-        .string()
-        .min(3)
-        .max(20)
-        .regex(/^[a-zA-Z0-9-_]+$/)
-        .optional(),
     offerId: zod_1.z.string().optional(),
 });
 const generateCouponSchema = zod_1.z.object({

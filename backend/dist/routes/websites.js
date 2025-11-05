@@ -82,9 +82,13 @@ router.post("/", auth_1.authenticateToken, auth_1.requireAdmin, async (req, res)
                 error: "Website ID already exists. Please use a different ID.",
             });
         }
-        const cleanDomain = data.domain
-            .replace(/https?:\/\//, "")
-            .replace(/\/$/, "");
+        let cleanDomain = data.domain.trim();
+        if (cleanDomain.endsWith("/")) {
+            cleanDomain = cleanDomain.slice(0, -1);
+        }
+        if (!cleanDomain.match(/^https?:\/\//)) {
+            cleanDomain = `https://${cleanDomain}`;
+        }
         const website = await prisma_1.prisma.website.create({
             data: {
                 websiteId,
@@ -135,9 +139,14 @@ router.put("/:id", auth_1.authenticateToken, auth_1.requireAdmin, async (req, re
         if (data.name)
             updateData.name = data.name;
         if (data.domain) {
-            updateData.domain = data.domain
-                .replace(/https?:\/\//, "")
-                .replace(/\/$/, "");
+            let cleanDomain = data.domain.trim();
+            if (cleanDomain.endsWith("/")) {
+                cleanDomain = cleanDomain.slice(0, -1);
+            }
+            if (!/^https?:\/\//.test(cleanDomain)) {
+                cleanDomain = `https://${cleanDomain}`;
+            }
+            updateData.domain = cleanDomain;
         }
         if (data.description !== undefined) {
             updateData.description = data.description || null;

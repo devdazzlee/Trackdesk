@@ -1,12 +1,12 @@
 export interface StatsParams {
-    timeRange?: '7d' | '30d' | '90d' | '1y';
+    timeRange?: "7d" | "30d" | "90d" | "1y";
     startDate?: string;
     endDate?: string;
 }
 export interface PerformanceChartParams {
-    timeRange?: '7d' | '30d' | '90d' | '1y';
-    metric?: 'clicks' | 'conversions' | 'revenue' | 'commission';
-    groupBy?: 'day' | 'week' | 'month';
+    timeRange?: "7d" | "30d" | "90d" | "1y";
+    metric?: "clicks" | "conversions" | "revenue" | "commission";
+    groupBy?: "day" | "week" | "month";
 }
 export declare class DashboardService {
     getStats(userId: string, userRole: string, params: StatsParams): Promise<{
@@ -50,7 +50,6 @@ export declare class DashboardService {
     getTopOffers(userId: string, userRole: string, limit: number): Promise<{
         id: string;
         name: string;
-        category: string;
         commissionRate: number;
         totalClicks: number;
         totalConversions: number;

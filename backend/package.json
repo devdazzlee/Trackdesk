@@ -19,6 +19,7 @@
     "db:deploy": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
+    "db:migrate:005": "tsx scripts/apply-migration-005.ts",
     "postinstall": "prisma generate"
   },
   "keywords": [

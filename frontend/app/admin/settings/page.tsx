@@ -271,6 +271,35 @@ export default function SystemSettingsPage() {
       } else {
         const error = await response.json();
         console.error("Commission update error:", error);
+
+        // Handle validation errors with better messages
+        if (error.details && Array.isArray(error.details)) {
+          const defaultRateError = error.details.find((detail: any) =>
+            detail.path?.includes("defaultRate")
+          );
+
+          if (defaultRateError) {
+            let errorMessage = defaultRateError.message;
+
+            // If no message from backend, create a user-friendly one
+            if (
+              !errorMessage ||
+              errorMessage === "Rate must be between 0 and 100"
+            ) {
+              if (defaultRateError.code === "too_big") {
+                errorMessage = `Commission rate is too large. Please enter a value less than or equal to 100%.`;
+              } else if (defaultRateError.code === "too_small") {
+                errorMessage = `Commission rate is too small. Please enter a value greater than or equal to 0%.`;
+              } else {
+                errorMessage = `Invalid commission rate. Please enter a value between 0 and 100%.`;
+              }
+            }
+
+            toast.error(errorMessage);
+            return;
+          }
+        }
+
         toast.error(error.error || "Failed to update commission settings");
       }
     } catch (error) {

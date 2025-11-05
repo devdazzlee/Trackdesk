@@ -9,6 +9,26 @@ const auth_1 = require("../middleware/auth");
 const prisma_1 = require("../lib/prisma");
 const EmailService_1 = __importDefault(require("../services/EmailService"));
 const router = express_1.default.Router();
+const commissionQuerySchema = zod_1.z.object({
+    page: zod_1.z
+        .string()
+        .optional()
+        .transform((val) => (val ? parseInt(val) : 1)),
+    limit: zod_1.z
+        .string()
+        .optional()
+        .transform((val) => (val ? parseInt(val) : 10)),
+    status: zod_1.z.enum(["PENDING", "APPROVED", "PAID", "CANCELLED"]).optional(),
+    affiliateId: zod_1.z.string().optional(),
+    affiliateSearch: zod_1.z.string().optional(),
+    dateFrom: zod_1.z.string().optional(),
+    dateTo: zod_1.z.string().optional(),
+    sortBy: zod_1.z
+        .enum(["createdAt", "commissionAmount", "status", "orderValue"])
+        .optional()
+        .default("createdAt"),
+    sortOrder: zod_1.z.enum(["asc", "desc"]).optional().default("desc"),
+});
 router.get("/", auth_1.authenticateToken, async (req, res) => {
     try {
         if (req.user.role !== "ADMIN") {
@@ -16,7 +36,23 @@ router.get("/", auth_1.authenticateToken, async (req, res) => {
                 .status(403)
                 .json({ error: "Only admins can access commission management" });
         }
-        const { page = 1, limit = 20, status, affiliateId, dateFrom, dateTo, sortBy = "createdAt", sortOrder = "desc", } = req.query;
+        let validatedQuery;
+        try {
+            validatedQuery = commissionQuerySchema.parse(req.query);
+        }
+        catch (error) {
+            if (error instanceof zod_1.z.ZodError) {
+                return res.status(400).json({
+                    error: "Invalid query parameters",
+                    details: error.errors.map((err) => ({
+                        field: err.path.join("."),
+                        message: err.message,
+                    })),
+                });
+            }
+            throw error;
+        }
+        const { page, limit, status, affiliateId, affiliateSearch, dateFrom, dateTo, sortBy, sortOrder, } = validatedQuery;
         const where = {};
         if (status) {
             where.status = status;
@@ -24,12 +60,61 @@ router.get("/", auth_1.authenticateToken, async (req, res) => {
         if (affiliateId) {
             where.affiliateId = affiliateId;
         }
+        if (affiliateSearch) {
+            const searchTerm = affiliateSearch.trim();
+            if (searchTerm) {
+                const matchingAffiliates = await prisma_1.prisma.affiliateProfile.findMany({
+                    where: {
+                        OR: [
+                            {
+                                user: {
+                                    OR: [
+                                        {
+                                            firstName: {
+                                                contains: searchTerm,
+                                                mode: "insensitive",
+                                            },
+                                        },
+                                        {
+                                            lastName: {
+                                                contains: searchTerm,
+                                                mode: "insensitive",
+                                            },
+                                        },
+                                        {
+                                            email: {
+                                                contains: searchTerm,
+                                                mode: "insensitive",
+                                            },
+                                        },
+                                    ],
+                                },
+                            },
+                        ],
+                    },
+                    select: { id: true },
+                });
+                const affiliateIds = matchingAffiliates.map((a) => a.id);
+                if (affiliateIds.length > 0) {
+                    where.affiliateId = { in: affiliateIds };
+                }
+                else {
+                    where.affiliateId = { in: [] };
+                }
+            }
+        }
         if (dateFrom || dateTo) {
             where.createdAt = {};
-            if (dateFrom)
-                where.createdAt.gte = new Date(dateFrom);
-            if (dateTo)
-                where.createdAt.lte = new Date(dateTo);
+            if (dateFrom) {
+                const fromDate = new Date(dateFrom);
+                fromDate.setUTCHours(0, 0, 0, 0);
+                where.createdAt.gte = fromDate;
+            }
+            if (dateTo) {
+                const toDate = new Date(dateTo);
+                toDate.setUTCHours(23, 59, 59, 999);
+                where.createdAt.lte = toDate;
+            }
         }
         const [orders, total, statistics] = await Promise.all([
             prisma_1.prisma.affiliateOrder.findMany({
@@ -47,9 +132,11 @@ router.get("/", auth_1.authenticateToken, async (req, res) => {
                         },
                     },
                 },
-                orderBy: { [sortBy]: sortOrder },
+                orderBy: {
+                    [sortBy]: sortOrder,
+                },
                 skip: (page - 1) * limit,
-                take: parseInt(limit),
+                take: limit,
             }),
             prisma_1.prisma.affiliateOrder.count({ where }),
             Promise.all([
@@ -128,10 +215,10 @@ router.get("/", auth_1.authenticateToken, async (req, res) => {
         res.json({
             data: commissions,
             pagination: {
-                page: parseInt(page),
-                limit: parseInt(limit),
+                page,
+                limit,
                 total,
-                pages: Math.ceil(total / parseInt(limit)),
+                pages: Math.ceil(total / limit),
             },
             statistics: formattedStatistics,
         });

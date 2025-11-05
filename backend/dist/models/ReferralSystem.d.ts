@@ -48,24 +48,18 @@ export declare class ReferralSystemModel {
         orderValue?: number;
     }): Promise<ReferralUsage>;
     static getReferralStats(affiliateId: string): Promise<ReferralStats>;
-    static getAffiliateReferralCodes(affiliateId: string): Promise<({
-        _count: {
-            usages: number;
-        };
-    } & {
+    static getAffiliateReferralCodes(affiliateId: string): Promise<{
+        commissionRate: number;
         id: string;
         createdAt: Date;
         updatedAt: Date;
-        commissionRate: number;
         code: string;
-        type: import(".prisma/client").$Enums.ReferralType;
-        affiliateId: string;
-        productId: string | null;
-        maxUses: number | null;
+        productId: string;
+        maxUses: number;
         currentUses: number;
-        expiresAt: Date | null;
+        expiresAt: Date;
         isActive: boolean;
-    })[]>;
+    }[]>;
     static generateShareableLinks(affiliateId: string, platforms?: string[]): Promise<{
         referralCode: string;
         links: Record<string, string>;

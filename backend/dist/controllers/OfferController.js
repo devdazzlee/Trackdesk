@@ -8,22 +8,16 @@ const offerService = new OfferService_1.OfferService();
 const createOfferSchema = zod_1.z.object({
     name: zod_1.z.string().min(1),
     description: zod_1.z.string().min(1),
-    category: zod_1.z.string().min(1),
     commissionRate: zod_1.z.number().min(0).max(100),
     startDate: zod_1.z.string().datetime(),
     endDate: zod_1.z.string().datetime().optional(),
-    terms: zod_1.z.string().optional(),
-    requirements: zod_1.z.string().optional(),
 });
 const updateOfferSchema = zod_1.z.object({
     name: zod_1.z.string().min(1).optional(),
     description: zod_1.z.string().min(1).optional(),
-    category: zod_1.z.string().min(1).optional(),
     commissionRate: zod_1.z.number().min(0).max(100).optional(),
     startDate: zod_1.z.string().datetime().optional(),
     endDate: zod_1.z.string().datetime().optional(),
-    terms: zod_1.z.string().optional(),
-    requirements: zod_1.z.string().optional(),
     status: zod_1.z.enum(["ACTIVE", "INACTIVE", "PAUSED", "EXPIRED"]).optional(),
 });
 const applyForOfferSchema = zod_1.z.object({
@@ -54,13 +48,12 @@ const updateCreativeSchema = zod_1.z.object({
 class OfferController {
     async getAllOffers(req, res) {
         try {
-            const { page = 1, limit = 10, search, status, category } = req.query;
+            const { page = 1, limit = 10, search, status } = req.query;
             const offers = await offerService.getAllOffers({
                 page: parseInt(page),
                 limit: parseInt(limit),
                 search: search,
                 status: status,
-                category: category,
             });
             res.json(offers);
         }

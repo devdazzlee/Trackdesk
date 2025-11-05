@@ -56,17 +56,35 @@ router.get("/", auth_1.authenticateToken, (0, auth_1.requireRole)(["ADMIN"]), as
             skip: (parseInt(page) - 1) * parseInt(limit),
             take: parseInt(limit),
         });
+        const offerIds = offers.map((o) => o.id);
+        const activities = await prisma.activity.findMany({
+            where: {
+                action: "offer_created",
+                resource: "offer",
+            },
+            select: {
+                details: true,
+            },
+        });
+        const referralCodeMap = new Map();
+        activities.forEach((activity) => {
+            const details = activity.details;
+            if (details?.offerId &&
+                details?.referralCodeIds &&
+                Array.isArray(details.referralCodeIds)) {
+                if (offerIds.includes(details.offerId)) {
+                    referralCodeMap.set(details.offerId, details.referralCodeIds);
+                }
+            }
+        });
         const formattedOffers = offers.map((offer) => ({
             id: offer.id,
             name: offer.name,
             description: offer.description,
-            category: offer.category,
             commissionRate: offer.commissionRate,
             status: offer.status.toLowerCase(),
             startDate: offer.startDate.toISOString().split("T")[0],
             endDate: offer.endDate?.toISOString().split("T")[0] || null,
-            terms: offer.terms,
-            requirements: offer.requirements,
             tags: offer.tags,
             totalClicks: offer.totalClicks,
             totalConversions: offer.totalConversions,
@@ -94,6 +112,7 @@ router.get("/", auth_1.authenticateToken, (0, auth_1.requireRole)(["ADMIN"]), as
                 url: creative.url,
                 downloadUrl: creative.downloadUrl,
             })),
+            referralCodeIds: referralCodeMap.get(offer.id) || [],
             createdAt: offer.createdAt.toISOString().split("T")[0],
             updatedAt: offer.updatedAt.toISOString().split("T")[0],
         }));
@@ -197,21 +216,18 @@ router.get("/affiliates", auth_1.authenticateToken, (0, auth_1.requireRole)(["AD
 });
 router.post("/", auth_1.authenticateToken, (0, auth_1.requireRole)(["ADMIN"]), async (req, res) => {
     try {
-        const { name, description, category, commissionRate, startDate, endDate, terms, requirements, tags, affiliateId, referralCodeIds, } = req.body;
+        const { name, description, commissionRate, startDate, endDate, tags, affiliateId, referralCodeIds, } = req.body;
         const schema = zod_1.z.object({
             name: zod_1.z.string().min(3, "Name must be at least 3 characters"),
             description: zod_1.z
                 .string()
                 .min(10, "Description must be at least 10 characters"),
-            category: zod_1.z.string().min(1, "Category is required"),
             commissionRate: zod_1.z
                 .number()
                 .min(0)
                 .max(100, "Commission rate must be between 0 and 100"),
             startDate: zod_1.z.string().min(1, "Start date is required"),
             endDate: zod_1.z.string().optional(),
-            terms: zod_1.z.string().optional(),
-            requirements: zod_1.z.string().optional(),
             tags: zod_1.z.array(zod_1.z.string()).optional(),
             affiliateId: zod_1.z.string().min(1, "Affiliate selection is required"),
             referralCodeIds: zod_1.z.array(zod_1.z.string()).optional(),
@@ -219,12 +235,9 @@ router.post("/", auth_1.authenticateToken, (0, auth_1.requireRole)(["ADMIN"]), a
         const validatedData = schema.parse({
             name,
             description,
-            category,
             commissionRate,
             startDate,
             endDate,
-            terms,
-            requirements,
             tags: tags || [],
             affiliateId,
             referralCodeIds: referralCodeIds || [],
@@ -259,14 +272,11 @@ router.post("/", auth_1.authenticateToken, (0, auth_1.requireRole)(["ADMIN"]), a
                 accountId: "trackdesk-system",
                 name: validatedData.name,
                 description: validatedData.description,
-                category: validatedData.category,
                 commissionRate: validatedData.commissionRate,
                 startDate: new Date(validatedData.startDate),
                 endDate: validatedData.endDate
                     ? new Date(validatedData.endDate)
                     : null,
-                terms: validatedData.terms,
-                requirements: validatedData.requirements,
                 tags: validatedData.tags,
             },
         });
@@ -288,6 +298,7 @@ router.post("/", auth_1.authenticateToken, (0, auth_1.requireRole)(["ADMIN"]), a
                     assignedAffiliate: affiliate.id,
                     affiliateName: `${affiliate.user.firstName} ${affiliate.user.lastName}`,
                     referralCode: affiliate.referralCodes[0]?.code || null,
+                    referralCodeIds: validatedData.referralCodeIds || [],
                 },
             },
         });
@@ -300,8 +311,6 @@ router.post("/", auth_1.authenticateToken, (0, auth_1.requireRole)(["ADMIN"]), a
                 startDate: offer.startDate.toISOString().split("T")[0],
                 endDate: offer.endDate?.toISOString().split("T")[0] || "No end date",
                 referralCodes: selectedReferralCodes.map((code) => code.code),
-                terms: offer.terms || "Standard terms apply",
-                requirements: offer.requirements || "No specific requirements",
             });
         }
         catch (emailError) {
@@ -314,13 +323,10 @@ router.post("/", auth_1.authenticateToken, (0, auth_1.requireRole)(["ADMIN"]), a
                 id: offer.id,
                 name: offer.name,
                 description: offer.description,
-                category: offer.category,
                 commissionRate: offer.commissionRate,
                 status: offer.status.toLowerCase(),
                 startDate: offer.startDate.toISOString().split("T")[0],
                 endDate: offer.endDate?.toISOString().split("T")[0] || null,
-                terms: offer.terms,
-                requirements: offer.requirements,
                 tags: offer.tags,
                 createdAt: offer.createdAt,
                 assignedAffiliate: {
@@ -339,43 +345,64 @@ router.post("/", auth_1.authenticateToken, (0, auth_1.requireRole)(["ADMIN"]), a
     catch (error) {
         console.error("Error creating offer:", error);
         if (error instanceof zod_1.z.ZodError) {
-            return res
-                .status(400)
-                .json({ error: "Invalid input data", details: error.errors });
+            return res.status(400).json({
+                error: "Invalid input data",
+                message: "Validation failed",
+                details: error.errors.map((err) => ({
+                    path: err.path.join("."),
+                    message: err.message,
+                    code: err.code,
+                })),
+            });
         }
-        res.status(500).json({ error: "Failed to create offer" });
+        if (error.code === "P2002") {
+            return res.status(400).json({
+                error: "Duplicate entry",
+                message: "An offer with this information already exists",
+            });
+        }
+        if (error.message) {
+            console.error("Detailed error:", error.message, error.stack);
+            return res.status(500).json({
+                error: "Failed to create offer",
+                message: error.message,
+            });
+        }
+        res.status(500).json({
+            error: "Failed to create offer",
+            message: "An unexpected error occurred. Please try again.",
+        });
     }
 });
 router.put("/:id", auth_1.authenticateToken, (0, auth_1.requireRole)(["ADMIN"]), async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, description, category, commissionRate, startDate, endDate, terms, requirements, tags, status, } = req.body;
+        const { name, description, commissionRate, startDate, endDate, tags, status, referralCodeIds, } = req.body;
         const schema = zod_1.z.object({
             name: zod_1.z.string().min(3).optional(),
             description: zod_1.z.string().min(10).optional(),
-            category: zod_1.z.string().min(1).optional(),
             commissionRate: zod_1.z.number().min(0).max(100).optional(),
             startDate: zod_1.z.string().optional(),
             endDate: zod_1.z.string().optional(),
-            terms: zod_1.z.string().optional(),
-            requirements: zod_1.z.string().optional(),
             tags: zod_1.z.array(zod_1.z.string()).optional(),
             status: zod_1.z.enum(["ACTIVE", "PAUSED", "ENDED"]).optional(),
+            referralCodeIds: zod_1.z.array(zod_1.z.string()).optional(),
         });
         const validatedData = schema.parse({
             name,
             description,
-            category,
             commissionRate,
             startDate,
             endDate,
-            terms,
-            requirements,
             tags,
             status,
+            referralCodeIds,
         });
         const updateData = {};
         Object.keys(validatedData).forEach((key) => {
+            if (key === "referralCodeIds") {
+                return;
+            }
             if (validatedData[key] !== undefined) {
                 if (key === "startDate" || key === "endDate") {
                     updateData[key] = validatedData[key]
@@ -414,6 +441,33 @@ router.put("/:id", auth_1.authenticateToken, (0, auth_1.requireRole)(["ADMIN"]),
                 },
             },
         });
+        if (validatedData.referralCodeIds !== undefined) {
+            const allActivities = await prisma.activity.findMany({
+                where: {
+                    action: "offer_created",
+                    resource: "offer",
+                },
+                orderBy: {
+                    createdAt: "desc",
+                },
+            });
+            const creationActivity = allActivities.find((activity) => {
+                const details = activity.details;
+                return details?.offerId === id;
+            });
+            if (creationActivity) {
+                const details = creationActivity.details;
+                await prisma.activity.update({
+                    where: { id: creationActivity.id },
+                    data: {
+                        details: {
+                            ...details,
+                            referralCodeIds: validatedData.referralCodeIds || [],
+                        },
+                    },
+                });
+            }
+        }
         await prisma.activity.create({
             data: {
                 userId: req.user.id,
@@ -423,6 +477,7 @@ router.put("/:id", auth_1.authenticateToken, (0, auth_1.requireRole)(["ADMIN"]),
                     offerId: id,
                     offerName: updatedOffer.name,
                     changes: updateData,
+                    referralCodeIds: validatedData.referralCodeIds || undefined,
                 },
             },
         });
@@ -433,11 +488,11 @@ router.put("/:id", auth_1.authenticateToken, (0, auth_1.requireRole)(["ADMIN"]),
                 id: updatedOffer.id,
                 name: updatedOffer.name,
                 description: updatedOffer.description,
-                category: updatedOffer.category,
                 commissionRate: updatedOffer.commissionRate,
                 status: updatedOffer.status.toLowerCase(),
                 startDate: updatedOffer.startDate.toISOString().split("T")[0],
                 endDate: updatedOffer.endDate?.toISOString().split("T")[0] || null,
+                tags: updatedOffer.tags,
                 affiliatesCount: updatedOffer._count.applications,
                 creativesCount: updatedOffer._count.creatives,
             },

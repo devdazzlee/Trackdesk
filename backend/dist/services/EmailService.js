@@ -913,20 +913,6 @@ The Trackdesk Team
                 </a>
               </div>
               
-              <div class="info-box">
-                <div class="info-box-title">📋 Terms & Conditions</div>
-                <div class="info-box-content">
-                  ${offerDetails.terms}
-                </div>
-              </div>
-              
-              <div class="info-box">
-                <div class="info-box-title">📝 Requirements</div>
-                <div class="info-box-content">
-                  ${offerDetails.requirements}
-                </div>
-              </div>
-              
               <p style="font-size: 16px; color: #374151; margin-top: 30px;">
                 <strong>Ready to start earning?</strong> Log into your dashboard to access all promotional materials, track your performance, and start promoting this offer to your audience.
               </p>
@@ -973,12 +959,6 @@ The Trackdesk Team
       - Start Date: ${offerDetails.startDate}
       - End Date: ${offerDetails.endDate}
       - Your Referral Codes: ${offerDetails.referralCodes.length > 0 ? offerDetails.referralCodes.join(", ") : "None assigned"}
-
-      TERMS & CONDITIONS:
-      ${offerDetails.terms}
-
-      REQUIREMENTS:
-      ${offerDetails.requirements}
 
       Ready to start earning? Log into your dashboard to access all promotional materials, track your performance, and start promoting this offer to your audience.
 

@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DeleteConfirmationModal } from "@/components/modals/delete-confirmation-modal";
 import {
   Dialog,
   DialogContent,
@@ -40,6 +40,8 @@ import {
   DollarSign,
   Users,
   Target,
+  Edit,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -49,12 +51,11 @@ import { getAuthHeaders } from "@/lib/getAuthHeaders";
 interface ReferralCode {
   id: string;
   code: string;
-  type: "SIGNUP" | "PRODUCT" | "BOTH";
   commissionRate: number;
-  productId?: string;
-  maxUses?: number;
+  productId?: string | null;
+  maxUses?: number | null;
   currentUses: number;
-  expiresAt?: string;
+  expiresAt?: string | null;
   isActive: boolean;
   createdAt: string;
 }
@@ -87,13 +88,23 @@ export default function ReferralsPage() {
   );
   const [isLoading, setIsLoading] = useState(true);
   const [isCreatingCode, setIsCreatingCode] = useState(false);
+  const [isUpdatingCode, setIsUpdatingCode] = useState(false);
+  const [isDeletingCode, setIsDeletingCode] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
+  const [deleteModal, setDeleteModal] = useState<{
+    isOpen: boolean;
+    codeId: string | null;
+    codeName: string | null;
+  }>({ isOpen: false, codeId: null, codeName: null });
+  const [editingCode, setEditingCode] = useState<ReferralCode | null>(null);
+  const [affiliateCommissionRate, setAffiliateCommissionRate] =
+    useState<number>(10);
 
   // Form state for creating referral code
   const [newCode, setNewCode] = useState({
-    type: "BOTH" as "SIGNUP" | "PRODUCT" | "BOTH",
-    commissionRate: 5, // Default to 5% to match affiliate tier
+    commissionRate: 10, // Will be set from affiliate profile
     productId: "",
     maxUses: "",
     expiresAt: "",
@@ -105,27 +116,43 @@ export default function ReferralsPage() {
 
   const fetchReferralData = async () => {
     try {
-      const [codesResponse, statsResponse, linksResponse] = await Promise.all([
-        fetch(`${config.apiUrl}/referral/codes`, { headers: getAuthHeaders() }),
-        fetch(`${config.apiUrl}/referral/stats`, { headers: getAuthHeaders() }),
-        fetch(`${config.apiUrl}/referral/shareable-links`, {
-          method: "POST",
-          headers: getAuthHeaders(),
-          body: JSON.stringify({
-            platforms: [
-              "facebook",
-              "twitter",
-              "instagram",
-              "linkedin",
-              "tiktok",
-            ],
+      const [codesResponse, statsResponse, linksResponse, profileResponse] =
+        await Promise.all([
+          fetch(`${config.apiUrl}/referral/codes`, {
+            headers: getAuthHeaders(),
           }),
-        }),
-      ]);
+          fetch(`${config.apiUrl}/referral/stats`, {
+            headers: getAuthHeaders(),
+          }),
+          fetch(`${config.apiUrl}/referral/shareable-links`, {
+            method: "POST",
+            headers: getAuthHeaders(),
+            body: JSON.stringify({
+              platforms: [
+                "facebook",
+                "twitter",
+                "instagram",
+                "linkedin",
+                "tiktok",
+              ],
+            }),
+          }),
+          fetch(`${config.apiUrl}/settings/profile`, {
+            headers: getAuthHeaders(),
+          }),
+        ]);
 
       if (codesResponse.ok) {
         const codes = await codesResponse.json();
-        setReferralCodes(codes);
+        // Use the actual commissionRate from database - don't transform it
+        const formattedCodes = codes.map((code: any) => ({
+          ...code,
+          // Use the actual commissionRate from database response
+          // Only default to 0 if it's truly undefined/null
+          commissionRate:
+            code.commissionRate != null ? Number(code.commissionRate) : 0,
+        }));
+        setReferralCodes(formattedCodes);
       }
 
       if (statsResponse.ok) {
@@ -136,6 +163,20 @@ export default function ReferralsPage() {
       if (linksResponse.ok) {
         const linksData = await linksResponse.json();
         setShareableLinks(linksData);
+      }
+
+      // Fetch affiliate profile to get commission rate
+      if (profileResponse.ok) {
+        const profileData = await profileResponse.json();
+        if (profileData.affiliate?.commissionRate) {
+          const commissionRate = profileData.affiliate.commissionRate;
+          setAffiliateCommissionRate(commissionRate);
+          // Update newCode with actual commission rate
+          setNewCode((prev) => ({
+            ...prev,
+            commissionRate: commissionRate,
+          }));
+        }
       }
     } catch (error) {
       console.error("Error fetching referral data:", error);
@@ -152,7 +193,7 @@ export default function ReferralsPage() {
         method: "POST",
         headers: getAuthHeaders(),
         body: JSON.stringify({
-          ...newCode,
+          commissionRate: newCode.commissionRate,
           maxUses: newCode.maxUses ? parseInt(newCode.maxUses) : undefined,
           expiresAt: newCode.expiresAt || undefined,
         }),
@@ -162,8 +203,7 @@ export default function ReferralsPage() {
         toast.success("Referral code created successfully!");
         setShowCreateDialog(false);
         setNewCode({
-          type: "BOTH",
-          commissionRate: 5,
+          commissionRate: affiliateCommissionRate,
           productId: "",
           maxUses: "",
           expiresAt: "",
@@ -177,6 +217,99 @@ export default function ReferralsPage() {
       toast.error("Failed to create referral code");
     } finally {
       setIsCreatingCode(false);
+    }
+  };
+
+  const handleEditClick = (code: ReferralCode) => {
+    // Use the actual commissionRate from the code object
+    // This should be the value from the database
+    setEditingCode({
+      ...code,
+      commissionRate:
+        code.commissionRate != null ? Number(code.commissionRate) : 0,
+    });
+    setShowEditDialog(true);
+  };
+
+  const handleUpdateReferralCode = async () => {
+    if (!editingCode) return;
+
+    setIsUpdatingCode(true);
+    try {
+      // Format expiresAt for datetime-local input
+      let expiresAtValue: string | null = null;
+      if (editingCode.expiresAt) {
+        const date = new Date(editingCode.expiresAt);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        const hours = String(date.getHours()).padStart(2, "0");
+        const minutes = String(date.getMinutes()).padStart(2, "0");
+        expiresAtValue = `${year}-${month}-${day}T${hours}:${minutes}`;
+      }
+
+      const response = await fetch(
+        `${config.apiUrl}/referral/codes/${editingCode.id}`,
+        {
+          method: "PUT",
+          headers: getAuthHeaders(),
+          body: JSON.stringify({
+            // Commission rate is not sent in update - it's controlled by admin only
+            productId: editingCode.productId || null,
+            maxUses: editingCode.maxUses || null,
+            expiresAt: expiresAtValue || null,
+            isActive: editingCode.isActive,
+          }),
+        }
+      );
+
+      if (response.ok) {
+        toast.success("Referral code updated successfully!");
+        setShowEditDialog(false);
+        setEditingCode(null);
+        fetchReferralData();
+      } else {
+        const error = await response.json();
+        toast.error(error.error || "Failed to update referral code");
+      }
+    } catch (error) {
+      console.error("Error updating referral code:", error);
+      toast.error("Failed to update referral code");
+    } finally {
+      setIsUpdatingCode(false);
+    }
+  };
+
+  const handleDeleteClick = (codeId: string, codeName: string) => {
+    setDeleteModal({ isOpen: true, codeId, codeName });
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteModal.codeId) return;
+
+    setIsDeletingCode(true);
+    try {
+      const response = await fetch(
+        `${config.apiUrl}/referral/codes/${deleteModal.codeId}`,
+        {
+          method: "DELETE",
+          headers: getAuthHeaders(),
+        }
+      );
+
+      if (response.ok) {
+        toast.success("Referral code deleted successfully!");
+        setDeleteModal({ isOpen: false, codeId: null, codeName: null });
+        fetchReferralData();
+      } else {
+        const error = await response.json();
+        toast.error(error.error || "Failed to delete referral code");
+      }
+    } catch (error) {
+      console.error("Error deleting referral code:", error);
+      toast.error("Failed to delete referral code");
+    } finally {
+      setIsDeletingCode(false);
     }
   };
 
@@ -238,24 +371,6 @@ export default function ReferralsPage() {
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="type">Type</Label>
-                  <Select
-                    value={newCode.type}
-                    onValueChange={(value: any) =>
-                      setNewCode({ ...newCode, type: value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="SIGNUP">Signup Only</SelectItem>
-                      <SelectItem value="PRODUCT">Product Only</SelectItem>
-                      <SelectItem value="BOTH">Both</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
                   <Label htmlFor="commissionRate">Commission Rate (%)</Label>
                   <Input
                     id="commissionRate"
@@ -263,13 +378,14 @@ export default function ReferralsPage() {
                     min="0"
                     max="100"
                     value={newCode.commissionRate}
-                    onChange={(e) =>
-                      setNewCode({
-                        ...newCode,
-                        commissionRate: parseFloat(e.target.value),
-                      })
-                    }
+                    disabled
+                    className="bg-muted"
+                    readOnly
                   />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Your commission rate: {affiliateCommissionRate}% (Only
+                    admins can change this)
+                  </p>
                 </div>
                 <div>
                   <Label htmlFor="maxUses">Max Uses (optional)</Label>
@@ -386,29 +502,33 @@ export default function ReferralsPage() {
         </div>
       )}
 
-      {/* Main Content */}
-      <Tabs defaultValue="codes" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="codes">Referral Codes</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="codes" className="space-y-6">
-          <div className="grid gap-6">
-            {referralCodes.map((code) => (
+      {/* Main Content - Referral Codes List */}
+      <div className="space-y-6">
+        <div className="grid gap-6">
+          {referralCodes.length === 0 ? (
+            <Card className="shadow-sm">
+              <CardContent className="py-12 text-center">
+                <p className="text-muted-foreground">
+                  No referral codes yet. Create your first referral code to get
+                  started!
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            referralCodes.map((code) => (
               <Card
                 key={code.id}
                 className="shadow-sm hover:shadow-md transition-shadow"
               >
                 <CardHeader className="pb-4">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <div>
+                    <div className="flex-1">
                       <CardTitle className="text-lg text-gray-900">
                         {code.code}
                       </CardTitle>
                       <CardDescription className="mt-1">
-                        {code.type} • {code.commissionRate}% commission •{" "}
-                        {code.currentUses} uses
+                        {code.commissionRate}% commission • {code.currentUses}{" "}
+                        uses
                         {code.maxUses && ` / ${code.maxUses}`}
                       </CardDescription>
                     </div>
@@ -424,20 +544,32 @@ export default function ReferralsPage() {
                       >
                         <Copy className="w-4 h-4" />
                       </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditClick(code)}
+                        className="px-3 hover:bg-blue-50"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeleteClick(code.id, code.code)}
+                        className="px-3 text-destructive hover:text-destructive hover:bg-red-50"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent className="pt-0">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-sm">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-6 text-sm">
                     <div className="space-y-1">
                       <p className="font-medium text-gray-700">Created</p>
                       <p className="text-muted-foreground">
                         {new Date(code.createdAt).toLocaleDateString()}
                       </p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="font-medium text-gray-700">Type</p>
-                      <p className="text-muted-foreground">{code.type}</p>
                     </div>
                     <div className="space-y-1">
                       <p className="font-medium text-gray-700">Commission</p>
@@ -456,53 +588,10 @@ export default function ReferralsPage() {
                   </div>
                 </CardContent>
               </Card>
-            ))}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="analytics" className="space-y-6">
-          {stats?.topProducts && stats.topProducts.length > 0 && (
-            <Card className="shadow-sm">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-lg">Top Products</CardTitle>
-                <CardDescription>
-                  Your best performing products by referrals
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="space-y-4">
-                  {stats.topProducts.map((product, index) => (
-                    <div
-                      key={product.productId}
-                      className="flex items-center justify-between p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
-                          {index + 1}
-                        </div>
-                        <div>
-                          <p className="font-semibold text-gray-900">
-                            {product.productName}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {product.referrals} referrals
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-bold text-green-600 text-lg">
-                          ${product.commissions.toFixed(2)}
-                        </p>
-                        <p className="text-sm text-muted-foreground">earned</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+            ))
           )}
-        </TabsContent>
-      </Tabs>
+        </div>
+      </div>
 
       {/* Share Links Dialog */}
       <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
@@ -577,6 +666,165 @@ export default function ReferralsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Edit Referral Code Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Referral Code</DialogTitle>
+            <DialogDescription>
+              Update your referral code settings. Changes will be saved
+              immediately.
+            </DialogDescription>
+          </DialogHeader>
+          {editingCode && (
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="editCode">Referral Code</Label>
+                <Input
+                  id="editCode"
+                  value={editingCode.code}
+                  disabled
+                  className="bg-muted"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Referral code cannot be changed
+                </p>
+              </div>
+              <div>
+                <Label htmlFor="editCommissionRate">Commission Rate (%)</Label>
+                <Input
+                  id="editCommissionRate"
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={editingCode.commissionRate}
+                  disabled
+                  className="bg-muted"
+                  readOnly
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Your commission rate: {editingCode.commissionRate}% (Only
+                  admins can change this)
+                </p>
+              </div>
+              <div>
+                <Label htmlFor="editMaxUses">Max Uses (optional)</Label>
+                <Input
+                  id="editMaxUses"
+                  type="number"
+                  min="1"
+                  value={editingCode.maxUses || ""}
+                  onChange={(e) =>
+                    setEditingCode({
+                      ...editingCode,
+                      maxUses: e.target.value
+                        ? parseInt(e.target.value)
+                        : undefined,
+                    })
+                  }
+                  placeholder="Leave empty for unlimited"
+                />
+              </div>
+              <div>
+                <Label htmlFor="editExpiresAt">Expires At (optional)</Label>
+                <Input
+                  id="editExpiresAt"
+                  type="datetime-local"
+                  value={
+                    editingCode.expiresAt
+                      ? (() => {
+                          const date = new Date(editingCode.expiresAt);
+                          const year = date.getFullYear();
+                          const month = String(date.getMonth() + 1).padStart(
+                            2,
+                            "0"
+                          );
+                          const day = String(date.getDate()).padStart(2, "0");
+                          const hours = String(date.getHours()).padStart(
+                            2,
+                            "0"
+                          );
+                          const minutes = String(date.getMinutes()).padStart(
+                            2,
+                            "0"
+                          );
+                          return `${year}-${month}-${day}T${hours}:${minutes}`;
+                        })()
+                      : ""
+                  }
+                  onChange={(e) =>
+                    setEditingCode({
+                      ...editingCode,
+                      expiresAt: e.target.value || undefined,
+                    })
+                  }
+                />
+              </div>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="editIsActive"
+                  checked={editingCode.isActive}
+                  onChange={(e) =>
+                    setEditingCode({
+                      ...editingCode,
+                      isActive: e.target.checked,
+                    })
+                  }
+                  className="h-4 w-4 rounded border-gray-300"
+                />
+                <Label htmlFor="editIsActive" className="cursor-pointer">
+                  Active
+                </Label>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowEditDialog(false);
+                setEditingCode(null);
+              }}
+              disabled={isUpdatingCode}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleUpdateReferralCode}
+              disabled={isUpdatingCode}
+            >
+              {isUpdatingCode ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Updating...
+                </>
+              ) : (
+                <>
+                  <Edit className="w-4 h-4 mr-2" />
+                  Update Code
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={deleteModal.isOpen}
+        onClose={() =>
+          setDeleteModal({ isOpen: false, codeId: null, codeName: null })
+        }
+        onConfirm={handleDeleteConfirm}
+        title="Delete Referral Code?"
+        message="Are you sure you want to delete this referral code?"
+        itemName={deleteModal.codeName || undefined}
+        description="This action cannot be undone. Referral codes that have been used cannot be deleted."
+        isLoading={isDeletingCode}
+        confirmText="Delete"
+      />
     </div>
   );
 }

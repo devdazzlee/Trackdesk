@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { AlertTriangle, Users, TrendingUp, TrendingDown } from "lucide-react";
 import { config } from "@/config/config";
+import { getAuthHeaders } from "@/lib/getAuthHeaders";
 
 interface AffiliateImpact {
   id: string;
@@ -56,10 +57,7 @@ export default function CommissionImpactModal({
         `${config.apiUrl}/system/settings/commission/preview`,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
+          headers: getAuthHeaders(),
           body: JSON.stringify({ defaultRate: newDefaultRate }),
         }
       );

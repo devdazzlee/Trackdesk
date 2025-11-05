@@ -1,17 +1,17 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
 export interface StatsParams {
-  timeRange?: '7d' | '30d' | '90d' | '1y';
+  timeRange?: "7d" | "30d" | "90d" | "1y";
   startDate?: string;
   endDate?: string;
 }
 
 export interface PerformanceChartParams {
-  timeRange?: '7d' | '30d' | '90d' | '1y';
-  metric?: 'clicks' | 'conversions' | 'revenue' | 'commission';
-  groupBy?: 'day' | 'week' | 'month';
+  timeRange?: "7d" | "30d" | "90d" | "1y";
+  metric?: "clicks" | "conversions" | "revenue" | "commission";
+  groupBy?: "day" | "week" | "month";
 }
 
 export class DashboardService {
@@ -22,17 +22,24 @@ export class DashboardService {
     if (params.startDate && params.endDate) {
       startDate = new Date(params.startDate);
     } else {
-      const days = params.timeRange === '7d' ? 7 : params.timeRange === '30d' ? 30 : params.timeRange === '90d' ? 90 : 365;
-      startDate = new Date(now.getTime() - (days * 24 * 60 * 60 * 1000));
+      const days =
+        params.timeRange === "7d"
+          ? 7
+          : params.timeRange === "30d"
+            ? 30
+            : params.timeRange === "90d"
+              ? 90
+              : 365;
+      startDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
     }
 
-    if (userRole === 'AFFILIATE') {
+    if (userRole === "AFFILIATE") {
       const affiliate = await prisma.affiliateProfile.findUnique({
-        where: { userId }
+        where: { userId },
       });
 
       if (!affiliate) {
-        throw new Error('Affiliate profile not found');
+        throw new Error("Affiliate profile not found");
       }
 
       // Get stats for the time period
@@ -40,29 +47,29 @@ export class DashboardService {
         prisma.click.count({
           where: {
             affiliateId: affiliate.id,
-            createdAt: { gte: startDate }
-          }
+            createdAt: { gte: startDate },
+          },
         }),
         prisma.conversion.count({
           where: {
             affiliateId: affiliate.id,
-            createdAt: { gte: startDate }
-          }
+            createdAt: { gte: startDate },
+          },
         }),
         prisma.commission.aggregate({
           where: {
             affiliateId: affiliate.id,
-            createdAt: { gte: startDate }
+            createdAt: { gte: startDate },
           },
-          _sum: { amount: true }
+          _sum: { amount: true },
         }),
         prisma.payout.aggregate({
           where: {
             affiliateId: affiliate.id,
-            createdAt: { gte: startDate }
+            createdAt: { gte: startDate },
           },
-          _sum: { amount: true }
-        })
+          _sum: { amount: true },
+        }),
       ]);
 
       return {
@@ -71,26 +78,33 @@ export class DashboardService {
         totalEarnings: commissions._sum.amount || 0,
         totalPayouts: payouts._sum.amount || 0,
         conversionRate: clicks > 0 ? (conversions / clicks) * 100 : 0,
-        availableBalance: affiliate.totalEarnings - (commissions._sum.amount || 0)
+        availableBalance:
+          affiliate.totalEarnings - (commissions._sum.amount || 0),
       };
     } else {
       // Admin/Manager stats
-      const [totalAffiliates, totalClicks, totalConversions, totalRevenue, totalCommissions] = await Promise.all([
+      const [
+        totalAffiliates,
+        totalClicks,
+        totalConversions,
+        totalRevenue,
+        totalCommissions,
+      ] = await Promise.all([
         prisma.affiliateProfile.count(),
         prisma.click.count({
-          where: { createdAt: { gte: startDate } }
+          where: { createdAt: { gte: startDate } },
         }),
         prisma.conversion.count({
-          where: { createdAt: { gte: startDate } }
+          where: { createdAt: { gte: startDate } },
         }),
         prisma.conversion.aggregate({
           where: { createdAt: { gte: startDate } },
-          _sum: { customerValue: true }
+          _sum: { customerValue: true },
         }),
         prisma.commission.aggregate({
           where: { createdAt: { gte: startDate } },
-          _sum: { amount: true }
-        })
+          _sum: { amount: true },
+        }),
       ]);
 
       return {
@@ -99,7 +113,8 @@ export class DashboardService {
         totalConversions,
         totalRevenue: totalRevenue._sum.customerValue || 0,
         totalCommissions: totalCommissions._sum.amount || 0,
-        conversionRate: totalClicks > 0 ? (totalConversions / totalClicks) * 100 : 0
+        conversionRate:
+          totalClicks > 0 ? (totalConversions / totalClicks) * 100 : 0,
       };
     }
   }
@@ -107,102 +122,121 @@ export class DashboardService {
   async getRecentActivity(userId: string, limit: number) {
     const activities = await prisma.activity.findMany({
       where: { userId },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       take: limit,
       include: {
         user: {
           select: {
             firstName: true,
             lastName: true,
-            email: true
-          }
-        }
-      }
+            email: true,
+          },
+        },
+      },
     });
 
     return activities;
   }
 
-  async getPerformanceChart(userId: string, userRole: string, params: PerformanceChartParams) {
+  async getPerformanceChart(
+    userId: string,
+    userRole: string,
+    params: PerformanceChartParams
+  ) {
     const now = new Date();
-    const days = params.timeRange === '7d' ? 7 : params.timeRange === '30d' ? 30 : params.timeRange === '90d' ? 90 : 365;
-    const startDate = new Date(now.getTime() - (days * 24 * 60 * 60 * 1000));
+    const days =
+      params.timeRange === "7d"
+        ? 7
+        : params.timeRange === "30d"
+          ? 30
+          : params.timeRange === "90d"
+            ? 90
+            : 365;
+    const startDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
 
     let chartData: any[] = [];
 
-    if (userRole === 'AFFILIATE') {
+    if (userRole === "AFFILIATE") {
       const affiliate = await prisma.affiliateProfile.findUnique({
-        where: { userId }
+        where: { userId },
       });
 
       if (!affiliate) {
-        throw new Error('Affiliate profile not found');
+        throw new Error("Affiliate profile not found");
       }
 
       // Generate chart data based on groupBy
-      const groupBy = params.groupBy || 'day';
-      const interval = groupBy === 'day' ? 1 : groupBy === 'week' ? 7 : 30;
+      const groupBy = params.groupBy || "day";
+      const interval = groupBy === "day" ? 1 : groupBy === "week" ? 7 : 30;
 
       for (let i = 0; i < days; i += interval) {
-        const dateStart = new Date(startDate.getTime() + (i * 24 * 60 * 60 * 1000));
-        const dateEnd = new Date(startDate.getTime() + ((i + interval) * 24 * 60 * 60 * 1000));
+        const dateStart = new Date(
+          startDate.getTime() + i * 24 * 60 * 60 * 1000
+        );
+        const dateEnd = new Date(
+          startDate.getTime() + (i + interval) * 24 * 60 * 60 * 1000
+        );
 
         const [clicks, conversions, revenue] = await Promise.all([
           prisma.click.count({
             where: {
               affiliateId: affiliate.id,
-              createdAt: { gte: dateStart, lt: dateEnd }
-            }
+              createdAt: { gte: dateStart, lt: dateEnd },
+            },
           }),
           prisma.conversion.count({
             where: {
               affiliateId: affiliate.id,
-              createdAt: { gte: dateStart, lt: dateEnd }
-            }
+              createdAt: { gte: dateStart, lt: dateEnd },
+            },
           }),
           prisma.conversion.aggregate({
             where: {
               affiliateId: affiliate.id,
-              createdAt: { gte: dateStart, lt: dateEnd }
+              createdAt: { gte: dateStart, lt: dateEnd },
             },
-            _sum: { customerValue: true }
-          })
+            _sum: { customerValue: true },
+          }),
         ]);
 
         chartData.push({
-          date: dateStart.toISOString().split('T')[0],
+          date: dateStart.toISOString().split("T")[0],
           clicks,
           conversions,
-          revenue: revenue._sum.customerValue || 0
+          revenue: revenue._sum.customerValue || 0,
         });
       }
     } else {
       // Admin chart data
-      const groupBy = params.groupBy || 'day';
-      const interval = groupBy === 'day' ? 1 : groupBy === 'week' ? 7 : 30;
+      const groupBy = params.groupBy || "day";
+      const interval = groupBy === "day" ? 1 : groupBy === "week" ? 7 : 30;
 
       for (let i = 0; i < days; i += interval) {
-        const dateStart = new Date(startDate.getTime() + (i * 24 * 60 * 60 * 1000));
-        const dateEnd = new Date(startDate.getTime() + ((i + interval) * 24 * 60 * 60 * 1000));
+        const dateStart = new Date(
+          startDate.getTime() + i * 24 * 60 * 60 * 1000
+        );
+        const dateEnd = new Date(
+          startDate.getTime() + (i + interval) * 24 * 60 * 60 * 1000
+        );
 
         const [clicks, conversions, revenue] = await Promise.all([
           prisma.click.count({
-            where: { createdAt: { gte: dateStart, lt: dateEnd } }
+            where: { createdAt: { gte: dateStart, lt: dateEnd } },
           }),
           prisma.conversion.count({
-            where: { createdAt: { gte: dateStart, lt: dateEnd } }
+            where: { createdAt: { gte: dateStart, lt: dateEnd } },
           }),
           prisma.conversion.aggregate({
             where: { createdAt: { gte: dateStart, lt: dateEnd } },
-            _sum: { customerValue: true }
-          })
+            _sum: { customerValue: true },
+          }),
         ]);
 
         chartData.push({
-          date: dateStart.toISOString().split('T')[0],
+          date: dateStart.toISOString().split("T")[0],
           clicks,
           conversions,
-          revenue: revenue._sum.customerValue || 0
+          revenue: revenue._sum.customerValue || 0,
         });
       }
     }
@@ -211,13 +245,13 @@ export class DashboardService {
   }
 
   async getTopOffers(userId: string, userRole: string, limit: number) {
-    if (userRole === 'AFFILIATE') {
+    if (userRole === "AFFILIATE") {
       const affiliate = await prisma.affiliateProfile.findUnique({
-        where: { userId }
+        where: { userId },
       });
 
       if (!affiliate) {
-        throw new Error('Affiliate profile not found');
+        throw new Error("Affiliate profile not found");
       }
 
       const offers = await prisma.offer.findMany({
@@ -225,34 +259,36 @@ export class DashboardService {
           applications: {
             some: {
               affiliateId: affiliate.id,
-              status: 'APPROVED'
-            }
-          }
+              status: "APPROVED",
+            },
+          },
         },
         include: {
           _count: {
             select: {
               conversions: true,
-              links: true
-            }
-          }
+              links: true,
+            },
+          },
         },
         orderBy: {
           conversions: {
-            _count: 'desc'
-          }
+            _count: "desc",
+          },
         },
-        take: limit
+        take: limit,
       });
 
-      return offers.map(offer => ({
+      return offers.map((offer) => ({
         id: offer.id,
         name: offer.name,
-        category: offer.category,
         commissionRate: offer.commissionRate,
         totalClicks: offer.totalClicks,
         totalConversions: offer.totalConversions,
-        conversionRate: offer.totalClicks > 0 ? (offer.totalConversions / offer.totalClicks) * 100 : 0
+        conversionRate:
+          offer.totalClicks > 0
+            ? (offer.totalConversions / offer.totalClicks) * 100
+            : 0,
       }));
     } else {
       // Admin top offers
@@ -261,34 +297,41 @@ export class DashboardService {
           _count: {
             select: {
               conversions: true,
-              links: true
-            }
-          }
+              links: true,
+            },
+          },
         },
         orderBy: {
           conversions: {
-            _count: 'desc'
-          }
+            _count: "desc",
+          },
         },
-        take: limit
+        take: limit,
       });
 
-      return offers.map(offer => ({
+      return offers.map((offer) => ({
         id: offer.id,
         name: offer.name,
-        category: offer.category,
         commissionRate: offer.commissionRate,
         totalClicks: offer.totalClicks,
         totalConversions: offer.totalConversions,
-        conversionRate: offer.totalClicks > 0 ? (offer.totalConversions / offer.totalClicks) * 100 : 0
+        conversionRate:
+          offer.totalClicks > 0
+            ? (offer.totalConversions / offer.totalClicks) * 100
+            : 0,
       }));
     }
   }
 
-  async getNotifications(userId: string, page: number, limit: number, unreadOnly: boolean) {
+  async getNotifications(
+    userId: string,
+    page: number,
+    limit: number,
+    unreadOnly: boolean
+  ) {
     const skip = (page - 1) * limit;
     const where: any = { userId };
-    
+
     if (unreadOnly) {
       where.read = false;
     }
@@ -298,9 +341,9 @@ export class DashboardService {
         where,
         skip,
         take: limit,
-        orderBy: { createdAt: 'desc' }
+        orderBy: { createdAt: "desc" },
       }),
-      prisma.notification.count({ where })
+      prisma.notification.count({ where }),
     ]);
 
     return {
@@ -309,8 +352,8 @@ export class DashboardService {
         page,
         limit,
         total,
-        pages: Math.ceil(total / limit)
-      }
+        pages: Math.ceil(total / limit),
+      },
     };
   }
 
@@ -318,9 +361,9 @@ export class DashboardService {
     await prisma.notification.updateMany({
       where: {
         id: notificationId,
-        userId
+        userId,
       },
-      data: { read: true }
+      data: { read: true },
     });
   }
 }

@@ -324,11 +324,7 @@ export declare class AffiliateService {
                     totalCommissions: number;
                     startDate: Date;
                     endDate: Date | null;
-                    category: string;
                     accountId: string;
-                    categoryId: string | null;
-                    terms: string | null;
-                    requirements: string | null;
                     tags: string[];
                     totalRevenue: number;
                 };

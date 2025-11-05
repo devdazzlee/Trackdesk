@@ -124,14 +124,10 @@ model Offer {
   accountId      String
   name           String
   description    String
-  category       String
-  categoryId     String?
   commissionRate Float
   status         OfferStatus @default(ACTIVE)
   startDate      DateTime
   endDate        DateTime?
-  terms          String?
-  requirements   String?
   tags           String[]    @default([])
 
   // Tracking
@@ -149,7 +145,6 @@ model Offer {
   conversions  Conversion[]
   links        AffiliateLink[]
   creatives    Creative[]
-  categoryRel  OfferCategory?     @relation(fields: [categoryId], references: [id])
 
   @@map("offers")
 }
@@ -1313,9 +1308,6 @@ model OfferCategory {
   // Timestamps
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  // Relations
-  offers Offer[]
 
   @@map("offer_categories")
 }

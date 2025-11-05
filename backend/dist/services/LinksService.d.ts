@@ -1,7 +1,8 @@
 export interface GenerateLinkData {
     url: string;
+    websiteId?: string;
+    referralCodeId?: string;
     campaignName?: string;
-    customAlias?: string;
     offerId?: string;
 }
 export interface GenerateCouponData {
@@ -27,6 +28,8 @@ export declare class LinksService {
         affiliateUrl: string;
         shortUrl: string;
         trackingCode: string;
+        websiteId: string;
+        referralCodeId: string;
         campaignName: string;
         clicks: number;
         conversions: number;
@@ -46,7 +49,6 @@ export declare class LinksService {
         earnings: number;
         status: string;
         createdAt: Date;
-        category: string;
     }[]>;
     getLinkStats(userId: string, linkId: string): Promise<{
         link: {

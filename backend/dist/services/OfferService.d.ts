@@ -3,27 +3,20 @@ export interface GetAllOffersParams {
     limit: number;
     search?: string;
     status?: string;
-    category?: string;
 }
 export interface CreateOfferData {
     name: string;
     description: string;
-    category: string;
     commissionRate: number;
     startDate: string;
     endDate?: string;
-    terms?: string;
-    requirements?: string;
 }
 export interface UpdateOfferData {
     name?: string;
     description?: string;
-    category?: string;
     commissionRate?: number;
     startDate?: string;
     endDate?: string;
-    terms?: string;
-    requirements?: string;
     status?: string;
 }
 export interface ApplyForOfferData {
@@ -85,11 +78,7 @@ export declare class OfferService {
             totalCommissions: number;
             startDate: Date;
             endDate: Date | null;
-            category: string;
             accountId: string;
-            categoryId: string | null;
-            terms: string | null;
-            requirements: string | null;
             tags: string[];
             totalRevenue: number;
         }[];
@@ -166,11 +155,7 @@ export declare class OfferService {
         totalCommissions: number;
         startDate: Date;
         endDate: Date | null;
-        category: string;
         accountId: string;
-        categoryId: string | null;
-        terms: string | null;
-        requirements: string | null;
         tags: string[];
         totalRevenue: number;
     }>;
@@ -187,11 +172,7 @@ export declare class OfferService {
         totalCommissions: number;
         startDate: Date;
         endDate: Date | null;
-        category: string;
         accountId: string;
-        categoryId: string | null;
-        terms: string | null;
-        requirements: string | null;
         tags: string[];
         totalRevenue: number;
     }>;
@@ -208,11 +189,7 @@ export declare class OfferService {
         totalCommissions: number;
         startDate: Date;
         endDate: Date | null;
-        category: string;
         accountId: string;
-        categoryId: string | null;
-        terms: string | null;
-        requirements: string | null;
         tags: string[];
         totalRevenue: number;
     }>;

@@ -41,6 +41,7 @@ router.get("/profile", auth_1.authenticateToken, async (req, res) => {
                     website: affiliate.website,
                     tier: affiliate.tier,
                     status: affiliate.status,
+                    commissionRate: affiliate.commissionRate,
                 }
                 : null,
         });
@@ -142,7 +143,8 @@ router.get("/security", auth_1.authenticateToken, async (req, res) => {
             if (userAgent.includes("Chrome") && !userAgent.includes("Edge")) {
                 device = "Chrome";
             }
-            else if (userAgent.includes("Safari") && !userAgent.includes("Chrome")) {
+            else if (userAgent.includes("Safari") &&
+                !userAgent.includes("Chrome")) {
                 device = "Safari";
             }
             else if (userAgent.includes("Firefox")) {
@@ -157,7 +159,8 @@ router.get("/security", auth_1.authenticateToken, async (req, res) => {
             else if (userAgent.includes("Windows")) {
                 device += " on Windows";
             }
-            else if (userAgent.includes("Linux") && !userAgent.includes("Android")) {
+            else if (userAgent.includes("Linux") &&
+                !userAgent.includes("Android")) {
                 device += " on Linux";
             }
             else if (userAgent.includes("iPhone") || userAgent.includes("iPad")) {

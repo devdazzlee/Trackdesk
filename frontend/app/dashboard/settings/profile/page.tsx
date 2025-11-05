@@ -31,6 +31,7 @@ import { toast } from "sonner";
 import { config } from "@/config/config";
 import { useAuth } from "@/contexts/AuthContext";
 import { getAuthHeaders } from "@/lib/getAuthHeaders";
+import { DeleteConfirmationModal } from "@/components/modals/delete-confirmation-modal";
 
 interface UserProfile {
   user: {
@@ -58,6 +59,8 @@ export default function ProfileSettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [deleteAvatarModal, setDeleteAvatarModal] = useState(false);
+  const [isDeletingAvatar, setIsDeletingAvatar] = useState(false);
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -179,13 +182,15 @@ export default function ProfileSettingsPage() {
     }
   };
 
-  const handleDeleteAvatar = async () => {
+  const handleDeleteAvatarClick = () => {
+    if (!profile?.user.avatar) return;
+    setDeleteAvatarModal(true);
+  };
+
+  const handleDeleteAvatarConfirm = async () => {
     if (!profile?.user.avatar) return;
 
-    if (!confirm("Are you sure you want to delete your profile picture?")) {
-      return;
-    }
-
+    setIsDeletingAvatar(true);
     toast.loading("Deleting avatar...", { id: "avatar-delete" });
 
     try {
@@ -196,6 +201,7 @@ export default function ProfileSettingsPage() {
 
       if (response.ok) {
         toast.success("Avatar deleted successfully!", { id: "avatar-delete" });
+        setDeleteAvatarModal(false);
         fetchProfile(); // Refresh profile
         await refreshUser(); // Refresh auth context to update navbar/sidebar
       } else {
@@ -207,6 +213,8 @@ export default function ProfileSettingsPage() {
     } catch (error) {
       console.error("Error deleting avatar:", error);
       toast.error("Failed to delete avatar", { id: "avatar-delete" });
+    } finally {
+      setIsDeletingAvatar(false);
     }
   };
 
@@ -311,7 +319,7 @@ export default function ProfileSettingsPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={handleDeleteAvatar}
+                    onClick={handleDeleteAvatarClick}
                     className="text-red-600 hover:text-red-700"
                   >
                     <Trash2 className="h-4 w-4 mr-2" />
@@ -448,6 +456,17 @@ export default function ProfileSettingsPage() {
           {isSaving ? "Saving..." : "Save Changes"}
         </Button>
       </div>
+
+      {/* Delete Avatar Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={deleteAvatarModal}
+        onClose={() => setDeleteAvatarModal(false)}
+        onConfirm={handleDeleteAvatarConfirm}
+        title="Delete Profile Picture?"
+        message="Are you sure you want to delete your profile picture?"
+        description="This action cannot be undone. Your profile picture will be removed and the default placeholder will be shown."
+        isLoading={isDeletingAvatar}
+      />
     </div>
   );
 }

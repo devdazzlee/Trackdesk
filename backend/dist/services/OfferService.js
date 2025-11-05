@@ -5,21 +5,17 @@ const client_1 = require("@prisma/client");
 const prisma = new client_1.PrismaClient();
 class OfferService {
     async getAllOffers(params) {
-        const { page, limit, search, status, category } = params;
+        const { page, limit, search, status } = params;
         const skip = (page - 1) * limit;
         const where = {};
         if (search) {
             where.OR = [
                 { name: { contains: search } },
                 { description: { contains: search } },
-                { category: { contains: search } },
             ];
         }
         if (status) {
             where.status = status;
-        }
-        if (category) {
-            where.category = category;
         }
         const [offers, total] = await Promise.all([
             prisma.offer.findMany({
@@ -73,12 +69,9 @@ class OfferService {
                 accountId,
                 name: data.name,
                 description: data.description,
-                category: data.category,
                 commissionRate: data.commissionRate,
                 startDate: new Date(data.startDate),
                 endDate: data.endDate ? new Date(data.endDate) : null,
-                terms: data.terms,
-                requirements: data.requirements,
             },
         });
         return offer;
@@ -89,12 +82,9 @@ class OfferService {
             data: {
                 name: data.name,
                 description: data.description,
-                category: data.category,
                 commissionRate: data.commissionRate,
                 startDate: data.startDate ? new Date(data.startDate) : undefined,
                 endDate: data.endDate ? new Date(data.endDate) : undefined,
-                terms: data.terms,
-                requirements: data.requirements,
                 status: data.status,
             },
         });

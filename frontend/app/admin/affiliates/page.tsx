@@ -67,6 +67,7 @@ import { toast } from "sonner";
 import { config } from "@/config/config";
 import { formatLastActivity, formatRelativeTime } from "@/lib/date-utils";
 import { getAuthHeaders } from "@/lib/getAuthHeaders";
+import { DeleteConfirmationModal } from "@/components/modals/delete-confirmation-modal";
 
 interface Affiliate {
   id: string;
@@ -75,6 +76,7 @@ interface Affiliate {
   joinDate: string;
   status: string;
   tier: string;
+  commissionRate?: number;
   totalEarnings: number;
   totalClicks: number;
   totalConversions: number;
@@ -96,6 +98,12 @@ export default function AffiliatesManagementPage() {
   const [selectedAffiliate, setSelectedAffiliate] = useState<Affiliate | null>(
     null
   );
+  const [deleteModal, setDeleteModal] = useState<{
+    isOpen: boolean;
+    affiliateId: string | null;
+    affiliateName: string | null;
+  }>({ isOpen: false, affiliateId: null, affiliateName: null });
+  const [isDeleting, setIsDeleting] = useState(false);
   const [editForm, setEditForm] = useState({
     status: "",
     tier: "",
@@ -148,7 +156,7 @@ export default function AffiliatesManagementPage() {
     setEditForm({
       status: affiliate.status.toUpperCase(),
       tier: affiliate.tier.toUpperCase(),
-      commissionRate: 5,
+      commissionRate: affiliate.commissionRate || 5,
     });
     setEditDialogOpen(true);
   };
@@ -176,7 +184,7 @@ export default function AffiliatesManagementPage() {
       // Update tier and commission rate
       if (
         editForm.tier !== selectedAffiliate.tier.toUpperCase() ||
-        editForm.commissionRate !== 5
+        editForm.commissionRate !== (selectedAffiliate.commissionRate || 5)
       ) {
         const tierResponse = await fetch(
           `${config.apiUrl}/admin/affiliates/${selectedAffiliate.id}/tier`,
@@ -191,7 +199,34 @@ export default function AffiliatesManagementPage() {
         );
 
         if (!tierResponse.ok) {
-          throw new Error("Failed to update tier");
+          const errorData = await tierResponse.json();
+
+          // Handle validation errors with better messages
+          if (errorData.details && Array.isArray(errorData.details)) {
+            const commissionError = errorData.details.find((detail: any) =>
+              detail.path?.includes("commissionRate")
+            );
+
+            if (commissionError) {
+              let errorMessage = commissionError.message;
+
+              // If no message from backend, create a user-friendly one
+              if (!errorMessage) {
+                if (commissionError.code === "too_big") {
+                  errorMessage = `Commission rate is too large. Please enter a value less than or equal to 100%.`;
+                } else if (commissionError.code === "too_small") {
+                  errorMessage = `Commission rate is too small. Please enter a value greater than or equal to 0%.`;
+                } else {
+                  errorMessage = `Invalid commission rate. Please enter a value between 0 and 100%.`;
+                }
+              }
+
+              toast.error(errorMessage);
+              return;
+            }
+          }
+
+          throw new Error(errorData.error || "Failed to update tier");
         }
       }
 
@@ -204,12 +239,17 @@ export default function AffiliatesManagementPage() {
     }
   };
 
-  const handleDeleteAffiliate = async (affiliateId: string) => {
-    if (!confirm("Are you sure you want to delete this affiliate?")) return;
+  const handleDeleteClick = (affiliateId: string, affiliateName: string) => {
+    setDeleteModal({ isOpen: true, affiliateId, affiliateName });
+  };
 
+  const handleDeleteConfirm = async () => {
+    if (!deleteModal.affiliateId) return;
+
+    setIsDeleting(true);
     try {
       const response = await fetch(
-        `${config.apiUrl}/admin/affiliates/${affiliateId}`,
+        `${config.apiUrl}/admin/affiliates/${deleteModal.affiliateId}`,
         {
           method: "DELETE",
           headers: getAuthHeaders(),
@@ -218,6 +258,11 @@ export default function AffiliatesManagementPage() {
 
       if (response.ok) {
         toast.success("Affiliate deleted successfully");
+        setDeleteModal({
+          isOpen: false,
+          affiliateId: null,
+          affiliateName: null,
+        });
         fetchAffiliates();
       } else {
         toast.error("Failed to delete affiliate");
@@ -225,6 +270,8 @@ export default function AffiliatesManagementPage() {
     } catch (error) {
       console.error("Error deleting affiliate:", error);
       toast.error("Failed to delete affiliate");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -481,7 +528,7 @@ export default function AffiliatesManagementPage() {
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() =>
-                                handleDeleteAffiliate(affiliate.id)
+                                handleDeleteClick(affiliate.id, affiliate.name)
                               }
                               className="text-red-600"
                             >
@@ -546,19 +593,17 @@ export default function AffiliatesManagementPage() {
                   }
                 >
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue>
+                      {editForm.tier &&
+                        editForm.tier.charAt(0) +
+                          editForm.tier.slice(1).toLowerCase()}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="BRONZE">
-                      Bronze (5% commission)
-                    </SelectItem>
-                    <SelectItem value="SILVER">
-                      Silver (10% commission)
-                    </SelectItem>
-                    <SelectItem value="GOLD">Gold (15% commission)</SelectItem>
-                    <SelectItem value="PLATINUM">
-                      Platinum (20% commission)
-                    </SelectItem>
+                    <SelectItem value="BRONZE">Bronze</SelectItem>
+                    <SelectItem value="SILVER">Silver</SelectItem>
+                    <SelectItem value="GOLD">Gold</SelectItem>
+                    <SelectItem value="PLATINUM">Platinum</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -593,6 +638,24 @@ export default function AffiliatesManagementPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={deleteModal.isOpen}
+        onClose={() =>
+          setDeleteModal({
+            isOpen: false,
+            affiliateId: null,
+            affiliateName: null,
+          })
+        }
+        onConfirm={handleDeleteConfirm}
+        title="Delete Affiliate?"
+        message="Are you sure you want to delete this affiliate?"
+        itemName={deleteModal.affiliateName || undefined}
+        description="This action cannot be undone. All associated data, commissions, and links will be permanently removed."
+        isLoading={isDeleting}
+      />
     </div>
   );
 }

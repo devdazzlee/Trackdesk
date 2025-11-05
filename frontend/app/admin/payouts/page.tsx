@@ -26,17 +26,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  CreditCard,
-  Clock,
-  CheckCircle,
-  XCircle,
-  DollarSign,
-  RefreshCw,
-  Filter,
-  Download,
-} from "lucide-react";
+import { CheckCircle, DollarSign, RefreshCw, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { config } from "@/config/config";
 import { getAuthHeaders } from "@/lib/getAuthHeaders";
@@ -64,20 +54,36 @@ interface PayoutSummary {
 export default function PayoutsManagementPage() {
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [summary, setSummary] = useState<PayoutSummary | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isInitialLoading, setIsInitialLoading] = useState(true); // For initial page load
+  const [isTableLoading, setIsTableLoading] = useState(false); // For table filtering/loading
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [statusFilter, setStatusFilter] = useState("all");
-  const [selectedPayouts, setSelectedPayouts] = useState<string[]>([]);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10, // 10 per page as requested
+    total: 0,
+    pages: 0,
+  });
 
   useEffect(() => {
     fetchPayouts();
-  }, [statusFilter]);
+  }, [statusFilter, pagination.page]);
 
   const fetchPayouts = async () => {
-    setIsLoading(true);
+    // Use table loading for subsequent loads, initial loading for first load
+    if (isInitialLoading) {
+      setIsInitialLoading(true);
+    } else {
+      setIsTableLoading(true);
+    }
+
     try {
       const params = new URLSearchParams();
-      if (statusFilter !== "all") params.append("status", statusFilter);
+      params.append("page", pagination.page.toString());
+      params.append("limit", pagination.limit.toString());
+      if (statusFilter !== "all") {
+        params.append("status", statusFilter.toUpperCase());
+      }
 
       const response = await fetch(
         `${config.apiUrl}/admin/payouts?${params.toString()}`,
@@ -86,19 +92,28 @@ export default function PayoutsManagementPage() {
         }
       );
 
-      if (response.ok) {
-        const data = await response.json();
-        setPayouts(data.data || []);
-        setSummary(data.summary || null);
-      } else {
-        console.error("Failed to fetch payouts:", response.status);
-        toast.error("Failed to load payouts");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to load payouts");
       }
-    } catch (error) {
+
+      const data = await response.json();
+      setPayouts(data.data || []);
+      setSummary(data.summary || null);
+      setPagination(
+        data.pagination || {
+          page: 1,
+          limit: 10,
+          total: 0,
+          pages: 0,
+        }
+      );
+    } catch (error: any) {
       console.error("Error fetching payouts:", error);
-      toast.error("Failed to load payouts");
+      toast.error(error.message || "Failed to load payouts");
     } finally {
-      setIsLoading(false);
+      setIsInitialLoading(false);
+      setIsTableLoading(false);
     }
   };
 
@@ -107,58 +122,6 @@ export default function PayoutsManagementPage() {
     await fetchPayouts();
     setIsRefreshing(false);
     toast.success("Payouts data refreshed");
-  };
-
-  const handleProcessPayout = async (payoutId: string) => {
-    try {
-      const response = await fetch(
-        `${config.apiUrl}/admin/payouts/${payoutId}/status`,
-        {
-          method: "PATCH",
-          headers: getAuthHeaders(),
-          body: JSON.stringify({ status: "processing" }),
-        }
-      );
-
-      if (response.ok) {
-        toast.success("Payout marked as processing");
-        fetchPayouts();
-      } else {
-        toast.error("Failed to process payout");
-      }
-    } catch (error) {
-      console.error("Error processing payout:", error);
-      toast.error("Failed to process payout");
-    }
-  };
-
-  const handleBulkProcess = async () => {
-    if (selectedPayouts.length === 0) {
-      toast.error("Please select payouts to process");
-      return;
-    }
-
-    try {
-      const response = await fetch(
-        `${config.apiUrl}/admin/payouts/process-bulk`,
-        {
-          method: "POST",
-          headers: getAuthHeaders(),
-          body: JSON.stringify({ payoutIds: selectedPayouts }),
-        }
-      );
-
-      if (response.ok) {
-        toast.success(`${selectedPayouts.length} payouts processed`);
-        setSelectedPayouts([]);
-        fetchPayouts();
-      } else {
-        toast.error("Failed to process payouts");
-      }
-    } catch (error) {
-      console.error("Error processing bulk payouts:", error);
-      toast.error("Failed to process bulk payouts");
-    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -170,14 +133,14 @@ export default function PayoutsManagementPage() {
       failed: "destructive",
     } as const;
 
-    const icons = {
-      pending: Clock,
-      processing: Clock,
+    const icons: Record<string, typeof CheckCircle | null> = {
+      pending: null,
+      processing: null,
       completed: CheckCircle,
-      failed: XCircle,
+      failed: null,
     };
 
-    const Icon = icons[statusLower as keyof typeof icons];
+    const Icon = icons[statusLower] || null;
 
     return (
       <Badge variant={variants[statusLower as keyof typeof variants]}>
@@ -187,7 +150,8 @@ export default function PayoutsManagementPage() {
     );
   };
 
-  if (isLoading) {
+  // Show full page loading only on initial load
+  if (isInitialLoading) {
     return <AdminLoading message="Loading payouts..." />;
   }
 
@@ -202,15 +166,10 @@ export default function PayoutsManagementPage() {
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
-          {selectedPayouts.length > 0 && (
-            <Button onClick={handleBulkProcess} className="w-full sm:w-auto">
-              Process {selectedPayouts.length} Selected
-            </Button>
-          )}
           <Button
             variant="outline"
             onClick={handleRefresh}
-            disabled={isRefreshing}
+            disabled={isRefreshing || isTableLoading}
             className="w-full sm:w-auto"
           >
             <RefreshCw
@@ -223,29 +182,7 @@ export default function PayoutsManagementPage() {
 
       {/* Summary Cards */}
       {summary && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{summary.pending}</div>
-              <p className="text-xs text-muted-foreground">
-                ${summary.totalPendingAmount.toFixed(2)} total
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Processing</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{summary.processing}</div>
-              <p className="text-xs text-muted-foreground">In progress</p>
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Completed</CardTitle>
@@ -271,27 +208,6 @@ export default function PayoutsManagementPage() {
         </div>
       )}
 
-      {/* Filters */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-center gap-4">
-            <Filter className="h-4 w-4 text-muted-foreground" />
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-48">
-                <SelectValue placeholder="All Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="processing">Processing</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="failed">Failed</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Payouts Table */}
       <Card>
         <CardHeader>
@@ -299,39 +215,35 @@ export default function PayoutsManagementPage() {
           <CardDescription>{payouts.length} payout requests</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border overflow-x-auto">
+          <div className="relative rounded-md border overflow-x-auto">
+            {/* Loading Overlay */}
+            {isTableLoading && (
+              <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center rounded-md">
+                <div className="flex flex-col items-center space-y-3">
+                  <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                  <p className="text-sm text-muted-foreground font-medium">
+                    Loading payouts...
+                  </p>
+                </div>
+              </div>
+            )}
+
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-12">
-                    <Checkbox
-                      checked={
-                        selectedPayouts.length === payouts.length &&
-                        payouts.length > 0
-                      }
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          setSelectedPayouts(payouts.map((p) => p.id));
-                        } else {
-                          setSelectedPayouts([]);
-                        }
-                      }}
-                    />
-                  </TableHead>
                   <TableHead>Payout ID</TableHead>
                   <TableHead>Affiliate</TableHead>
                   <TableHead>Amount</TableHead>
                   <TableHead>Method</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Request Date</TableHead>
-                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {payouts.length === 0 ? (
+                {!isTableLoading && payouts.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={8}
+                      colSpan={6}
                       className="text-center py-8 text-muted-foreground"
                     >
                       No payout requests found.
@@ -340,23 +252,6 @@ export default function PayoutsManagementPage() {
                 ) : (
                   payouts.map((payout) => (
                     <TableRow key={payout.id}>
-                      <TableCell>
-                        <Checkbox
-                          checked={selectedPayouts.includes(payout.id)}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              setSelectedPayouts([
-                                ...selectedPayouts,
-                                payout.id,
-                              ]);
-                            } else {
-                              setSelectedPayouts(
-                                selectedPayouts.filter((id) => id !== payout.id)
-                              );
-                            }
-                          }}
-                        />
-                      </TableCell>
                       <TableCell className="font-mono text-sm">
                         {payout.id}
                       </TableCell>
@@ -376,23 +271,47 @@ export default function PayoutsManagementPage() {
                       <TableCell>{payout.method}</TableCell>
                       <TableCell>{getStatusBadge(payout.status)}</TableCell>
                       <TableCell>{payout.requestDate}</TableCell>
-                      <TableCell>
-                        {payout.status === "pending" && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleProcessPayout(payout.id)}
-                          >
-                            Process
-                          </Button>
-                        )}
-                      </TableCell>
                     </TableRow>
                   ))
                 )}
               </TableBody>
             </Table>
           </div>
+
+          {/* Pagination */}
+          {pagination.pages > 1 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4">
+              <div className="text-sm text-muted-foreground text-center sm:text-left">
+                Showing {(pagination.page - 1) * pagination.limit + 1} to{" "}
+                {Math.min(pagination.page * pagination.limit, pagination.total)}{" "}
+                of {pagination.total} payouts
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setPagination({ ...pagination, page: pagination.page - 1 })
+                  }
+                  disabled={pagination.page === 1 || isTableLoading}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setPagination({ ...pagination, page: pagination.page + 1 })
+                  }
+                  disabled={
+                    pagination.page === pagination.pages || isTableLoading
+                  }
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

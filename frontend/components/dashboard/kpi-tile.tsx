@@ -1,22 +1,23 @@
-"use client"
+"use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { LucideIcon, TrendingUp, TrendingDown } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { LucideIcon, TrendingUp, TrendingDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface KPITileProps {
-  title: string
-  value: string | number
+  title: string;
+  value: string | number;
   change?: {
-    value: number
-    type: "increase" | "decrease"
-    period: string
-  }
-  icon: LucideIcon
-  iconColor?: string
-  description?: string
-  className?: string
+    value: number;
+    type: "increase" | "decrease";
+    period: string;
+  };
+  icon: LucideIcon;
+  iconColor?: string;
+  description?: string;
+  className?: string;
+  formatAsCurrency?: boolean;
 }
 
 export function KPITile({
@@ -26,19 +27,31 @@ export function KPITile({
   icon: Icon,
   iconColor = "text-blue-600",
   description,
-  className
+  className,
+  formatAsCurrency = true,
 }: KPITileProps) {
   const formatValue = (val: string | number) => {
     if (typeof val === "number") {
-      if (val >= 1000000) {
-        return `$${(val / 1000000).toFixed(1)}M`
-      } else if (val >= 1000) {
-        return `$${(val / 1000).toFixed(1)}K`
+      if (formatAsCurrency) {
+        // Format as currency
+        if (val >= 1000000) {
+          return `$${(val / 1000000).toFixed(1)}M`;
+        } else if (val >= 1000) {
+          return `$${(val / 1000).toFixed(1)}K`;
+        }
+        return `$${val.toLocaleString()}`;
+      } else {
+        // Format as number (no currency symbol)
+        if (val >= 1000000) {
+          return `${(val / 1000000).toFixed(1)}M`;
+        } else if (val >= 1000) {
+          return `${(val / 1000).toFixed(1)}K`;
+        }
+        return val.toLocaleString();
       }
-      return `$${val.toLocaleString()}`
     }
-    return val
-  }
+    return val;
+  };
 
   return (
     <Card className={cn("hover:shadow-md transition-shadow", className)}>
@@ -63,21 +76,16 @@ export function KPITile({
               variant={change.type === "increase" ? "default" : "destructive"}
               className="text-xs"
             >
-              {change.type === "increase" ? "+" : "-"}{Math.abs(change.value)}%
+              {change.type === "increase" ? "+" : "-"}
+              {Math.abs(change.value)}%
             </Badge>
-            <span className="text-xs text-slate-500">
-              vs {change.period}
-            </span>
+            <span className="text-xs text-slate-500">vs {change.period}</span>
           </div>
         )}
         {description && (
-          <p className="text-xs text-slate-500 mt-1">
-            {description}
-          </p>
+          <p className="text-xs text-slate-500 mt-1">{description}</p>
         )}
       </CardContent>
     </Card>
-  )
+  );
 }
-
-

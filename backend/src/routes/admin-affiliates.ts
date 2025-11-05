@@ -93,6 +93,7 @@ router.get(
             joinDate: affiliate.createdAt.toISOString().split("T")[0],
             status: affiliate.status,
             tier: affiliate.tier,
+            commissionRate: affiliate.commissionRate || null,
             totalEarnings: earnings._sum.commissionAmount || 0,
             totalClicks: clicks,
             totalConversions: conversions,
@@ -262,7 +263,14 @@ router.patch(
       // Validate input
       const schema = z.object({
         tier: z.enum(["BRONZE", "SILVER", "GOLD", "PLATINUM"]).optional(),
-        commissionRate: z.number().min(0).max(100).optional(),
+        commissionRate: z
+          .number()
+          .min(0, "Commission rate must be at least 0%")
+          .max(
+            100,
+            "Commission rate cannot exceed 100%. Please enter a value between 0 and 100%."
+          )
+          .optional(),
       });
 
       const validatedData = schema.parse({ tier, commissionRate });

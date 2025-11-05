@@ -27,8 +27,6 @@ declare class EmailService {
         startDate: string;
         endDate: string;
         referralCodes: string[];
-        terms: string;
-        requirements: string;
     }): Promise<void>;
     static generateToken(): string;
     static generateTokenExpiry(): Date;

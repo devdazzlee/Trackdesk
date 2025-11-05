@@ -28,15 +28,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   DollarSign,
@@ -52,6 +43,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { getAuthHeaders } from "@/lib/getAuthHeaders";
+import { config } from "@/config/config";
+import { Loader2 } from "lucide-react";
 
 interface Commission {
   id: string;
@@ -103,16 +96,15 @@ interface CommissionAnalytics {
 export default function CommissionsPage() {
   const [commissions, setCommissions] = useState<Commission[]>([]);
   const [analytics, setAnalytics] = useState<CommissionAnalytics | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [selectedCommissions, setSelectedCommissions] = useState<string[]>([]);
-  const [showBulkUpdateDialog, setShowBulkUpdateDialog] = useState(false);
-  const [bulkStatus, setBulkStatus] = useState<
-    "PENDING" | "APPROVED" | "PAID" | "CANCELLED"
-  >("PENDING");
-  const [bulkNotes, setBulkNotes] = useState("");
+  const [isInitialLoading, setIsInitialLoading] = useState(true); // For initial page load
+  const [isTableLoading, setIsTableLoading] = useState(false); // For table filtering/loading
+  const [updatingCommissions, setUpdatingCommissions] = useState<
+    Map<string, string>
+  >(new Map()); // Track which commission is being updated and the action type
   const [filters, setFilters] = useState({
     status: "all",
     affiliateId: "",
+    affiliateSearch: "", // Search by affiliate name or email
     dateFrom: "",
     dateTo: "",
     sortBy: "createdAt",
@@ -120,63 +112,126 @@ export default function CommissionsPage() {
   });
   const [pagination, setPagination] = useState({
     page: 1,
-    limit: 20,
+    limit: 10, // 10 per page to match payouts
     total: 0,
     pages: 0,
   });
 
+  // Fetch analytics on mount and when filters change
   useEffect(() => {
-    fetchCommissions();
     fetchAnalytics();
-  }, [filters, pagination.page]);
+  }, []);
+
+  // Debounce affiliate search to avoid too many API calls
+  useEffect(() => {
+    if (!filters.affiliateSearch) {
+      // If no search, fetch immediately
+      fetchCommissions();
+      return;
+    }
+
+    // Debounce search input
+    const timer = setTimeout(() => {
+      fetchCommissions();
+    }, 500); // 500ms delay for search
+
+    return () => clearTimeout(timer);
+  }, [filters.affiliateSearch]);
+
+  // Fetch commissions when other filters change (excluding affiliateSearch)
+  useEffect(() => {
+    if (!filters.affiliateSearch) {
+      // Only fetch if not searching (to avoid duplicate calls)
+      fetchCommissions();
+    }
+  }, [
+    filters.status,
+    filters.affiliateId,
+    filters.dateFrom,
+    filters.dateTo,
+    filters.sortBy,
+    filters.sortOrder,
+    pagination.page,
+  ]);
 
   const fetchCommissions = async () => {
     try {
-      const filteredFilters: any = { ...filters };
-      if (filteredFilters.status === "all") {
-        delete filteredFilters.status;
+      // Use table loading for subsequent loads, initial loading for first load
+      if (isInitialLoading) {
+        setIsInitialLoading(true);
+      } else {
+        setIsTableLoading(true);
       }
 
-      const params = new URLSearchParams({
-        page: pagination.page.toString(),
-        limit: pagination.limit.toString(),
-        ...filteredFilters,
-      });
+      // Build query parameters properly
+      const params = new URLSearchParams();
+      params.append("page", pagination.page.toString());
+      params.append("limit", pagination.limit.toString());
+
+      // Add filters only if they have values
+      if (filters.status && filters.status !== "all") {
+        params.append("status", filters.status);
+      }
+
+      if (filters.affiliateId) {
+        params.append("affiliateId", filters.affiliateId);
+      }
+
+      if (filters.affiliateSearch) {
+        params.append("affiliateSearch", filters.affiliateSearch);
+      }
+
+      if (filters.dateFrom) {
+        params.append("dateFrom", filters.dateFrom);
+      }
+
+      if (filters.dateTo) {
+        params.append("dateTo", filters.dateTo);
+      }
+
+      if (filters.sortBy) {
+        params.append("sortBy", filters.sortBy);
+      }
+
+      if (filters.sortOrder) {
+        params.append("sortOrder", filters.sortOrder);
+      }
 
       const response = await fetch(
-        `http://localhost:3003/api/commission-management?${params}`,
+        `${config.apiUrl}/commission-management?${params.toString()}`,
         {
           headers: getAuthHeaders(),
         }
       );
 
-      if (response.ok) {
-        const data = await response.json();
-        setCommissions(data.data || data.commissions || []);
-        setPagination(
-          data.pagination || {
-            page: 1,
-            limit: 20,
-            total: 0,
-            pages: 0,
-          }
-        );
-      } else {
-        console.error("Failed to fetch commissions:", response.status);
-        toast.error("Failed to load commissions");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to load commissions");
       }
-    } catch (error) {
+
+      const data = await response.json();
+      setCommissions(data.data || data.commissions || []);
+      setPagination(
+        data.pagination || {
+          page: 1,
+          limit: 10,
+          total: 0,
+          pages: 0,
+        }
+      );
+    } catch (error: any) {
       console.error("Error fetching commissions:", error);
-      toast.error("Failed to load commissions");
+      toast.error(error.message || "Failed to load commissions");
     } finally {
-      setIsLoading(false);
+      setIsInitialLoading(false);
+      setIsTableLoading(false);
     }
   };
 
   const fetchAnalytics = async () => {
     try {
       const response = await fetch(
-        "http://localhost:3003/api/commission-management/analytics?period=30d",
+        `${config.apiUrl}/commission-management/analytics?period=30d`,
         {
           headers: getAuthHeaders(),
         }
@@ -196,9 +251,16 @@ export default function CommissionsPage() {
     status: string,
     notes?: string
   ) => {
+    // Set loading state for this commission and action
+    setUpdatingCommissions((prev) => {
+      const newMap = new Map(prev);
+      newMap.set(commissionId, status);
+      return newMap;
+    });
+
     try {
       const response = await fetch(
-        `http://localhost:3003/api/commission-management/${commissionId}/status`,
+        `${config.apiUrl}/commission-management/${commissionId}/status`,
         {
           method: "PATCH",
           headers: getAuthHeaders(),
@@ -208,6 +270,15 @@ export default function CommissionsPage() {
 
       if (response.ok) {
         toast.success("Commission status updated successfully");
+        // Update the commission in the list immediately for better UX
+        setCommissions((prev) =>
+          prev.map((commission) =>
+            commission.id === commissionId
+              ? { ...commission, status: status as any }
+              : commission
+          )
+        );
+        // Refresh the full list to ensure data consistency
         fetchCommissions();
       } else {
         const error = await response.json();
@@ -215,61 +286,13 @@ export default function CommissionsPage() {
       }
     } catch (error) {
       toast.error("Failed to update commission status");
-    }
-  };
-
-  const bulkUpdateStatus = async () => {
-    if (selectedCommissions.length === 0) {
-      toast.error("Please select commissions to update");
-      return;
-    }
-
-    try {
-      const response = await fetch(
-        "http://localhost:3003/api/commission-management/bulk-status",
-        {
-          method: "PATCH",
-          headers: getAuthHeaders(),
-          body: JSON.stringify({
-            commissionIds: selectedCommissions,
-            status: bulkStatus,
-            notes: bulkNotes,
-          }),
-        }
-      );
-
-      if (response.ok) {
-        toast.success(
-          `${selectedCommissions.length} commissions updated successfully`
-        );
-        setSelectedCommissions([]);
-        setShowBulkUpdateDialog(false);
-        setBulkNotes("");
-        fetchCommissions();
-      } else {
-        const error = await response.json();
-        toast.error(error.error || "Failed to update commissions");
-      }
-    } catch (error) {
-      toast.error("Failed to update commissions");
-    }
-  };
-
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedCommissions(commissions.map((c) => c.id));
-    } else {
-      setSelectedCommissions([]);
-    }
-  };
-
-  const handleSelectCommission = (commissionId: string, checked: boolean) => {
-    if (checked) {
-      setSelectedCommissions([...selectedCommissions, commissionId]);
-    } else {
-      setSelectedCommissions(
-        selectedCommissions.filter((id) => id !== commissionId)
-      );
+    } finally {
+      // Clear loading state
+      setUpdatingCommissions((prev) => {
+        const newMap = new Map(prev);
+        newMap.delete(commissionId);
+        return newMap;
+      });
     }
   };
 
@@ -298,7 +321,8 @@ export default function CommissionsPage() {
     );
   };
 
-  if (isLoading) {
+  // Show full page loading only on initial load
+  if (isInitialLoading) {
     return <AdminLoading message="Loading commissions..." />;
   }
 
@@ -315,15 +339,11 @@ export default function CommissionsPage() {
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
-          {selectedCommissions.length > 0 && (
-            <Button
-              onClick={() => setShowBulkUpdateDialog(true)}
-              className="w-full sm:w-auto"
-            >
-              Update {selectedCommissions.length} Selected
-            </Button>
-          )}
-          <Button variant="outline" className="w-full sm:w-auto">
+          <Button
+            variant="outline"
+            className="w-full sm:w-auto"
+            disabled={isTableLoading}
+          >
             <Download className="w-4 h-4 mr-2" />
             Export
           </Button>
@@ -410,7 +430,7 @@ export default function CommissionsPage() {
           <CardTitle>Filters</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
               <Label htmlFor="status">Status</Label>
               <Select
@@ -430,6 +450,18 @@ export default function CommissionsPage() {
                   <SelectItem value="CANCELLED">Cancelled</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div>
+              <Label htmlFor="affiliateSearch">Search Affiliate</Label>
+              <Input
+                id="affiliateSearch"
+                type="text"
+                placeholder="Name or email..."
+                value={filters.affiliateSearch}
+                onChange={(e) =>
+                  setFilters({ ...filters, affiliateSearch: e.target.value })
+                }
+              />
             </div>
             <div>
               <Label htmlFor="dateFrom">From Date</Label>
@@ -453,6 +485,8 @@ export default function CommissionsPage() {
                 }
               />
             </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
             <div>
               <Label htmlFor="sortBy">Sort By</Label>
               <Select
@@ -466,7 +500,10 @@ export default function CommissionsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="createdAt">Date Created</SelectItem>
-                  <SelectItem value="amount">Amount</SelectItem>
+                  <SelectItem value="commissionAmount">
+                    Commission Amount
+                  </SelectItem>
+                  <SelectItem value="orderValue">Order Value</SelectItem>
                   <SelectItem value="status">Status</SelectItem>
                 </SelectContent>
               </Select>
@@ -494,6 +531,7 @@ export default function CommissionsPage() {
                   setFilters({
                     status: "all",
                     affiliateId: "",
+                    affiliateSearch: "",
                     dateFrom: "",
                     dateTo: "",
                     sortBy: "createdAt",
@@ -502,9 +540,10 @@ export default function CommissionsPage() {
                   setPagination({ ...pagination, page: 1 });
                 }}
                 variant="outline"
+                className="w-full"
               >
                 <Filter className="w-4 h-4 mr-2" />
-                Clear
+                Clear Filters
               </Button>
             </div>
           </div>
@@ -520,19 +559,22 @@ export default function CommissionsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border overflow-x-auto">
+          <div className="relative rounded-md border overflow-x-auto">
+            {/* Loading Overlay */}
+            {isTableLoading && (
+              <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center rounded-md">
+                <div className="flex flex-col items-center space-y-3">
+                  <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                  <p className="text-sm text-muted-foreground font-medium">
+                    Loading commissions...
+                  </p>
+                </div>
+              </div>
+            )}
+
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-12">
-                    <Checkbox
-                      checked={
-                        selectedCommissions.length === commissions.length &&
-                        commissions.length > 0
-                      }
-                      onCheckedChange={handleSelectAll}
-                    />
-                  </TableHead>
                   <TableHead>Affiliate</TableHead>
                   <TableHead>Amount</TableHead>
                   <TableHead>Rate</TableHead>
@@ -542,10 +584,10 @@ export default function CommissionsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {commissions.length === 0 ? (
+                {!isTableLoading && commissions.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={7}
+                      colSpan={6}
                       className="text-center py-8 text-muted-foreground"
                     >
                       No commissions found. Create some referral codes to
@@ -555,17 +597,6 @@ export default function CommissionsPage() {
                 ) : (
                   commissions.map((commission) => (
                     <TableRow key={commission.id}>
-                      <TableCell>
-                        <Checkbox
-                          checked={selectedCommissions.includes(commission.id)}
-                          onCheckedChange={(checked) =>
-                            handleSelectCommission(
-                              commission.id,
-                              checked as boolean
-                            )
-                          }
-                        />
-                      </TableCell>
                       <TableCell>
                         <div>
                           <div className="font-medium">
@@ -602,10 +633,20 @@ export default function CommissionsPage() {
                             }
                             disabled={
                               commission.status === "APPROVED" ||
-                              commission.status === "PAID"
+                              commission.status === "PAID" ||
+                              isTableLoading ||
+                              updatingCommissions.has(commission.id)
                             }
                           >
-                            Approve
+                            {updatingCommissions.get(commission.id) ===
+                            "APPROVED" ? (
+                              <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                Approving...
+                              </>
+                            ) : (
+                              "Approve"
+                            )}
                           </Button>
                           <Button
                             variant="outline"
@@ -613,9 +654,21 @@ export default function CommissionsPage() {
                             onClick={() =>
                               updateCommissionStatus(commission.id, "PAID")
                             }
-                            disabled={commission.status === "PAID"}
+                            disabled={
+                              commission.status === "PAID" ||
+                              isTableLoading ||
+                              updatingCommissions.has(commission.id)
+                            }
                           >
-                            Mark Paid
+                            {updatingCommissions.get(commission.id) ===
+                            "PAID" ? (
+                              <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                Marking...
+                              </>
+                            ) : (
+                              "Mark Paid"
+                            )}
                           </Button>
                         </div>
                       </TableCell>
@@ -641,7 +694,7 @@ export default function CommissionsPage() {
                   onClick={() =>
                     setPagination({ ...pagination, page: pagination.page - 1 })
                   }
-                  disabled={pagination.page === 1}
+                  disabled={pagination.page === 1 || isTableLoading}
                 >
                   Previous
                 </Button>
@@ -651,7 +704,9 @@ export default function CommissionsPage() {
                   onClick={() =>
                     setPagination({ ...pagination, page: pagination.page + 1 })
                   }
-                  disabled={pagination.page === pagination.pages}
+                  disabled={
+                    pagination.page === pagination.pages || isTableLoading
+                  }
                 >
                   Next
                 </Button>
@@ -660,61 +715,6 @@ export default function CommissionsPage() {
           )}
         </CardContent>
       </Card>
-
-      {/* Bulk Update Dialog */}
-      <Dialog
-        open={showBulkUpdateDialog}
-        onOpenChange={setShowBulkUpdateDialog}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Bulk Update Commissions</DialogTitle>
-            <DialogDescription>
-              Update the status of {selectedCommissions.length} selected
-              commissions.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="bulkStatus">New Status</Label>
-              <Select
-                value={bulkStatus}
-                onValueChange={(value: any) => setBulkStatus(value)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="PENDING">Pending</SelectItem>
-                  <SelectItem value="APPROVED">Approved</SelectItem>
-                  <SelectItem value="PAID">Paid</SelectItem>
-                  <SelectItem value="CANCELLED">Cancelled</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="bulkNotes">Notes (optional)</Label>
-              <Input
-                id="bulkNotes"
-                value={bulkNotes}
-                onChange={(e) => setBulkNotes(e.target.value)}
-                placeholder="Add notes about this bulk update..."
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowBulkUpdateDialog(false)}
-            >
-              Cancel
-            </Button>
-            <Button onClick={bulkUpdateStatus}>
-              Update {selectedCommissions.length} Commissions
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

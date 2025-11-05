@@ -426,6 +426,7 @@ export default function AdminDashboardPage() {
           icon={Users}
           iconColor="text-blue-600"
           description={`${dashboardData.statistics.activeAffiliates} active, ${dashboardData.statistics.pendingAffiliates} pending`}
+          formatAsCurrency={false}
         />
         <KPITile
           title="Total Revenue"

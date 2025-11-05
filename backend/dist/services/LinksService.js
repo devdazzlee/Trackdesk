@@ -43,17 +43,28 @@ class LinksService {
         if (!affiliate) {
             throw new Error("Affiliate profile not found");
         }
-        const slug = await this.generateUniqueSlug(data.customAlias);
+        let slug;
+        if (data.referralCodeId) {
+            const referralCode = await prisma.referralCode.findUnique({
+                where: { id: data.referralCodeId },
+            });
+            if (referralCode && referralCode.affiliateId === affiliate.id) {
+                slug = `${referralCode.code}-${crypto_1.default.randomBytes(4).toString("hex")}`;
+            }
+            else {
+                slug = await this.generateUniqueSlug();
+            }
+        }
+        else {
+            slug = await this.generateUniqueSlug();
+        }
         const shortUrl = `${process.env.SHORT_URL_DOMAIN || "https://track.link"}/${slug}`;
-        const url = new URL(data.url);
-        url.searchParams.set("ref", affiliate.id);
-        url.searchParams.set("track", slug);
-        const affiliateUrl = url.toString();
+        const affiliateUrl = data.url;
         const link = await prisma.affiliateLink.create({
             data: {
                 affiliateId: affiliate.id,
                 offerId: data.offerId || null,
-                originalUrl: data.url,
+                originalUrl: affiliateUrl,
                 shortUrl: shortUrl,
                 customSlug: slug,
                 clicks: 0,
@@ -68,6 +79,8 @@ class LinksService {
             affiliateUrl: affiliateUrl,
             shortUrl: link.shortUrl,
             trackingCode: slug,
+            websiteId: data.websiteId || null,
+            referralCodeId: data.referralCodeId || null,
             campaignName: data.campaignName || "Default Campaign",
             clicks: link.clicks,
             conversions: link.conversions,
@@ -89,7 +102,6 @@ class LinksService {
                 offer: {
                     select: {
                         name: true,
-                        category: true,
                     },
                 },
             },
@@ -107,7 +119,6 @@ class LinksService {
             earnings: link.earnings,
             status: link.isActive ? "Active" : "Inactive",
             createdAt: link.createdAt,
-            category: link.offer?.category || "General",
         }));
         console.log("LinksService.getMyLinks - Raw database links:", links.map((l) => ({ id: l.id, customSlug: l.customSlug })));
         console.log("LinksService.getMyLinks - Mapped links:", mappedLinks.map((l) => ({ id: l.id, name: l.name })));

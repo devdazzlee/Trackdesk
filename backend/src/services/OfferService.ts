@@ -7,29 +7,22 @@ export interface GetAllOffersParams {
   limit: number;
   search?: string;
   status?: string;
-  category?: string;
 }
 
 export interface CreateOfferData {
   name: string;
   description: string;
-  category: string;
   commissionRate: number;
   startDate: string;
   endDate?: string;
-  terms?: string;
-  requirements?: string;
 }
 
 export interface UpdateOfferData {
   name?: string;
   description?: string;
-  category?: string;
   commissionRate?: number;
   startDate?: string;
   endDate?: string;
-  terms?: string;
-  requirements?: string;
   status?: string;
 }
 
@@ -87,7 +80,7 @@ export interface GetOfferClicksParams {
 
 export class OfferService {
   async getAllOffers(params: GetAllOffersParams) {
-    const { page, limit, search, status, category } = params;
+    const { page, limit, search, status } = params;
     const skip = (page - 1) * limit;
 
     const where: any = {};
@@ -95,14 +88,10 @@ export class OfferService {
       where.OR = [
         { name: { contains: search } },
         { description: { contains: search } },
-        { category: { contains: search } },
       ];
     }
     if (status) {
       where.status = status;
-    }
-    if (category) {
-      where.category = category;
     }
 
     const [offers, total] = await Promise.all([
@@ -162,12 +151,9 @@ export class OfferService {
         accountId,
         name: data.name,
         description: data.description,
-        category: data.category,
         commissionRate: data.commissionRate,
         startDate: new Date(data.startDate),
         endDate: data.endDate ? new Date(data.endDate) : null,
-        terms: data.terms,
-        requirements: data.requirements,
       },
     });
 
@@ -180,12 +166,9 @@ export class OfferService {
       data: {
         name: data.name,
         description: data.description,
-        category: data.category,
         commissionRate: data.commissionRate,
         startDate: data.startDate ? new Date(data.startDate) : undefined,
         endDate: data.endDate ? new Date(data.endDate) : undefined,
-        terms: data.terms,
-        requirements: data.requirements,
         status: data.status as any,
       },
     });

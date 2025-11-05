@@ -43,7 +43,6 @@ router.post("/codes", authenticateToken, async (req: any, res) => {
     }
 
     const schema = z.object({
-      type: z.enum(["SIGNUP", "PRODUCT", "BOTH"]),
       commissionRate: z.number().min(0).max(100),
       productId: z.string().optional(),
       maxUses: z.number().positive().optional(),
@@ -88,8 +87,8 @@ router.post("/codes", authenticateToken, async (req: any, res) => {
     const referralCode = await ReferralSystemModel.generateReferralCode(
       affiliate.id,
       {
-        type: data.type || "BOTH",
-        commissionRate: data.commissionRate || 10,
+        type: "BOTH", // Default to BOTH, type field is no longer exposed in UI
+        commissionRate: data.commissionRate || affiliate.commissionRate || 10,
         productId: data.productId,
         maxUses: data.maxUses,
         expiresAt: expiresAtDate,
@@ -314,6 +313,163 @@ router.get("/admin/stats", authenticateToken, async (req: any, res) => {
   } catch (error) {
     console.error("Error fetching admin referral stats:", error);
     res.status(500).json({ error: "Failed to fetch admin referral stats" });
+  }
+});
+
+// Update referral code
+router.put("/codes/:id", authenticateToken, async (req: any, res) => {
+  try {
+    if (req.user.role !== "AFFILIATE") {
+      return res
+        .status(403)
+        .json({ error: "Only affiliates can update referral codes" });
+    }
+
+    const { id } = req.params;
+
+    const schema = z.object({
+      // commissionRate removed - only admins can change this via affiliate profile
+      productId: z.string().optional().nullable(),
+      maxUses: z.number().positive().optional().nullable(),
+      expiresAt: z.string().optional().nullable(),
+      isActive: z.boolean().optional(),
+    });
+
+    const data = schema.parse(req.body);
+
+    // Find the referral code and verify ownership
+    const referralCode = await prisma.referralCode.findUnique({
+      where: { id },
+      include: {
+        affiliate: {
+          select: {
+            userId: true,
+            commissionRate: true,
+          },
+        },
+      },
+    });
+
+    if (!referralCode) {
+      return res.status(404).json({ error: "Referral code not found" });
+    }
+
+    // Verify the affiliate owns this referral code
+    if (referralCode.affiliate.userId !== req.user.id) {
+      return res.status(403).json({
+        error: "You don't have permission to update this referral code",
+      });
+    }
+
+    // Parse expiresAt date if provided
+    // Note: commissionRate is not updated here - only admins can change it via affiliate profile
+    let expiresAtDate: Date | null | undefined = undefined;
+    if (data.expiresAt !== undefined) {
+      if (data.expiresAt === null || data.expiresAt === "") {
+        expiresAtDate = null;
+      } else {
+        try {
+          expiresAtDate = new Date(data.expiresAt);
+          if (isNaN(expiresAtDate.getTime())) {
+            return res.status(400).json({
+              error: "Invalid expiration date format. Please use a valid date.",
+            });
+          }
+        } catch (error) {
+          return res.status(400).json({
+            error: "Invalid expiration date format. Please use a valid date.",
+          });
+        }
+      }
+    }
+
+    // Build update data
+    const updateData: any = {};
+    // Commission rate is not updated - only admins can change it via affiliate profile
+    if (data.productId !== undefined) updateData.productId = data.productId;
+    if (data.maxUses !== undefined) updateData.maxUses = data.maxUses;
+    if (data.expiresAt !== undefined) updateData.expiresAt = expiresAtDate;
+    if (data.isActive !== undefined) updateData.isActive = data.isActive;
+
+    // Update the referral code
+    const updatedCode = await prisma.referralCode.update({
+      where: { id },
+      data: updateData,
+    });
+
+    res.json(updatedCode);
+  } catch (error) {
+    console.error("Error updating referral code:", error);
+
+    if (error instanceof z.ZodError) {
+      const errorMessages = error.errors.map(
+        (err) => `${err.path.join(".")}: ${err.message}`
+      );
+      return res.status(400).json({
+        error: "Validation error",
+        details: errorMessages,
+      });
+    }
+
+    res.status(400).json({ error: "Failed to update referral code" });
+  }
+});
+
+// Delete referral code
+router.delete("/codes/:id", authenticateToken, async (req: any, res) => {
+  try {
+    if (req.user.role !== "AFFILIATE") {
+      return res
+        .status(403)
+        .json({ error: "Only affiliates can delete referral codes" });
+    }
+
+    const { id } = req.params;
+
+    // Find the referral code and verify ownership
+    const referralCode = await prisma.referralCode.findUnique({
+      where: { id },
+      include: {
+        affiliate: {
+          select: {
+            userId: true,
+          },
+        },
+      },
+    });
+
+    if (!referralCode) {
+      return res.status(404).json({ error: "Referral code not found" });
+    }
+
+    // Verify the affiliate owns this referral code
+    if (referralCode.affiliate.userId !== req.user.id) {
+      return res.status(403).json({
+        error: "You don't have permission to delete this referral code",
+      });
+    }
+
+    // Check if referral code has been used
+    const usageCount = await prisma.referralUsage.count({
+      where: { referralCodeId: id },
+    });
+
+    if (usageCount > 0) {
+      return res.status(400).json({
+        error:
+          "Cannot delete referral code that has been used. You can deactivate it instead.",
+      });
+    }
+
+    // Delete the referral code
+    await prisma.referralCode.delete({
+      where: { id },
+    });
+
+    res.json({ success: true, message: "Referral code deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting referral code:", error);
+    res.status(500).json({ error: "Failed to delete referral code" });
   }
 });
 

@@ -8,23 +8,17 @@ const offerService = new OfferService();
 const createOfferSchema = z.object({
   name: z.string().min(1),
   description: z.string().min(1),
-  category: z.string().min(1),
   commissionRate: z.number().min(0).max(100),
   startDate: z.string().datetime(),
   endDate: z.string().datetime().optional(),
-  terms: z.string().optional(),
-  requirements: z.string().optional(),
 });
 
 const updateOfferSchema = z.object({
   name: z.string().min(1).optional(),
   description: z.string().min(1).optional(),
-  category: z.string().min(1).optional(),
   commissionRate: z.number().min(0).max(100).optional(),
   startDate: z.string().datetime().optional(),
   endDate: z.string().datetime().optional(),
-  terms: z.string().optional(),
-  requirements: z.string().optional(),
   status: z.enum(["ACTIVE", "INACTIVE", "PAUSED", "EXPIRED"]).optional(),
 });
 
@@ -60,14 +54,13 @@ const updateCreativeSchema = z.object({
 export class OfferController {
   async getAllOffers(req: Request, res: Response) {
     try {
-      const { page = 1, limit = 10, search, status, category } = req.query;
+      const { page = 1, limit = 10, search, status } = req.query;
 
       const offers = await offerService.getAllOffers({
         page: parseInt(page as string),
         limit: parseInt(limit as string),
         search: search as string,
         status: status as string,
-        category: category as string,
       });
 
       res.json(offers);

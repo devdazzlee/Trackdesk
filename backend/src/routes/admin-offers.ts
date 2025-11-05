@@ -63,18 +63,43 @@ router.get(
         take: parseInt(limit as string),
       });
 
+      // Get referral code IDs from activity log for each offer
+      const offerIds = offers.map((o) => o.id);
+      const activities = await prisma.activity.findMany({
+        where: {
+          action: "offer_created",
+          resource: "offer",
+        },
+        select: {
+          details: true,
+        },
+      });
+
+      // Create a map of offerId -> referralCodeIds
+      // Prisma stores JSON fields, so we need to filter in JavaScript
+      const referralCodeMap = new Map<string, string[]>();
+      activities.forEach((activity: any) => {
+        const details = activity.details as any;
+        if (
+          details?.offerId &&
+          details?.referralCodeIds &&
+          Array.isArray(details.referralCodeIds)
+        ) {
+          if (offerIds.includes(details.offerId)) {
+            referralCodeMap.set(details.offerId, details.referralCodeIds);
+          }
+        }
+      });
+
       // Format offers data
       const formattedOffers = offers.map((offer) => ({
         id: offer.id,
         name: offer.name,
         description: offer.description,
-        category: offer.category,
         commissionRate: offer.commissionRate,
         status: offer.status.toLowerCase(),
         startDate: offer.startDate.toISOString().split("T")[0],
         endDate: offer.endDate?.toISOString().split("T")[0] || null,
-        terms: offer.terms,
-        requirements: offer.requirements,
         tags: offer.tags,
         // Tracking data
         totalClicks: offer.totalClicks,
@@ -107,6 +132,8 @@ router.get(
           url: creative.url,
           downloadUrl: creative.downloadUrl,
         })),
+        // Referral code IDs from activity log
+        referralCodeIds: referralCodeMap.get(offer.id) || [],
         createdAt: offer.createdAt.toISOString().split("T")[0],
         updatedAt: offer.updatedAt.toISOString().split("T")[0],
       }));
@@ -235,12 +262,9 @@ router.post(
       const {
         name,
         description,
-        category,
         commissionRate,
         startDate,
         endDate,
-        terms,
-        requirements,
         tags,
         affiliateId, // Single affiliate ID to assign this offer to
         referralCodeIds, // Array of referral code IDs to associate with this offer
@@ -252,15 +276,12 @@ router.post(
         description: z
           .string()
           .min(10, "Description must be at least 10 characters"),
-        category: z.string().min(1, "Category is required"),
         commissionRate: z
           .number()
           .min(0)
           .max(100, "Commission rate must be between 0 and 100"),
         startDate: z.string().min(1, "Start date is required"),
         endDate: z.string().optional(),
-        terms: z.string().optional(),
-        requirements: z.string().optional(),
         tags: z.array(z.string()).optional(),
         affiliateId: z.string().min(1, "Affiliate selection is required"),
         referralCodeIds: z.array(z.string()).optional(),
@@ -269,12 +290,9 @@ router.post(
       const validatedData = schema.parse({
         name,
         description,
-        category,
         commissionRate,
         startDate,
         endDate,
-        terms,
-        requirements,
         tags: tags || [],
         affiliateId,
         referralCodeIds: referralCodeIds || [],
@@ -314,14 +332,11 @@ router.post(
           accountId: "trackdesk-system", // Using system account ID
           name: validatedData.name,
           description: validatedData.description,
-          category: validatedData.category,
           commissionRate: validatedData.commissionRate,
           startDate: new Date(validatedData.startDate),
           endDate: validatedData.endDate
             ? new Date(validatedData.endDate)
             : null,
-          terms: validatedData.terms,
-          requirements: validatedData.requirements,
           tags: validatedData.tags,
         },
       });
@@ -335,7 +350,7 @@ router.post(
         },
       });
 
-      // Log activity
+      // Log activity (store referral code IDs for later retrieval)
       await prisma.activity.create({
         data: {
           userId: req.user.id,
@@ -347,6 +362,7 @@ router.post(
             assignedAffiliate: affiliate.id,
             affiliateName: `${affiliate.user.firstName} ${affiliate.user.lastName}`,
             referralCode: affiliate.referralCodes[0]?.code || null,
+            referralCodeIds: validatedData.referralCodeIds || [], // Store selected referral code IDs
           },
         },
       });
@@ -369,8 +385,6 @@ router.post(
             endDate:
               offer.endDate?.toISOString().split("T")[0] || "No end date",
             referralCodes: selectedReferralCodes.map((code) => code.code),
-            terms: offer.terms || "Standard terms apply",
-            requirements: offer.requirements || "No specific requirements",
           }
         );
       } catch (emailError) {
@@ -385,13 +399,10 @@ router.post(
           id: offer.id,
           name: offer.name,
           description: offer.description,
-          category: offer.category,
           commissionRate: offer.commissionRate,
           status: offer.status.toLowerCase(),
           startDate: offer.startDate.toISOString().split("T")[0],
           endDate: offer.endDate?.toISOString().split("T")[0] || null,
-          terms: offer.terms,
-          requirements: offer.requirements,
           tags: offer.tags,
           createdAt: offer.createdAt,
           assignedAffiliate: {
@@ -406,14 +417,44 @@ router.post(
           },
         },
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating offer:", error);
+
+      // Handle Zod validation errors
       if (error instanceof z.ZodError) {
-        return res
-          .status(400)
-          .json({ error: "Invalid input data", details: error.errors });
+        return res.status(400).json({
+          error: "Invalid input data",
+          message: "Validation failed",
+          details: error.errors.map((err) => ({
+            path: err.path.join("."),
+            message: err.message,
+            code: err.code,
+          })),
+        });
       }
-      res.status(500).json({ error: "Failed to create offer" });
+
+      // Handle Prisma errors
+      if (error.code === "P2002") {
+        return res.status(400).json({
+          error: "Duplicate entry",
+          message: "An offer with this information already exists",
+        });
+      }
+
+      // Handle other known errors
+      if (error.message) {
+        console.error("Detailed error:", error.message, error.stack);
+        return res.status(500).json({
+          error: "Failed to create offer",
+          message: error.message,
+        });
+      }
+
+      // Generic error response
+      res.status(500).json({
+        error: "Failed to create offer",
+        message: "An unexpected error occurred. Please try again.",
+      });
     }
   }
 );
@@ -429,46 +470,45 @@ router.put(
       const {
         name,
         description,
-        category,
         commissionRate,
         startDate,
         endDate,
-        terms,
-        requirements,
         tags,
         status,
+        referralCodeIds, // Include referral code IDs in update
       } = req.body;
 
       // Validate input
       const schema = z.object({
         name: z.string().min(3).optional(),
         description: z.string().min(10).optional(),
-        category: z.string().min(1).optional(),
         commissionRate: z.number().min(0).max(100).optional(),
         startDate: z.string().optional(),
         endDate: z.string().optional(),
-        terms: z.string().optional(),
-        requirements: z.string().optional(),
         tags: z.array(z.string()).optional(),
         status: z.enum(["ACTIVE", "PAUSED", "ENDED"]).optional(),
+        referralCodeIds: z.array(z.string()).optional(),
       });
 
       const validatedData = schema.parse({
         name,
         description,
-        category,
         commissionRate,
         startDate,
         endDate,
-        terms,
-        requirements,
         tags,
         status,
+        referralCodeIds,
       });
 
-      // Remove undefined values
+      // Remove undefined values and exclude referralCodeIds (not part of Offer model)
       const updateData: any = {};
       Object.keys(validatedData).forEach((key) => {
+        // Skip referralCodeIds - it's stored in activity log, not in Offer model
+        if (key === "referralCodeIds") {
+          return;
+        }
+
         if (validatedData[key as keyof typeof validatedData] !== undefined) {
           if (key === "startDate" || key === "endDate") {
             updateData[key] = validatedData[key as keyof typeof validatedData]
@@ -510,6 +550,41 @@ router.put(
         },
       });
 
+      // Update activity log with new referral code IDs if provided
+      if (validatedData.referralCodeIds !== undefined) {
+        // Find the original offer creation activity
+        // Prisma doesn't support JSON path queries directly, so we fetch and filter
+        const allActivities = await prisma.activity.findMany({
+          where: {
+            action: "offer_created",
+            resource: "offer",
+          },
+          orderBy: {
+            createdAt: "desc",
+          },
+        });
+
+        // Find the activity for this offer
+        const creationActivity = allActivities.find((activity: any) => {
+          const details = activity.details as any;
+          return details?.offerId === id;
+        });
+
+        // Update the referral code IDs in the activity details
+        if (creationActivity) {
+          const details = creationActivity.details as any;
+          await prisma.activity.update({
+            where: { id: creationActivity.id },
+            data: {
+              details: {
+                ...details,
+                referralCodeIds: validatedData.referralCodeIds || [],
+              },
+            },
+          });
+        }
+      }
+
       // Log activity
       await prisma.activity.create({
         data: {
@@ -520,6 +595,7 @@ router.put(
             offerId: id,
             offerName: updatedOffer.name,
             changes: updateData,
+            referralCodeIds: validatedData.referralCodeIds || undefined,
           },
         },
       });
@@ -531,11 +607,11 @@ router.put(
           id: updatedOffer.id,
           name: updatedOffer.name,
           description: updatedOffer.description,
-          category: updatedOffer.category,
           commissionRate: updatedOffer.commissionRate,
           status: updatedOffer.status.toLowerCase(),
           startDate: updatedOffer.startDate.toISOString().split("T")[0],
           endDate: updatedOffer.endDate?.toISOString().split("T")[0] || null,
+          tags: updatedOffer.tags,
           affiliatesCount: updatedOffer._count.applications,
           creativesCount: updatedOffer._count.creatives,
         },

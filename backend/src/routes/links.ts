@@ -8,13 +8,9 @@ const router: Router = express.Router();
 // Validation schemas
 const generateLinkSchema = z.object({
   url: z.string().url("Invalid URL format"),
+  websiteId: z.string().optional(),
+  referralCodeId: z.string().optional(),
   campaignName: z.string().optional(),
-  customAlias: z
-    .string()
-    .min(3)
-    .max(20)
-    .regex(/^[a-zA-Z0-9-_]+$/)
-    .optional(),
   offerId: z.string().optional(),
 });
 

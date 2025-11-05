@@ -5,8 +5,9 @@ const prisma = new PrismaClient();
 
 export interface GenerateLinkData {
   url: string;
+  websiteId?: string;
+  referralCodeId?: string;
   campaignName?: string;
-  customAlias?: string;
   offerId?: string;
 }
 
@@ -81,24 +82,38 @@ export class LinksService {
       throw new Error("Affiliate profile not found");
     }
 
-    // Generate unique slug
-    const slug = await this.generateUniqueSlug(data.customAlias);
+    // Generate unique slug (use referral code as part of slug if available)
+    let slug: string;
+    if (data.referralCodeId) {
+      // Get referral code to use in slug
+      const referralCode = await prisma.referralCode.findUnique({
+        where: { id: data.referralCodeId },
+      });
+
+      if (referralCode && referralCode.affiliateId === affiliate.id) {
+        // Use referral code as part of slug
+        slug = `${referralCode.code}-${crypto.randomBytes(4).toString("hex")}`;
+      } else {
+        // Fallback to random slug
+        slug = await this.generateUniqueSlug();
+      }
+    } else {
+      slug = await this.generateUniqueSlug();
+    }
 
     // Create short URL (you can customize the domain)
     const shortUrl = `${process.env.SHORT_URL_DOMAIN || "https://track.link"}/${slug}`;
 
-    // Create affiliate URL with tracking parameters
-    const url = new URL(data.url);
-    url.searchParams.set("ref", affiliate.id);
-    url.searchParams.set("track", slug);
-    const affiliateUrl = url.toString();
+    // The URL is already generated in the format: {domain}?websiteId={websiteId}&ref={referralCode}
+    // So we can use it directly as the affiliate URL
+    const affiliateUrl = data.url;
 
     // Create affiliate link in database
     const link = await prisma.affiliateLink.create({
       data: {
         affiliateId: affiliate.id,
         offerId: data.offerId || null,
-        originalUrl: data.url,
+        originalUrl: affiliateUrl,
         shortUrl: shortUrl,
         customSlug: slug,
         clicks: 0,
@@ -114,6 +129,8 @@ export class LinksService {
       affiliateUrl: affiliateUrl,
       shortUrl: link.shortUrl,
       trackingCode: slug,
+      websiteId: data.websiteId || null,
+      referralCodeId: data.referralCodeId || null,
       campaignName: data.campaignName || "Default Campaign",
       clicks: link.clicks,
       conversions: link.conversions,
@@ -141,7 +158,6 @@ export class LinksService {
         offer: {
           select: {
             name: true,
-            category: true,
           },
         },
       },
@@ -160,7 +176,6 @@ export class LinksService {
       earnings: link.earnings,
       status: link.isActive ? "Active" : "Inactive",
       createdAt: link.createdAt,
-      category: link.offer?.category || "General",
     }));
 
     console.log(

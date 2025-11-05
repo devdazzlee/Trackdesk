@@ -12,7 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+// Tabs components commented out - not using tabs for now
+// import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DataLoading } from "@/components/ui/loading";
 import {
   Copy,
@@ -33,9 +34,17 @@ import {
   X,
   Loader2,
 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { config } from "@/config/config";
 import { getAuthHeaders } from "@/lib/getAuthHeaders";
+import { DeleteConfirmationModal } from "@/components/modals/delete-confirmation-modal";
 
 interface AffiliateLink {
   id: string;
@@ -95,10 +104,20 @@ interface LinkStats {
   conversionRate: number;
 }
 
+interface Website {
+  id: string;
+  websiteId: string;
+  name: string;
+  domain: string;
+  status: string;
+}
+
 export default function LinksPage() {
-  const [urlInput, setUrlInput] = useState("");
+  const [selectedWebsite, setSelectedWebsite] = useState<string>("");
+  const [selectedReferralCode, setSelectedReferralCode] = useState<string>("");
   const [campaignName, setCampaignName] = useState("");
-  const [customAlias, setCustomAlias] = useState("");
+  const [websites, setWebsites] = useState<Website[]>([]);
+  const [referralCodes, setReferralCodes] = useState<any[]>([]);
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -126,14 +145,78 @@ export default function LinksPage() {
   const [couponMaxUsage, setCouponMaxUsage] = useState("");
   const [isGeneratingCoupon, setIsGeneratingCoupon] = useState(false);
 
+  // Delete modals state
+  const [deleteLinkModal, setDeleteLinkModal] = useState<{
+    isOpen: boolean;
+    linkId: string | null;
+    linkName: string | null;
+  }>({ isOpen: false, linkId: null, linkName: null });
+  const [deactivateCouponModal, setDeactivateCouponModal] = useState<{
+    isOpen: boolean;
+    couponId: string | null;
+    couponCode: string | null;
+  }>({ isOpen: false, couponId: null, couponCode: null });
+  const [isDeletingLink, setIsDeletingLink] = useState(false);
+  const [isDeactivatingCoupon, setIsDeactivatingCoupon] = useState(false);
+
   useEffect(() => {
     fetchAllData();
   }, []);
 
   const fetchAllData = async () => {
     setIsLoading(true);
-    await Promise.all([fetchMyLinks(), fetchMarketingAssets(), fetchCoupons()]);
+    await Promise.all([
+      fetchMyLinks(),
+      fetchMarketingAssets(),
+      fetchCoupons(),
+      fetchWebsites(),
+      fetchReferralCodes(),
+    ]);
     setIsLoading(false);
+  };
+
+  const fetchWebsites = async () => {
+    try {
+      const response = await fetch(`${config.apiUrl}/websites`, {
+        headers: getAuthHeaders(),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // Filter only ACTIVE websites
+        const activeWebsites = (data.websites || []).filter(
+          (website: Website) => website.status === "ACTIVE"
+        );
+        setWebsites(activeWebsites);
+      } else {
+        console.error("Failed to fetch websites");
+      }
+    } catch (error) {
+      console.error("Error fetching websites:", error);
+    }
+  };
+
+  const fetchReferralCodes = async () => {
+    try {
+      const response = await fetch(`${config.apiUrl}/referral/codes`, {
+        headers: getAuthHeaders(),
+      });
+
+      if (response.ok) {
+        const codes = await response.json();
+        // Filter only active referral codes
+        const activeCodes = codes.filter(
+          (code: any) =>
+            code.isActive &&
+            (!code.expiresAt || new Date(code.expiresAt) > new Date())
+        );
+        setReferralCodes(activeCodes);
+      } else {
+        console.error("Failed to fetch referral codes");
+      }
+    } catch (error) {
+      console.error("Error fetching referral codes:", error);
+    }
   };
 
   const fetchMyLinks = async () => {
@@ -220,69 +303,82 @@ export default function LinksPage() {
   };
 
   const handleGenerateLink = async () => {
-    if (!urlInput.trim()) {
-      toast.error("Please enter a valid URL");
+    if (!selectedWebsite) {
+      toast.error("Please select a destination website");
       return;
     }
 
-    // Validate custom alias format if provided
-    if (customAlias && !/^[a-zA-Z0-9-_]+$/.test(customAlias)) {
-      toast.error(
-        "Custom alias can only contain letters, numbers, hyphens, and underscores"
-      );
-      return;
-    }
-
-    if (customAlias && (customAlias.length < 3 || customAlias.length > 20)) {
-      toast.error("Custom alias must be between 3 and 20 characters");
+    if (!selectedReferralCode) {
+      toast.error("Please select a referral code");
       return;
     }
 
     setIsGenerating(true);
 
     try {
+      const selectedWebsiteData = websites.find(
+        (w) => w.id === selectedWebsite
+      );
+      const selectedCodeData = referralCodes.find(
+        (c) => c.id === selectedReferralCode
+      );
+
+      if (!selectedWebsiteData || !selectedCodeData) {
+        toast.error("Invalid website or referral code selected");
+        setIsGenerating(false);
+        return;
+      }
+
+      // Generate link in format: {domain}?websiteId={websiteId}&ref={referralCode}
+      const domain = selectedWebsiteData.domain;
+      const websiteId = selectedWebsiteData.websiteId;
+      const referralCode = selectedCodeData.code;
+
+      // Ensure domain has protocol
+      let fullDomain = domain;
+      if (!domain.startsWith("http://") && !domain.startsWith("https://")) {
+        fullDomain = `https://${domain}`;
+      }
+
+      // Remove trailing slash if present
+      fullDomain = fullDomain.replace(/\/$/, "");
+
+      const generatedUrl = `${fullDomain}?websiteId=${websiteId}&ref=${referralCode}`;
+
       console.log("Generating link:", {
-        url: urlInput,
+        url: generatedUrl,
+        websiteId,
+        referralCode,
         campaignName,
-        customAlias,
       });
-      console.log("API URL:", `${config.apiUrl}/links/generate`);
 
       const response = await fetch(`${config.apiUrl}/links/generate`, {
         method: "POST",
         headers: getAuthHeaders(),
         body: JSON.stringify({
-          url: urlInput,
+          url: generatedUrl,
+          websiteId: websiteId,
+          referralCodeId: selectedReferralCode,
           campaignName: campaignName || undefined,
-          customAlias: customAlias || undefined,
         }),
       });
 
-      console.log("Generate link response status:", response.status);
-
       if (response.ok) {
         const data = await response.json();
-        console.log("Link generated successfully:", data);
-        console.log("Generated link ID:", data.link?.id);
         toast.success(data.message || "Affiliate link generated successfully!");
-        setUrlInput("");
+        setSelectedWebsite("");
+        setSelectedReferralCode("");
         setCampaignName("");
-        setCustomAlias("");
         fetchMyLinks(); // Refresh links list
       } else {
         const error = await response.json();
-        console.error("Error response:", error);
-        console.error("Response status:", response.status);
 
-        // Handle authentication errors
         if (response.status === 401) {
           toast.error("Please log in to generate affiliate links");
           return;
         }
 
-        // Show specific error messages
         if (error.details && Array.isArray(error.details)) {
-          // Zod validation errors
           const messages = error.details.map((d: any) => d.message).join(", ");
           toast.error(messages);
         } else {
@@ -317,41 +413,36 @@ export default function LinksPage() {
     toast.success("Data refreshed successfully");
   };
 
-  const handleDeleteLink = async (linkId: string, linkName: string) => {
-    console.log(
-      "Delete button clicked - Link ID:",
-      linkId,
-      "Link Name:",
-      linkName
-    );
+  const handleDeleteLinkClick = (linkId: string, linkName: string) => {
+    setDeleteLinkModal({ isOpen: true, linkId, linkName });
+  };
 
-    if (!confirm(`Are you sure you want to delete "${linkName}"?`)) {
-      return;
-    }
+  const handleDeleteLinkConfirm = async () => {
+    if (!deleteLinkModal.linkId) return;
 
+    setIsDeletingLink(true);
     try {
-      console.log(
-        "Sending DELETE request to:",
-        `${config.apiUrl}/links/${linkId}`
+      const response = await fetch(
+        `${config.apiUrl}/links/${deleteLinkModal.linkId}`,
+        {
+          method: "DELETE",
+          headers: getAuthHeaders(),
+        }
       );
-      const response = await fetch(`${config.apiUrl}/links/${linkId}`, {
-        method: "DELETE",
-        headers: getAuthHeaders(),
-      });
-
-      console.log("Delete response status:", response.status);
 
       if (response.ok) {
         toast.success("Link deleted successfully");
+        setDeleteLinkModal({ isOpen: false, linkId: null, linkName: null });
         fetchMyLinks(); // Refresh links list
       } else {
         const error = await response.json();
-        console.error("Delete error response:", error);
         toast.error(error.error || "Failed to delete link");
       }
     } catch (error) {
       console.error("Error deleting link:", error);
       toast.error("Failed to delete link");
+    } finally {
+      setIsDeletingLink(false);
     }
   };
 
@@ -494,19 +585,20 @@ export default function LinksPage() {
     }
   };
 
-  const handleDeactivateCoupon = async (
+  const handleDeactivateCouponClick = (
     couponId: string,
     couponCode: string
   ) => {
-    if (
-      !confirm(`Are you sure you want to deactivate coupon "${couponCode}"?`)
-    ) {
-      return;
-    }
+    setDeactivateCouponModal({ isOpen: true, couponId, couponCode });
+  };
 
+  const handleDeactivateCouponConfirm = async () => {
+    if (!deactivateCouponModal.couponId) return;
+
+    setIsDeactivatingCoupon(true);
     try {
       const response = await fetch(
-        `${config.apiUrl}/links/coupons/${couponId}/deactivate`,
+        `${config.apiUrl}/links/coupons/${deactivateCouponModal.couponId}/deactivate`,
         {
           method: "PATCH",
           headers: getAuthHeaders(),
@@ -515,6 +607,11 @@ export default function LinksPage() {
 
       if (response.ok) {
         toast.success("Coupon deactivated successfully");
+        setDeactivateCouponModal({
+          isOpen: false,
+          couponId: null,
+          couponCode: null,
+        });
         fetchCoupons(); // Refresh coupons list
       } else {
         const error = await response.json();
@@ -523,6 +620,8 @@ export default function LinksPage() {
     } catch (error) {
       console.error("Error deactivating coupon:", error);
       toast.error("Failed to deactivate coupon");
+    } finally {
+      setIsDeactivatingCoupon(false);
     }
   };
 
@@ -555,225 +654,269 @@ export default function LinksPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="generator" className="space-y-6">
+      {/* Tabs - Commented out for now, showing only URL Generator content */}
+      {/* <Tabs defaultValue="generator" className="space-y-6">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="generator">URL Generator</TabsTrigger>
           <TabsTrigger value="assets">Marketing Assets</TabsTrigger>
           <TabsTrigger value="coupons">Coupon Codes</TabsTrigger>
-        </TabsList>
+        </TabsList> */}
 
-        {/* URL Generator Tab */}
-        <TabsContent value="generator" className="space-y-6">
-          {/* Link Generator Form */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Generate Affiliate Link</CardTitle>
-              <CardDescription>
-                Convert any URL into a trackable affiliate link
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="url">Destination URL *</Label>
-                  <Input
-                    id="url"
-                    placeholder="https://example.com/product"
-                    value={urlInput}
-                    onChange={(e) => setUrlInput(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="campaign">Campaign Name (Optional)</Label>
-                  <Input
-                    id="campaign"
-                    placeholder="Summer Sale 2024"
-                    value={campaignName}
-                    onChange={(e) => setCampaignName(e.target.value)}
-                  />
-                </div>
-              </div>
+      {/* URL Generator Tab - Now displayed directly without tabs */}
+      <div className="space-y-6">
+        {/* Link Generator Form */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Generate Affiliate Link</CardTitle>
+            <CardDescription>
+              Convert any URL into a trackable affiliate link
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="alias">Custom Alias (Optional)</Label>
-                <Input
-                  id="alias"
-                  placeholder="summer-sale"
-                  value={customAlias}
-                  onChange={(e) => setCustomAlias(e.target.value)}
-                />
+                <Label htmlFor="website">Destination Website *</Label>
+                <Select
+                  value={selectedWebsite}
+                  onValueChange={setSelectedWebsite}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a website" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {websites.length === 0 ? (
+                      <SelectItem value="no-websites" disabled>
+                        No active websites available
+                      </SelectItem>
+                    ) : (
+                      websites.map((website) => (
+                        <SelectItem key={website.id} value={website.id}>
+                          {website.name} ({website.domain})
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
                 <p className="text-xs text-muted-foreground">
-                  3-20 characters, letters, numbers, hyphens and underscores
-                  only
+                  Select a website domain from your registered websites
                 </p>
               </div>
-              <Button
-                onClick={handleGenerateLink}
-                disabled={isGenerating}
-                className="w-full md:w-auto"
+              <div className="space-y-2">
+                <Label htmlFor="campaign">Campaign Name (Optional)</Label>
+                <Input
+                  id="campaign"
+                  placeholder="Summer Sale 2024"
+                  value={campaignName}
+                  onChange={(e) => setCampaignName(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="referralCode">Active Referral Code *</Label>
+              <Select
+                value={selectedReferralCode}
+                onValueChange={setSelectedReferralCode}
               >
-                <Sparkles className="w-4 h-4 mr-2" />
-                {isGenerating ? "Generating..." : "Generate Affiliate Link"}
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Generated Links List */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Your Generated Links</CardTitle>
-              <CardDescription>
-                {myLinks.length} active affiliate links
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {myLinks.length === 0 ? (
-                <div className="text-center py-8">
-                  <LinkIcon className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No Links Yet</h3>
-                  <p className="text-muted-foreground">
-                    Generate your first affiliate link to start earning
-                    commissions
-                  </p>
-                </div>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a referral code" />
+                </SelectTrigger>
+                <SelectContent>
+                  {referralCodes.length === 0 ? (
+                    <SelectItem value="no-codes" disabled>
+                      No active referral codes available
+                    </SelectItem>
+                  ) : (
+                    referralCodes.map((code) => (
+                      <SelectItem key={code.id} value={code.id}>
+                        {code.code} ({code.commissionRate}% commission)
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Select an active referral code to include in the link
+              </p>
+            </div>
+            <Button
+              onClick={handleGenerateLink}
+              disabled={
+                isGenerating || !selectedWebsite || !selectedReferralCode
+              }
+              className="w-full md:w-auto"
+            >
+              {isGenerating ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Generating...
+                </>
               ) : (
-                <div className="space-y-4">
-                  {myLinks.map((link) => (
-                    <div
-                      key={link.id}
-                      className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                    >
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-lg">{link.name}</h3>
-                          <p className="text-sm text-muted-foreground">
-                            {link.campaignName}
-                          </p>
-                        </div>
-                        <Badge
-                          variant={
-                            link.status === "Active" ? "default" : "secondary"
-                          }
-                        >
-                          {link.status}
-                        </Badge>
+                <>
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Generate Affiliate Link
+                </>
+              )}
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Generated Links List */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Your Generated Links</CardTitle>
+            <CardDescription>
+              {myLinks.length} active affiliate links
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {myLinks.length === 0 ? (
+              <div className="text-center py-8">
+                <LinkIcon className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No Links Yet</h3>
+                <p className="text-muted-foreground">
+                  Generate your first affiliate link to start earning
+                  commissions
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {myLinks.map((link) => (
+                  <div
+                    key={link.id}
+                    className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-lg">{link.name}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {link.campaignName}
+                        </p>
                       </div>
+                      <Badge
+                        variant={
+                          link.status === "Active" ? "default" : "secondary"
+                        }
+                      >
+                        {link.status}
+                      </Badge>
+                    </div>
 
-                      <div className="space-y-2">
-                        <div className="flex items-center space-x-2">
-                          <Input
-                            value={link.url}
-                            readOnly
-                            className="flex-1 text-sm"
-                          />
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleCopyLink(link.url, link.id)}
-                          >
-                            {copiedLink === link.id ? (
-                              <Check className="w-4 h-4" />
-                            ) : (
-                              <Copy className="w-4 h-4" />
-                            )}
-                          </Button>
-                        </div>
-
-                        <div className="flex items-center space-x-2">
-                          <Input
-                            value={link.shortUrl}
-                            readOnly
-                            className="flex-1 text-sm"
-                          />
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              handleCopyLink(link.shortUrl, `short-${link.id}`)
-                            }
-                          >
-                            {copiedLink === `short-${link.id}` ? (
-                              <Check className="w-4 h-4" />
-                            ) : (
-                              <Copy className="w-4 h-4" />
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t">
-                        <div>
-                          <p className="text-sm text-muted-foreground">
-                            Clicks
-                          </p>
-                          <p className="text-lg font-semibold">{link.clicks}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">
-                            Conversions
-                          </p>
-                          <p className="text-lg font-semibold">
-                            {link.conversions}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">
-                            Earnings
-                          </p>
-                          <p className="text-lg font-semibold text-green-600">
-                            ${link.earnings.toFixed(2)}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t">
+                    <div className="space-y-2">
+                      <div className="flex items-center space-x-2">
+                        <Input
+                          value={link.url}
+                          readOnly
+                          className="flex-1 text-sm"
+                        />
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleViewLinkStats(link.id)}
-                          className="flex-1"
+                          onClick={() => handleCopyLink(link.url, link.id)}
                         >
-                          <BarChart3 className="w-4 h-4 mr-2" />
-                          View Stats
+                          {copiedLink === link.id ? (
+                            <Check className="w-4 h-4" />
+                          ) : (
+                            <Copy className="w-4 h-4" />
+                          )}
                         </Button>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <Input
+                          value={link.shortUrl}
+                          readOnly
+                          className="flex-1 text-sm"
+                        />
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() =>
-                            handleToggleLinkStatus(link.id, link.status)
+                            handleCopyLink(link.shortUrl, `short-${link.id}`)
                           }
-                          className="flex-1"
                         >
-                          {link.status === "Active" ? (
-                            <>
-                              <PowerOff className="w-4 h-4 mr-2" />
-                              Deactivate
-                            </>
+                          {copiedLink === `short-${link.id}` ? (
+                            <Check className="w-4 h-4" />
                           ) : (
-                            <>
-                              <Power className="w-4 h-4 mr-2" />
-                              Activate
-                            </>
+                            <Copy className="w-4 h-4" />
                           )}
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => handleDeleteLink(link.id, link.name)}
-                        >
-                          <Trash2 className="w-4 h-4 mr-2" />
-                          Delete
                         </Button>
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
 
-        {/* Marketing Assets Tab */}
-        <TabsContent value="assets" className="space-y-6">
+                    <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Clicks</p>
+                        <p className="text-lg font-semibold">{link.clicks}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">
+                          Conversions
+                        </p>
+                        <p className="text-lg font-semibold">
+                          {link.conversions}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">
+                          Earnings
+                        </p>
+                        <p className="text-lg font-semibold text-green-600">
+                          ${link.earnings.toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleViewLinkStats(link.id)}
+                        className="flex-1"
+                      >
+                        <BarChart3 className="w-4 h-4 mr-2" />
+                        View Stats
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          handleToggleLinkStatus(link.id, link.status)
+                        }
+                        className="flex-1"
+                      >
+                        {link.status === "Active" ? (
+                          <>
+                            <PowerOff className="w-4 h-4 mr-2" />
+                            Deactivate
+                          </>
+                        ) : (
+                          <>
+                            <Power className="w-4 h-4 mr-2" />
+                            Activate
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() =>
+                          handleDeleteLinkClick(link.id, link.name)
+                        }
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Marketing Assets Tab - Commented out for now */}
+      {/* <TabsContent value="assets" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Marketing Assets</CardTitle>
@@ -834,10 +977,10 @@ export default function LinksPage() {
               )}
             </CardContent>
           </Card>
-        </TabsContent>
+        </TabsContent> */}
 
-        {/* Coupon Codes Tab */}
-        <TabsContent value="coupons" className="space-y-6">
+      {/* Coupon Codes Tab - Commented out for now */}
+      {/* <TabsContent value="coupons" className="space-y-6">
           <Card>
             <CardHeader>
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -933,7 +1076,10 @@ export default function LinksPage() {
                             variant="outline"
                             size="sm"
                             onClick={() =>
-                              handleDeactivateCoupon(coupon.id, coupon.code)
+                              handleDeactivateCouponClick(
+                                coupon.id,
+                                coupon.code
+                              )
                             }
                           >
                             <PowerOff className="w-4 h-4 mr-2" />
@@ -947,8 +1093,8 @@ export default function LinksPage() {
               )}
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+        </TabsContent> */}
+      {/* </Tabs> */}
 
       {/* Link Stats Modal */}
       {showStatsModal && (
@@ -1193,6 +1339,39 @@ export default function LinksPage() {
           </div>
         </div>
       )}
+
+      {/* Delete Link Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={deleteLinkModal.isOpen}
+        onClose={() =>
+          setDeleteLinkModal({ isOpen: false, linkId: null, linkName: null })
+        }
+        onConfirm={handleDeleteLinkConfirm}
+        title="Delete Link?"
+        message="Are you sure you want to delete this affiliate link?"
+        itemName={deleteLinkModal.linkName || undefined}
+        description="This action cannot be undone. All tracking data for this link will be permanently removed."
+        isLoading={isDeletingLink}
+      />
+
+      {/* Deactivate Coupon Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={deactivateCouponModal.isOpen}
+        onClose={() =>
+          setDeactivateCouponModal({
+            isOpen: false,
+            couponId: null,
+            couponCode: null,
+          })
+        }
+        onConfirm={handleDeactivateCouponConfirm}
+        title="Deactivate Coupon?"
+        message="Are you sure you want to deactivate this coupon?"
+        itemName={deactivateCouponModal.couponCode || undefined}
+        description="This coupon will be deactivated and will no longer be available for use. This action can be reversed by reactivating the coupon."
+        isLoading={isDeactivatingCoupon}
+        confirmText="Deactivate"
+      />
     </div>
   );
 }

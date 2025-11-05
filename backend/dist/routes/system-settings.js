@@ -220,7 +220,10 @@ router.put("/commission", auth_1.authenticateToken, async (req, res) => {
                 .json({ error: "Only admins can update commission settings" });
         }
         const schema = zod_1.z.object({
-            defaultRate: zod_1.z.number().min(0).max(100, "Rate must be between 0 and 100"),
+            defaultRate: zod_1.z
+                .number()
+                .min(0, "Commission rate must be greater than or equal to 0%")
+                .max(100, "Commission rate must be less than or equal to 100%"),
             minimumPayout: zod_1.z.number().min(0, "Minimum payout must be positive"),
             payoutFrequency: zod_1.z.enum(["Weekly", "Bi-Weekly", "Monthly", "Quarterly"]),
             approvalPeriod: zod_1.z.number().min(0, "Approval period must be positive"),
@@ -324,7 +327,7 @@ router.put("/commission", auth_1.authenticateToken, async (req, res) => {
                             affiliateEmail: affiliate.user.email,
                             oldRate: affiliate.commissionRate,
                             newRate: data.defaultRate,
-                            reason: "Default commission rate change",
+                            reason: "Default commission rate change - only affiliates using default rate were updated",
                         },
                     },
                 });

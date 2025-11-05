@@ -38,7 +38,6 @@ router.post("/codes", auth_1.authenticateToken, async (req, res) => {
                 .json({ error: "Only affiliates can create referral codes" });
         }
         const schema = zod_1.z.object({
-            type: zod_1.z.enum(["SIGNUP", "PRODUCT", "BOTH"]),
             commissionRate: zod_1.z.number().min(0).max(100),
             productId: zod_1.z.string().optional(),
             maxUses: zod_1.z.number().positive().optional(),
@@ -73,8 +72,8 @@ router.post("/codes", auth_1.authenticateToken, async (req, res) => {
             }
         }
         const referralCode = await ReferralSystem_1.ReferralSystemModel.generateReferralCode(affiliate.id, {
-            type: data.type || "BOTH",
-            commissionRate: data.commissionRate || 10,
+            type: "BOTH",
+            commissionRate: data.commissionRate || affiliate.commissionRate || 10,
             productId: data.productId,
             maxUses: data.maxUses,
             expiresAt: expiresAtDate,
@@ -253,6 +252,132 @@ router.get("/admin/stats", auth_1.authenticateToken, async (req, res) => {
     catch (error) {
         console.error("Error fetching admin referral stats:", error);
         res.status(500).json({ error: "Failed to fetch admin referral stats" });
+    }
+});
+router.put("/codes/:id", auth_1.authenticateToken, async (req, res) => {
+    try {
+        if (req.user.role !== "AFFILIATE") {
+            return res
+                .status(403)
+                .json({ error: "Only affiliates can update referral codes" });
+        }
+        const { id } = req.params;
+        const schema = zod_1.z.object({
+            productId: zod_1.z.string().optional().nullable(),
+            maxUses: zod_1.z.number().positive().optional().nullable(),
+            expiresAt: zod_1.z.string().optional().nullable(),
+            isActive: zod_1.z.boolean().optional(),
+        });
+        const data = schema.parse(req.body);
+        const referralCode = await prisma_1.prisma.referralCode.findUnique({
+            where: { id },
+            include: {
+                affiliate: {
+                    select: {
+                        userId: true,
+                        commissionRate: true,
+                    },
+                },
+            },
+        });
+        if (!referralCode) {
+            return res.status(404).json({ error: "Referral code not found" });
+        }
+        if (referralCode.affiliate.userId !== req.user.id) {
+            return res.status(403).json({
+                error: "You don't have permission to update this referral code",
+            });
+        }
+        let expiresAtDate = undefined;
+        if (data.expiresAt !== undefined) {
+            if (data.expiresAt === null || data.expiresAt === "") {
+                expiresAtDate = null;
+            }
+            else {
+                try {
+                    expiresAtDate = new Date(data.expiresAt);
+                    if (isNaN(expiresAtDate.getTime())) {
+                        return res.status(400).json({
+                            error: "Invalid expiration date format. Please use a valid date.",
+                        });
+                    }
+                }
+                catch (error) {
+                    return res.status(400).json({
+                        error: "Invalid expiration date format. Please use a valid date.",
+                    });
+                }
+            }
+        }
+        const updateData = {};
+        if (data.productId !== undefined)
+            updateData.productId = data.productId;
+        if (data.maxUses !== undefined)
+            updateData.maxUses = data.maxUses;
+        if (data.expiresAt !== undefined)
+            updateData.expiresAt = expiresAtDate;
+        if (data.isActive !== undefined)
+            updateData.isActive = data.isActive;
+        const updatedCode = await prisma_1.prisma.referralCode.update({
+            where: { id },
+            data: updateData,
+        });
+        res.json(updatedCode);
+    }
+    catch (error) {
+        console.error("Error updating referral code:", error);
+        if (error instanceof zod_1.z.ZodError) {
+            const errorMessages = error.errors.map((err) => `${err.path.join(".")}: ${err.message}`);
+            return res.status(400).json({
+                error: "Validation error",
+                details: errorMessages,
+            });
+        }
+        res.status(400).json({ error: "Failed to update referral code" });
+    }
+});
+router.delete("/codes/:id", auth_1.authenticateToken, async (req, res) => {
+    try {
+        if (req.user.role !== "AFFILIATE") {
+            return res
+                .status(403)
+                .json({ error: "Only affiliates can delete referral codes" });
+        }
+        const { id } = req.params;
+        const referralCode = await prisma_1.prisma.referralCode.findUnique({
+            where: { id },
+            include: {
+                affiliate: {
+                    select: {
+                        userId: true,
+                    },
+                },
+            },
+        });
+        if (!referralCode) {
+            return res.status(404).json({ error: "Referral code not found" });
+        }
+        if (referralCode.affiliate.userId !== req.user.id) {
+            return res.status(403).json({
+                error: "You don't have permission to delete this referral code",
+            });
+        }
+        const usageCount = await prisma_1.prisma.referralUsage.count({
+            where: { referralCodeId: id },
+        });
+        if (usageCount > 0) {
+            return res.status(400).json({
+                error: "Cannot delete referral code that has been used. You can deactivate it instead.",
+            });
+        }
+        await prisma_1.prisma.referralCode.delete({
+            where: { id },
+        });
+        res.json({ success: true, message: "Referral code deleted successfully" });
+    }
+    catch (error) {
+        console.error("Error deleting referral code:", error);
+        res.status(500).json({ error: "Failed to delete referral code" });
     }
 });
 router.get("/analytics", auth_1.authenticateToken, async (req, res) => {

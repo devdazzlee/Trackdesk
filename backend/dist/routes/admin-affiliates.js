@@ -75,6 +75,7 @@ router.get("/", auth_1.authenticateToken, (0, auth_1.requireRole)(["ADMIN"]), as
                 joinDate: affiliate.createdAt.toISOString().split("T")[0],
                 status: affiliate.status,
                 tier: affiliate.tier,
+                commissionRate: affiliate.commissionRate || null,
                 totalEarnings: earnings._sum.commissionAmount || 0,
                 totalClicks: clicks,
                 totalConversions: conversions,
@@ -207,7 +208,11 @@ router.patch("/:id/tier", auth_1.authenticateToken, (0, auth_1.requireRole)(["AD
         const { tier, commissionRate } = req.body;
         const schema = zod_1.z.object({
             tier: zod_1.z.enum(["BRONZE", "SILVER", "GOLD", "PLATINUM"]).optional(),
-            commissionRate: zod_1.z.number().min(0).max(100).optional(),
+            commissionRate: zod_1.z
+                .number()
+                .min(0, "Commission rate must be at least 0%")
+                .max(100, "Commission rate cannot exceed 100%. Please enter a value between 0 and 100%.")
+                .optional(),
         });
         const validatedData = schema.parse({ tier, commissionRate });
         const updatedAffiliate = await prisma.affiliateProfile.update({

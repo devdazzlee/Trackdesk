@@ -100,10 +100,18 @@ router.post("/", authenticateToken, requireAdmin, async (req: any, res) => {
       });
     }
 
-    // Clean domain (remove protocol and trailing slash)
-    const cleanDomain = data.domain
-      .replace(/https?:\/\//, "")
-      .replace(/\/$/, "");
+    // Clean domain (preserve protocol if provided, remove trailing slash)
+    let cleanDomain = data.domain.trim();
+
+    // Remove trailing slash if present
+    if (cleanDomain.endsWith("/")) {
+      cleanDomain = cleanDomain.slice(0, -1);
+    }
+
+    // If no protocol is provided, add https://
+    if (!cleanDomain.match(/^https?:\/\//)) {
+      cleanDomain = `https://${cleanDomain}`;
+    }
 
     // Create website in database
     const website = await prisma.website.create({
@@ -163,9 +171,20 @@ router.put("/:id", authenticateToken, requireAdmin, async (req: any, res) => {
     const updateData: any = {};
     if (data.name) updateData.name = data.name;
     if (data.domain) {
-      updateData.domain = data.domain
-        .replace(/https?:\/\//, "")
-        .replace(/\/$/, "");
+      // Clean domain (preserve protocol if provided, remove trailing slash)
+      let cleanDomain = data.domain.trim();
+
+      // Remove trailing slash if present
+      if (cleanDomain.endsWith("/")) {
+        cleanDomain = cleanDomain.slice(0, -1);
+      }
+
+      // If no protocol is provided, add https://
+      if (!/^https?:\/\//.test(cleanDomain)) {
+        cleanDomain = `https://${cleanDomain}`;
+      }
+
+      updateData.domain = cleanDomain;
     }
     if (data.description !== undefined) {
       updateData.description = data.description || null;

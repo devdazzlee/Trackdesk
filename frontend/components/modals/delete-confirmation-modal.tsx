@@ -1,77 +1,182 @@
-"use client"
+"use client";
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { AlertTriangle, Trash2 } from "lucide-react"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { AlertTriangle, Trash2, Loader2 } from "lucide-react";
 
-interface DeleteConfirmationModalProps {
-  isOpen: boolean
-  onClose: () => void
-  onConfirm: () => void
-  title: string
-  message: string
-  itemName?: string
-  isLoading?: boolean
+export interface DeleteConfirmationModalProps {
+  /**
+   * Whether the modal is open
+   */
+  isOpen: boolean;
+  /**
+   * Callback when the modal should be closed
+   */
+  onClose: () => void;
+  /**
+   * Callback when the user confirms the deletion
+   */
+  onConfirm: () => void | Promise<void>;
+  /**
+   * Title of the modal (e.g., "Delete Website?")
+   */
+  title?: string;
+  /**
+   * Main message/description to display
+   */
+  message?: string;
+  /**
+   * Optional: Name of the item being deleted (displayed prominently)
+   */
+  itemName?: string;
+  /**
+   * Optional: Additional description or warning
+   */
+  description?: string;
+  /**
+   * Whether the delete operation is in progress
+   */
+  isLoading?: boolean;
+  /**
+   * Optional: Custom confirm button text (default: "Delete")
+   */
+  confirmText?: string;
+  /**
+   * Optional: Custom cancel button text (default: "Cancel")
+   */
+  cancelText?: string;
+  /**
+   * Optional: Custom variant for destructive actions
+   */
+  variant?: "default" | "destructive";
 }
 
-export function DeleteConfirmationModal({ 
-  isOpen, 
-  onClose, 
-  onConfirm, 
-  title, 
-  message, 
+/**
+ * Reusable Delete Confirmation Modal Component
+ *
+ * A professional, accessible modal for confirming delete operations.
+ * Uses AlertDialog for better UX and accessibility.
+ *
+ * @example
+ * ```tsx
+ * const [deleteModal, setDeleteModal] = useState<{
+ *   isOpen: boolean;
+ *   itemId: string | null;
+ *   itemName: string | null;
+ * }>({ isOpen: false, itemId: null, itemName: null });
+ *
+ * <DeleteConfirmationModal
+ *   isOpen={deleteModal.isOpen}
+ *   onClose={() => setDeleteModal({ isOpen: false, itemId: null, itemName: null })}
+ *   onConfirm={async () => {
+ *     await handleDelete(deleteModal.itemId!);
+ *     setDeleteModal({ isOpen: false, itemId: null, itemName: null });
+ *   }}
+ *   title="Delete Website?"
+ *   message="Are you sure you want to delete this website?"
+ *   itemName={deleteModal.itemName || undefined}
+ *   description="This action cannot be undone. All associated data will be permanently removed."
+ *   isLoading={isDeleting}
+ * />
+ * ```
+ */
+export function DeleteConfirmationModal({
+  isOpen,
+  onClose,
+  onConfirm,
+  title = "Delete Item?",
+  message = "Are you sure you want to delete this item?",
   itemName,
-  isLoading = false 
+  description,
+  isLoading = false,
+  confirmText = "Delete",
+  cancelText = "Cancel",
+  variant = "destructive",
 }: DeleteConfirmationModalProps) {
+  const handleConfirm = async () => {
+    try {
+      await onConfirm();
+    } catch (error) {
+      // Error handling is done in the parent component
+      console.error("Delete confirmation error:", error);
+    }
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center space-x-2">
-            <AlertTriangle className="h-5 w-5 text-red-600" />
-            <span>{title}</span>
-          </DialogTitle>
-        </DialogHeader>
-        
-        <div className="space-y-4">
-          <p className="text-slate-600">
-            {message}
-          </p>
-          {itemName && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-              <p className="font-medium text-red-800">{itemName}</p>
+    <AlertDialog open={isOpen} onOpenChange={onClose}>
+      <AlertDialogContent className="max-w-md">
+        <AlertDialogHeader>
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/20">
+              <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
             </div>
-          )}
-          <p className="text-sm text-red-600">
-            This action cannot be undone.
-          </p>
+            <AlertDialogTitle className="text-lg font-semibold">
+              {title}
+            </AlertDialogTitle>
+          </div>
+        </AlertDialogHeader>
+
+        <div className="space-y-4 py-4">
+          <AlertDialogDescription asChild>
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">{message}</p>
+
+              {itemName && (
+                <div className="rounded-lg border border-red-200 bg-red-50 p-3 dark:border-red-800 dark:bg-red-900/10">
+                  <p className="font-medium text-red-900 dark:text-red-100">
+                    {itemName}
+                  </p>
+                </div>
+              )}
+
+              {description && (
+                <p className="text-sm text-muted-foreground">{description}</p>
+              )}
+
+              {!description && (
+                <p className="text-sm font-medium text-red-600 dark:text-red-400">
+                  This action cannot be undone.
+                </p>
+              )}
+            </div>
+          </AlertDialogDescription>
         </div>
-        
-        <div className="flex justify-end space-x-2 pt-4">
-          <Button variant="outline" onClick={onClose} disabled={isLoading}>
-            Cancel
-          </Button>
-          <Button 
-            variant="destructive" 
-            onClick={onConfirm}
+
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={onClose} disabled={isLoading}>
+            {cancelText}
+          </AlertDialogCancel>
+          <AlertDialogAction
+            onClick={handleConfirm}
             disabled={isLoading}
+            className={
+              variant === "destructive"
+                ? "bg-red-600 text-white hover:bg-red-700 focus:ring-red-600 dark:bg-red-600 dark:hover:bg-red-700"
+                : ""
+            }
           >
             {isLoading ? (
               <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Deleting...
               </>
             ) : (
               <>
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete
+                <Trash2 className="mr-2 h-4 w-4" />
+                {confirmText}
               </>
             )}
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
-  )
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
 }
-
-

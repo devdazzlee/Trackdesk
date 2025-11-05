@@ -43,6 +43,7 @@ router.get("/profile", authenticateToken, async (req: any, res) => {
             website: affiliate.website,
             tier: affiliate.tier,
             status: affiliate.status,
+            commissionRate: affiliate.commissionRate,
           }
         : null,
     });
@@ -158,11 +159,14 @@ router.get("/security", authenticateToken, async (req: any, res) => {
     const loginHistory = loginActivities.map((activity) => {
       const userAgent = activity.userAgent || "Unknown Device";
       let device = "Unknown Device";
-      
+
       // Parse browser
       if (userAgent.includes("Chrome") && !userAgent.includes("Edge")) {
         device = "Chrome";
-      } else if (userAgent.includes("Safari") && !userAgent.includes("Chrome")) {
+      } else if (
+        userAgent.includes("Safari") &&
+        !userAgent.includes("Chrome")
+      ) {
         device = "Safari";
       } else if (userAgent.includes("Firefox")) {
         device = "Firefox";
@@ -175,7 +179,10 @@ router.get("/security", authenticateToken, async (req: any, res) => {
         device += " on MacOS";
       } else if (userAgent.includes("Windows")) {
         device += " on Windows";
-      } else if (userAgent.includes("Linux") && !userAgent.includes("Android")) {
+      } else if (
+        userAgent.includes("Linux") &&
+        !userAgent.includes("Android")
+      ) {
         device += " on Linux";
       } else if (userAgent.includes("iPhone") || userAgent.includes("iPad")) {
         device += " on iOS";

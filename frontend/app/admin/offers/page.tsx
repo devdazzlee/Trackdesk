@@ -63,6 +63,7 @@ import {
 import { toast } from "sonner";
 import { config } from "@/config/config";
 import { getAuthHeaders } from "@/lib/getAuthHeaders";
+import { DeleteConfirmationModal } from "@/components/modals/delete-confirmation-modal";
 
 interface ReferralCode {
   id: string;
@@ -95,13 +96,10 @@ interface Offer {
   id: string;
   name: string;
   description: string;
-  category: string;
   commissionRate: number;
   status: string;
   startDate: string;
   endDate: string | null;
-  terms: string | null;
-  requirements: string | null;
   tags: string[];
   totalClicks: number;
   totalConversions: number;
@@ -119,6 +117,7 @@ interface Offer {
     appliedAt: string;
   }>;
   creatives: Creative[];
+  referralCodeIds?: string[]; // Referral code IDs associated with this offer
   createdAt: string;
   updatedAt: string;
 }
@@ -158,15 +157,26 @@ export default function OffersManagementPage() {
   const [isEditingCreative, setIsEditingCreative] = useState(false);
   const [editingCreative, setEditingCreative] = useState<Creative | null>(null);
 
+  // Delete modals state
+  const [deleteOfferModal, setDeleteOfferModal] = useState<{
+    isOpen: boolean;
+    offerId: string | null;
+    offerName: string | null;
+  }>({ isOpen: false, offerId: null, offerName: null });
+  const [deleteCreativeModal, setDeleteCreativeModal] = useState<{
+    isOpen: boolean;
+    creativeId: string | null;
+    creativeName: string | null;
+  }>({ isOpen: false, creativeId: null, creativeName: null });
+  const [isDeletingOffer, setIsDeletingOffer] = useState(false);
+  const [isDeletingCreative, setIsDeletingCreative] = useState(false);
+
   const [newOffer, setNewOffer] = useState({
     name: "",
     description: "",
-    category: "Software",
     commissionRate: 10,
     startDate: new Date().toISOString().split("T")[0],
     endDate: "",
-    terms: "",
-    requirements: "",
     tags: [] as string[],
     affiliateId: "",
     referralCodeIds: [] as string[],
@@ -184,12 +194,9 @@ export default function OffersManagementPage() {
   const [editOffer, setEditOffer] = useState({
     name: "",
     description: "",
-    category: "Software",
     commissionRate: 10,
     startDate: new Date().toISOString().split("T")[0],
     endDate: "",
-    terms: "",
-    requirements: "",
     tags: [] as string[],
     status: "active",
     affiliateId: "",
@@ -308,45 +315,87 @@ export default function OffersManagementPage() {
         setNewOffer({
           name: "",
           description: "",
-          category: "Software",
           commissionRate: 10,
           startDate: new Date().toISOString().split("T")[0],
           endDate: "",
-          terms: "",
-          requirements: "",
           tags: [],
           affiliateId: "",
           referralCodeIds: [],
         });
         fetchOffers();
       } else {
-        const error = await response.json();
-        toast.error(error.error || "Failed to create offer");
+        let errorMessage = "Failed to create offer";
+        const contentType = response.headers.get("content-type");
+
+        try {
+          if (contentType && contentType.includes("application/json")) {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorData.message || errorMessage;
+
+            // If there are validation details, show them
+            if (errorData.details && Array.isArray(errorData.details)) {
+              const detailsMessage = errorData.details
+                .map((detail: any) => {
+                  const path = Array.isArray(detail.path)
+                    ? detail.path.join(".")
+                    : detail.path;
+                  return detail.message || `${path}: ${detail.message}`;
+                })
+                .join(", ");
+              errorMessage = `${errorMessage}: ${detailsMessage}`;
+            }
+          } else {
+            const textError = await response.text();
+            if (textError) {
+              errorMessage = `Failed to create offer: ${textError}`;
+            } else {
+              errorMessage = `Failed to create offer: ${response.statusText}`;
+            }
+          }
+        } catch (parseError) {
+          console.error("Error parsing error response:", parseError);
+          errorMessage = `Failed to create offer: ${
+            response.statusText || "Unknown error"
+          }`;
+        }
+
+        toast.error(errorMessage);
+        console.error("Error creating offer:", {
+          status: response.status,
+          statusText: response.statusText,
+          errorMessage,
+        });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating offer:", error);
-      toast.error("Failed to create offer");
+      const errorMessage =
+        error?.message || "Failed to create offer. Please try again.";
+      toast.error(errorMessage);
     } finally {
       setIsCreating(false);
     }
   };
 
-  const handleDeleteOffer = async (offerId: string) => {
-    if (
-      !confirm(
-        "Are you sure you want to delete this offer? This will also delete all associated creatives and applications."
-      )
-    )
-      return;
+  const handleDeleteOfferClick = (offerId: string, offerName: string) => {
+    setDeleteOfferModal({ isOpen: true, offerId, offerName });
+  };
 
+  const handleDeleteOfferConfirm = async () => {
+    if (!deleteOfferModal.offerId) return;
+
+    setIsDeletingOffer(true);
     try {
-      const response = await fetch(`${config.apiUrl}/admin/offers/${offerId}`, {
-        method: "DELETE",
-        headers: getAuthHeaders(),
-      });
+      const response = await fetch(
+        `${config.apiUrl}/admin/offers/${deleteOfferModal.offerId}`,
+        {
+          method: "DELETE",
+          headers: getAuthHeaders(),
+        }
+      );
 
       if (response.ok) {
         toast.success("Offer deleted successfully");
+        setDeleteOfferModal({ isOpen: false, offerId: null, offerName: null });
         fetchOffers();
       } else {
         toast.error("Failed to delete offer");
@@ -354,6 +403,8 @@ export default function OffersManagementPage() {
     } catch (error) {
       console.error("Error deleting offer:", error);
       toast.error("Failed to delete offer");
+    } finally {
+      setIsDeletingOffer(false);
     }
   };
 
@@ -396,16 +447,24 @@ export default function OffersManagementPage() {
     }
   };
 
-  const handleDeleteCreative = async (creativeId: string) => {
-    if (
-      !selectedOfferId ||
-      !confirm("Are you sure you want to delete this creative?")
-    )
+  const handleDeleteCreativeClick = (
+    creativeId: string,
+    creativeName: string
+  ) => {
+    if (!selectedOfferId) {
+      toast.error("No offer selected");
       return;
+    }
+    setDeleteCreativeModal({ isOpen: true, creativeId, creativeName });
+  };
 
+  const handleDeleteCreativeConfirm = async () => {
+    if (!deleteCreativeModal.creativeId || !selectedOfferId) return;
+
+    setIsDeletingCreative(true);
     try {
       const response = await fetch(
-        `${config.apiUrl}/admin/offers/${selectedOfferId}/creatives/${creativeId}`,
+        `${config.apiUrl}/admin/offers/${selectedOfferId}/creatives/${deleteCreativeModal.creativeId}`,
         {
           method: "DELETE",
           headers: getAuthHeaders(),
@@ -414,6 +473,11 @@ export default function OffersManagementPage() {
 
       if (response.ok) {
         toast.success("Creative deleted successfully");
+        setDeleteCreativeModal({
+          isOpen: false,
+          creativeId: null,
+          creativeName: null,
+        });
         fetchOfferCreatives(selectedOfferId);
         fetchOffers(); // Refresh offers to update creative count
       } else {
@@ -422,6 +486,8 @@ export default function OffersManagementPage() {
     } catch (error) {
       console.error("Error deleting creative:", error);
       toast.error("Failed to delete creative");
+    } finally {
+      setIsDeletingCreative(false);
     }
   };
 
@@ -490,16 +556,13 @@ export default function OffersManagementPage() {
     setEditOffer({
       name: offer.name,
       description: offer.description,
-      category: offer.category,
       commissionRate: offer.commissionRate,
       startDate: offer.startDate,
       endDate: offer.endDate || "",
-      terms: offer.terms || "",
-      requirements: offer.requirements || "",
       tags: offer.tags || [],
       status: offer.status,
       affiliateId: offer.applications?.[0]?.affiliateId || "",
-      referralCodeIds: [], // Will be populated when affiliate is selected
+      referralCodeIds: offer.referralCodeIds || [], // Load previously selected referral codes
     });
     setEditDialogOpen(true);
   };
@@ -708,10 +771,8 @@ export default function OffersManagementPage() {
                 <TableRow>
                   <TableHead>Offer Name</TableHead>
                   <TableHead>Commission</TableHead>
-                  <TableHead>Category</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Affiliates</TableHead>
-                  <TableHead>Creatives</TableHead>
                   <TableHead>Clicks</TableHead>
                   <TableHead>Conversions</TableHead>
                   <TableHead>Revenue</TableHead>
@@ -722,7 +783,7 @@ export default function OffersManagementPage() {
                 {offers.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={10}
+                      colSpan={8}
                       className="text-center py-8 text-muted-foreground"
                     >
                       No offers found. Create your first offer to get started.
@@ -742,7 +803,6 @@ export default function OffersManagementPage() {
                       <TableCell>
                         <Badge variant="outline">{offer.commissionRate}%</Badge>
                       </TableCell>
-                      <TableCell>{offer.category}</TableCell>
                       <TableCell>
                         <Badge
                           variant={
@@ -753,16 +813,27 @@ export default function OffersManagementPage() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Users className="h-4 w-4 text-muted-foreground" />
-                          {offer.affiliatesCount}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Image className="h-4 w-4 text-muted-foreground" />
-                          {offer.creativesCount}
-                        </div>
+                        {offer.applications && offer.applications.length > 0 ? (
+                          <div className="flex items-center gap-1 flex-wrap">
+                            {offer.applications.map((app, index) => (
+                              <span
+                                key={app.id}
+                                className="text-sm font-medium"
+                              >
+                                {app.affiliateName}
+                                {index < offer.applications.length - 1 && (
+                                  <span className="text-muted-foreground mx-1">
+                                    ,
+                                  </span>
+                                )}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">
+                            No affiliates
+                          </span>
+                        )}
                       </TableCell>
                       <TableCell>
                         {offer.totalClicks.toLocaleString()}
@@ -786,13 +857,9 @@ export default function OffersManagementPage() {
                               Edit
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                              onClick={() => openCreativesDialog(offer.id)}
-                            >
-                              <Image className="w-4 h-4 mr-2" />
-                              Manage Creatives
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleDeleteOffer(offer.id)}
+                              onClick={() =>
+                                handleDeleteOfferClick(offer.id, offer.name)
+                              }
                               className="text-red-600"
                             >
                               <Trash2 className="w-4 h-4 mr-2" />
@@ -901,37 +968,6 @@ export default function OffersManagementPage() {
                     onChange={(e) =>
                       setNewOffer({ ...newOffer, endDate: e.target.value })
                     }
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Terms and Requirements */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Terms & Requirements</h3>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="terms">Terms & Conditions</Label>
-                  <Textarea
-                    id="terms"
-                    placeholder="Commission will be paid monthly..."
-                    value={newOffer.terms}
-                    onChange={(e) =>
-                      setNewOffer({ ...newOffer, terms: e.target.value })
-                    }
-                    rows={3}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="requirements">Requirements</Label>
-                  <Textarea
-                    id="requirements"
-                    placeholder="Affiliates must maintain minimum sales..."
-                    value={newOffer.requirements}
-                    onChange={(e) =>
-                      setNewOffer({ ...newOffer, requirements: e.target.value })
-                    }
-                    rows={3}
                   />
                 </div>
               </div>
@@ -1250,40 +1286,6 @@ export default function OffersManagementPage() {
                 </div>
               </div>
             </div>
-
-            {/* Terms and Requirements */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Terms & Requirements</h3>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="editTerms">Terms & Conditions</Label>
-                  <Textarea
-                    id="editTerms"
-                    placeholder="Commission will be paid monthly..."
-                    value={editOffer.terms}
-                    onChange={(e) =>
-                      setEditOffer({ ...editOffer, terms: e.target.value })
-                    }
-                    rows={3}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="editRequirements">Requirements</Label>
-                  <Textarea
-                    id="editRequirements"
-                    placeholder="Affiliates must maintain minimum sales..."
-                    value={editOffer.requirements}
-                    onChange={(e) =>
-                      setEditOffer({
-                        ...editOffer,
-                        requirements: e.target.value,
-                      })
-                    }
-                    rows={3}
-                  />
-                </div>
-              </div>
-            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
@@ -1446,7 +1448,12 @@ export default function OffersManagementPage() {
                               Edit
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                              onClick={() => handleDeleteCreative(creative.id)}
+                              onClick={() =>
+                                handleDeleteCreativeClick(
+                                  creative.id,
+                                  creative.name
+                                )
+                              }
                               className="text-red-600"
                             >
                               <Trash2 className="w-4 h-4 mr-2" />
@@ -1588,6 +1595,38 @@ export default function OffersManagementPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Offer Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={deleteOfferModal.isOpen}
+        onClose={() =>
+          setDeleteOfferModal({ isOpen: false, offerId: null, offerName: null })
+        }
+        onConfirm={handleDeleteOfferConfirm}
+        title="Delete Offer?"
+        message="Are you sure you want to delete this offer?"
+        itemName={deleteOfferModal.offerName || undefined}
+        description="This will also delete all associated creatives and applications. This action cannot be undone."
+        isLoading={isDeletingOffer}
+      />
+
+      {/* Delete Creative Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={deleteCreativeModal.isOpen}
+        onClose={() =>
+          setDeleteCreativeModal({
+            isOpen: false,
+            creativeId: null,
+            creativeName: null,
+          })
+        }
+        onConfirm={handleDeleteCreativeConfirm}
+        title="Delete Creative?"
+        message="Are you sure you want to delete this creative?"
+        itemName={deleteCreativeModal.creativeName || undefined}
+        description="This action cannot be undone. The creative will be permanently removed from the offer."
+        isLoading={isDeletingCreative}
+      />
     </div>
   );
 }

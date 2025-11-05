@@ -6,6 +6,28 @@ import emailService from "../services/EmailService";
 
 const router: Router = express.Router();
 
+// Validation schema for query parameters
+const commissionQuerySchema = z.object({
+  page: z
+    .string()
+    .optional()
+    .transform((val) => (val ? parseInt(val) : 1)),
+  limit: z
+    .string()
+    .optional()
+    .transform((val) => (val ? parseInt(val) : 10)),
+  status: z.enum(["PENDING", "APPROVED", "PAID", "CANCELLED"]).optional(),
+  affiliateId: z.string().optional(),
+  affiliateSearch: z.string().optional(),
+  dateFrom: z.string().optional(),
+  dateTo: z.string().optional(),
+  sortBy: z
+    .enum(["createdAt", "commissionAmount", "status", "orderValue"])
+    .optional()
+    .default("createdAt"),
+  sortOrder: z.enum(["asc", "desc"]).optional().default("desc"),
+});
+
 // Get all commissions with filtering
 router.get("/", authenticateToken, async (req: any, res) => {
   try {
@@ -15,31 +37,109 @@ router.get("/", authenticateToken, async (req: any, res) => {
         .json({ error: "Only admins can access commission management" });
     }
 
+    // Validate and parse query parameters
+    let validatedQuery;
+    try {
+      validatedQuery = commissionQuerySchema.parse(req.query);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          error: "Invalid query parameters",
+          details: error.errors.map((err) => ({
+            field: err.path.join("."),
+            message: err.message,
+          })),
+        });
+      }
+      throw error;
+    }
     const {
-      page = 1,
-      limit = 20,
+      page,
+      limit,
       status,
       affiliateId,
+      affiliateSearch,
       dateFrom,
       dateTo,
-      sortBy = "createdAt",
-      sortOrder = "desc",
-    } = req.query;
+      sortBy,
+      sortOrder,
+    } = validatedQuery;
 
+    // Build where clause
     const where: any = {};
 
+    // Status filter
     if (status) {
       where.status = status;
     }
 
+    // Affiliate ID filter
     if (affiliateId) {
       where.affiliateId = affiliateId;
     }
 
+    // Affiliate search filter (by name or email)
+    if (affiliateSearch) {
+      const searchTerm = affiliateSearch.trim();
+      if (searchTerm) {
+        // Find affiliates matching the search term
+        const matchingAffiliates = await prisma.affiliateProfile.findMany({
+          where: {
+            OR: [
+              {
+                user: {
+                  OR: [
+                    {
+                      firstName: {
+                        contains: searchTerm,
+                        mode: "insensitive",
+                      },
+                    },
+                    {
+                      lastName: {
+                        contains: searchTerm,
+                        mode: "insensitive",
+                      },
+                    },
+                    {
+                      email: {
+                        contains: searchTerm,
+                        mode: "insensitive",
+                      },
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+          select: { id: true },
+        });
+
+        const affiliateIds = matchingAffiliates.map((a) => a.id);
+        if (affiliateIds.length > 0) {
+          where.affiliateId = { in: affiliateIds };
+        } else {
+          // No matching affiliates found, return empty result
+          where.affiliateId = { in: [] };
+        }
+      }
+    }
+
+    // Date range filter with proper timezone handling
     if (dateFrom || dateTo) {
       where.createdAt = {};
-      if (dateFrom) where.createdAt.gte = new Date(dateFrom);
-      if (dateTo) where.createdAt.lte = new Date(dateTo);
+      if (dateFrom) {
+        // Set to start of day (00:00:00) in UTC
+        const fromDate = new Date(dateFrom);
+        fromDate.setUTCHours(0, 0, 0, 0);
+        where.createdAt.gte = fromDate;
+      }
+      if (dateTo) {
+        // Set to end of day (23:59:59) in UTC
+        const toDate = new Date(dateTo);
+        toDate.setUTCHours(23, 59, 59, 999);
+        where.createdAt.lte = toDate;
+      }
     }
 
     // Get real commission data from AffiliateOrder table
@@ -59,9 +159,11 @@ router.get("/", authenticateToken, async (req: any, res) => {
             },
           },
         },
-        orderBy: { [sortBy]: sortOrder },
+        orderBy: {
+          [sortBy]: sortOrder,
+        },
         skip: (page - 1) * limit,
-        take: parseInt(limit),
+        take: limit,
       }),
       prisma.affiliateOrder.count({ where }),
       // Calculate statistics
@@ -161,10 +263,10 @@ router.get("/", authenticateToken, async (req: any, res) => {
     res.json({
       data: commissions,
       pagination: {
-        page: parseInt(page as string),
-        limit: parseInt(limit as string),
+        page,
+        limit,
         total,
-        pages: Math.ceil(total / parseInt(limit as string)),
+        pages: Math.ceil(total / limit),
       },
       statistics: formattedStatistics,
     });

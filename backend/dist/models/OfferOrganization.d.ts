@@ -4,7 +4,7 @@ export interface OfferCategory {
     name: string;
     description: string;
     order: number;
-    status: 'ACTIVE' | 'INACTIVE';
+    status: "ACTIVE" | "INACTIVE";
     createdAt: Date;
     updatedAt: Date;
 }
@@ -23,7 +23,7 @@ export interface OfferGroup {
     name: string;
     description: string;
     offers: string[];
-    status: 'ACTIVE' | 'INACTIVE';
+    status: "ACTIVE" | "INACTIVE";
     createdAt: Date;
     updatedAt: Date;
 }
@@ -40,9 +40,9 @@ export interface GroupCriteria {
 }
 export interface CustomRule {
     field: string;
-    operator: 'EQUALS' | 'NOT_EQUALS' | 'CONTAINS' | 'GREATER_THAN' | 'LESS_THAN' | 'IN' | 'NOT_IN';
+    operator: "EQUALS" | "NOT_EQUALS" | "CONTAINS" | "GREATER_THAN" | "LESS_THAN" | "IN" | "NOT_IN";
     value: any;
-    logic: 'AND' | 'OR';
+    logic: "AND" | "OR";
 }
 export interface OfferTemplate {
     id: string;
@@ -71,7 +71,7 @@ export interface OfferTemplateData {
 }
 export interface CreativeAsset {
     id: string;
-    type: 'BANNER' | 'LOGO' | 'TEXT' | 'VIDEO' | 'AUDIO' | 'DOCUMENT';
+    type: "BANNER" | "LOGO" | "TEXT" | "VIDEO" | "AUDIO" | "DOCUMENT";
     name: string;
     url: string;
     size: number;
@@ -81,7 +81,7 @@ export interface CreativeAsset {
         height: number;
     };
     alt: string;
-    status: 'ACTIVE' | 'INACTIVE';
+    status: "ACTIVE" | "INACTIVE";
 }
 export interface TrackingSettings {
     clickTracking: boolean;
@@ -103,7 +103,7 @@ export interface OfferOrganization {
     name: string;
     description: string;
     settings: any;
-    status: 'ACTIVE' | 'INACTIVE';
+    status: "ACTIVE" | "INACTIVE";
     createdAt: Date;
     updatedAt: Date;
 }
@@ -117,7 +117,7 @@ export interface OrganizationRule {
     id: string;
     name: string;
     description: string;
-    type: 'AUTO_CATEGORIZE' | 'AUTO_TAG' | 'AUTO_GROUP' | 'VALIDATION' | 'APPROVAL';
+    type: "AUTO_CATEGORIZE" | "AUTO_TAG" | "AUTO_GROUP" | "VALIDATION" | "APPROVAL";
     conditions: RuleCondition[];
     actions: RuleAction[];
     priority: number;
@@ -125,12 +125,12 @@ export interface OrganizationRule {
 }
 export interface RuleCondition {
     field: string;
-    operator: 'EQUALS' | 'NOT_EQUALS' | 'CONTAINS' | 'GREATER_THAN' | 'LESS_THAN' | 'IN' | 'NOT_IN';
+    operator: "EQUALS" | "NOT_EQUALS" | "CONTAINS" | "GREATER_THAN" | "LESS_THAN" | "IN" | "NOT_IN";
     value: any;
-    logic: 'AND' | 'OR';
+    logic: "AND" | "OR";
 }
 export interface RuleAction {
-    type: 'ASSIGN_CATEGORY' | 'ADD_TAG' | 'ADD_TO_GROUP' | 'VALIDATE' | 'REQUIRE_APPROVAL' | 'AUTO_APPROVE';
+    type: "ASSIGN_CATEGORY" | "ADD_TAG" | "ADD_TO_GROUP" | "VALIDATE" | "REQUIRE_APPROVAL" | "AUTO_APPROVE";
     parameters: Record<string, any>;
     enabled: boolean;
 }
