@@ -41,6 +41,8 @@ import { config } from "@/config/config";
 
 interface DashboardOverview {
   totalReferrals: number;
+  totalClicks?: number;
+  totalConversions?: number;
   totalCommissions: number;
   pendingCommissions: number;
   conversionRate: number;
@@ -64,6 +66,8 @@ interface DashboardOverview {
   }>;
   dailyStats: Array<{
     date: string;
+    clicks?: number;
+    conversions?: number;
     referrals: number;
     commissions: number;
   }>;
@@ -306,22 +310,25 @@ export default function DashboardPage() {
 
   // Use real data from API
   const stats = {
-    totalClicks: dashboardData.totalReferrals,
-    totalConversions: dashboardData.totalReferrals,
+    totalClicks: dashboardData.totalClicks ?? dashboardData.totalReferrals ?? 0,
+    totalConversions:
+      dashboardData.totalConversions ?? dashboardData.totalReferrals ?? 0,
     conversionRate: dashboardData.conversionRate,
     totalEarnings: dashboardData.totalCommissions,
     pendingEarnings: dashboardData.pendingCommissions,
     activeLinks: dashboardData.activeCodes,
-    thisMonthClicks: dashboardData.totalReferrals,
-    thisMonthConversions: dashboardData.totalReferrals,
+    thisMonthClicks:
+      dashboardData.totalClicks ?? dashboardData.totalReferrals ?? 0,
+    thisMonthConversions:
+      dashboardData.totalConversions ?? dashboardData.totalReferrals ?? 0,
     thisMonthEarnings: dashboardData.totalCommissions,
   };
 
   // Use real performance data from API
   const performanceData = dashboardData.dailyStats.map((day) => ({
     date: day.date,
-    clicks: day.referrals,
-    conversions: day.referrals,
+    clicks: day.clicks ?? day.referrals,
+    conversions: day.conversions ?? day.referrals,
     earnings: day.commissions,
   }));
 
