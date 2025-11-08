@@ -1,45 +1,177 @@
 import express, { Router } from "express";
 import { authenticateToken } from "../middleware/auth";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, PaymentMethod } from "@prisma/client";
 import { z } from "zod";
 
 const router: Router = express.Router();
 const prisma = new PrismaClient();
 
+const ALLOWED_PAYMENT_METHODS: PaymentMethod[] = [
+  "PAYPAL",
+  "STRIPE",
+  "BANK_TRANSFER",
+  "CRYPTO",
+  "WISE",
+];
+
+function normalizePaymentMethod(method: string): PaymentMethod {
+  const normalized = method.toUpperCase().replace(/\s+/g, "_") as PaymentMethod;
+
+  if (!ALLOWED_PAYMENT_METHODS.includes(normalized)) {
+    throw new Error("Invalid payout method");
+  }
+
+  return normalized;
+}
+
+function parseBankAccountData(bankAccount?: string | null) {
+  if (!bankAccount) {
+    return {
+      bankDetails: null as Record<string, any> | null,
+      payoutFrequency: null as string | null,
+      minimumPayout: null as number | null,
+    };
+  }
+
+  try {
+    const parsed = JSON.parse(bankAccount);
+
+    if (parsed && typeof parsed === "object") {
+      return {
+        bankDetails: parsed.bankDetails || parsed || null,
+        payoutFrequency: parsed.payoutFrequency || null,
+        minimumPayout:
+          typeof parsed.minimumPayout === "number"
+            ? parsed.minimumPayout
+            : null,
+      };
+    }
+  } catch (error) {
+    console.warn("Failed to parse bank account settings", error);
+  }
+
+  return {
+    bankDetails: null as Record<string, any> | null,
+    payoutFrequency: null as string | null,
+    minimumPayout: null as number | null,
+  };
+}
+
+async function buildAffiliatePayoutSettings(affiliate: any) {
+  const bankData = parseBankAccountData(affiliate.bankAccount);
+
+  const [lastPayout, nextPendingOrder] = await Promise.all([
+    prisma.payout.findFirst({
+      where: { affiliateId: affiliate.id, status: "COMPLETED" },
+      orderBy: { processedAt: "desc" },
+    }),
+    prisma.affiliateOrder.findFirst({
+      where: {
+        affiliateId: affiliate.id,
+        commissionAmount: { gt: 0 },
+        status: {
+          in: ["PENDING", "APPROVED"],
+        },
+      },
+      orderBy: { createdAt: "asc" },
+    }),
+  ]);
+
+  const nextPayoutDate = nextPendingOrder
+    ? new Date(nextPendingOrder.createdAt.getTime() + 30 * 24 * 60 * 60 * 1000)
+    : null;
+
+  return {
+    minimumPayout: bankData.minimumPayout ?? 50.0,
+    payoutMethod: formatPayoutMethod(affiliate.paymentMethod),
+    payoutEmail: affiliate.paymentEmail || affiliate.user?.email || "",
+    payoutFrequency: bankData.payoutFrequency || "Monthly",
+    bankDetails: bankData.bankDetails,
+    lastPayoutDate: lastPayout?.processedAt || lastPayout?.createdAt || null,
+    nextPayoutDate: nextPayoutDate ? nextPayoutDate.toISOString() : null,
+    taxInfo: {
+      taxId: affiliate.taxId || "",
+      businessName: affiliate.companyName || "",
+      address: affiliate.address || null,
+    },
+    notifications: {
+      payoutProcessed: true,
+      payoutPending: true,
+      payoutFailed: true,
+    },
+  };
+}
+
 // Get pending commissions
 router.get("/pending", authenticateToken, async (req: any, res) => {
   try {
     const userId = req.user.id;
-    const { page = 1, limit = 20, status = "PENDING" } = req.query;
+    const {
+      page = 1,
+      limit = 20,
+      status = "PENDING",
+      period = "30d",
+    } = req.query;
+
+    const statusParam =
+      typeof status === "string" ? status.toUpperCase() : "PENDING";
+    const periodParam =
+      typeof period === "string" ? period.toLowerCase() : "30d";
 
     const affiliate = await prisma.affiliateProfile.findFirst({
       where: { userId },
+      include: {
+        user: true,
+      },
     });
 
     if (!affiliate) {
       return res.status(404).json({ error: "Affiliate profile not found" });
     }
 
+    // Determine period filter
+    const periodDaysMap: Record<string, number> = {
+      "7d": 7,
+      "30d": 30,
+      "90d": 90,
+      "180d": 180,
+      all: 0,
+    };
+
+    const periodDays = periodDaysMap[periodParam] ?? 30;
+    const dateFilter =
+      periodDays > 0
+        ? {
+            gte: new Date(Date.now() - periodDays * 24 * 60 * 60 * 1000),
+          }
+        : undefined;
+
     const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
 
-    // Get pending commissions from AffiliateOrder table
+    // Build base filter for affiliate orders
+    const baseWhere: any = {
+      affiliateId: affiliate.id,
+      commissionAmount: { gt: 0 },
+    };
+
+    if (dateFilter) {
+      baseWhere.createdAt = dateFilter;
+    }
+
+    if (statusParam !== "ALL") {
+      baseWhere.status = statusParam;
+    }
+
+    // Get commissions from AffiliateOrder table
     const commissions = await prisma.affiliateOrder.findMany({
-      where: {
-        affiliateId: affiliate.id,
-        status: status as string,
-        commissionAmount: { gt: 0 },
-      },
+      where: baseWhere,
       orderBy: { createdAt: "desc" },
       skip,
       take: parseInt(limit as string),
     });
 
     const total = await prisma.affiliateOrder.count({
-      where: {
-        affiliateId: affiliate.id,
-        status: status as string,
-        commissionAmount: { gt: 0 },
-      },
+      where: baseWhere,
     });
 
     // Format commissions data
@@ -52,15 +184,84 @@ router.get("/pending", authenticateToken, async (req: any, res) => {
       commissionRate: commission.commissionRate,
       commissionAmount: commission.commissionAmount || 0,
       status: commission.status.toLowerCase(),
-      expectedPayout: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+      expectedPayout: new Date(
+        commission.createdAt.getTime() + 30 * 24 * 60 * 60 * 1000
+      )
         .toISOString()
-        .split("T")[0], // 30 days from now
+        .split("T")[0],
       referralCode: commission.referralCode || "N/A",
       type: "Product", // Based on your schema, all affiliate orders are product sales
     }));
 
+    // Summary metrics
+    const [pendingSummary, approvedSummary, paidSummary] = await Promise.all([
+      prisma.affiliateOrder.aggregate({
+        where: {
+          affiliateId: affiliate.id,
+          status: "PENDING",
+          commissionAmount: { gt: 0 },
+        },
+        _sum: { commissionAmount: true, orderValue: true },
+        _count: { id: true },
+      }),
+      prisma.affiliateOrder.aggregate({
+        where: {
+          affiliateId: affiliate.id,
+          status: "APPROVED",
+          commissionAmount: { gt: 0 },
+        },
+        _sum: { commissionAmount: true, orderValue: true },
+        _count: { id: true },
+      }),
+      prisma.affiliateOrder.aggregate({
+        where: {
+          affiliateId: affiliate.id,
+          status: "PAID",
+          commissionAmount: { gt: 0 },
+        },
+        _sum: { commissionAmount: true, orderValue: true },
+        _count: { id: true },
+      }),
+    ]);
+
+    const nextPendingOrder = await prisma.affiliateOrder.findFirst({
+      where: {
+        affiliateId: affiliate.id,
+        commissionAmount: { gt: 0 },
+        status: {
+          in: ["PENDING", "APPROVED"],
+        },
+      },
+      orderBy: { createdAt: "asc" },
+    });
+
+    const nextPayoutDate = nextPendingOrder
+      ? new Date(
+          nextPendingOrder.createdAt.getTime() + 30 * 24 * 60 * 60 * 1000
+        )
+      : null;
+
+    const bankData = parseBankAccountData(affiliate.bankAccount);
+    const summary = {
+      pendingAmount: pendingSummary._sum.commissionAmount || 0,
+      pendingCount: pendingSummary._count.id || 0,
+      approvedAmount: approvedSummary._sum.commissionAmount || 0,
+      approvedCount: approvedSummary._count.id || 0,
+      paidAmount: paidSummary._sum.commissionAmount || 0,
+      paidCount: paidSummary._count.id || 0,
+      nextPayoutDate: nextPayoutDate ? nextPayoutDate.toISOString() : null,
+      nextPayoutAmount: pendingSummary._sum.commissionAmount || 0,
+      payoutMethod: formatPayoutMethod(affiliate.paymentMethod),
+      payoutEmail: affiliate.paymentEmail || affiliate.user?.email || "",
+      payoutFrequency: bankData.payoutFrequency || "Monthly",
+      minimumPayout: bankData.minimumPayout ?? 50,
+      currency: commissions[0]?.currency || "USD",
+      bankDetails: bankData.bankDetails || null,
+    };
+
     res.json({
       data: formattedCommissions,
+      summary,
       pagination: {
         page: parseInt(page as string),
         limit: parseInt(limit as string),
@@ -74,60 +275,107 @@ router.get("/pending", authenticateToken, async (req: any, res) => {
   }
 });
 
+function formatPayoutMethod(method: string) {
+  return method
+    .toLowerCase()
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
 // Get payout history
 router.get("/history", authenticateToken, async (req: any, res) => {
   try {
     const userId = req.user.id;
-    const { page = 1, limit = 20 } = req.query;
+    const { page = 1, limit = 10, startDate, endDate } = req.query;
 
     const affiliate = await prisma.affiliateProfile.findFirst({
       where: { userId },
+      include: {
+        user: true,
+      },
     });
 
     if (!affiliate) {
       return res.status(404).json({ error: "Affiliate profile not found" });
     }
 
-    const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
+    const parsedPage = Math.max(parseInt(page as string), 1);
+    const parsedLimit = Math.min(Math.max(parseInt(limit as string), 1), 50);
+    const skip = (parsedPage - 1) * parsedLimit;
 
-    // Get payout history from Payout table
-    const payouts = await prisma.payout.findMany({
-      where: {
-        affiliateId: affiliate.id,
-      },
-      orderBy: { createdAt: "desc" },
-      skip,
-      take: parseInt(limit as string),
-    });
+    const whereClause: any = {
+      affiliateId: affiliate.id,
+      status: "PAID",
+      commissionAmount: { gt: 0 },
+    };
 
-    const total = await prisma.payout.count({
-      where: {
-        affiliateId: affiliate.id,
-      },
-    });
+    if (startDate && typeof startDate === "string") {
+      whereClause.updatedAt = {
+        ...(whereClause.updatedAt || {}),
+        gte: new Date(startDate),
+      };
+    }
 
-    // Format payout history
-    const paginatedHistory = payouts.map((payout) => ({
-      id: `PAY-${String(payout.id).slice(-6).toUpperCase()}`,
-      date: payout.createdAt.toISOString().split("T")[0],
-      amount: payout.amount,
-      status: payout.status.toLowerCase(),
-      method: payout.method,
-      transactionId: payout.referenceId || "Pending",
-      period: new Date(payout.createdAt).toLocaleDateString("en-US", {
-        month: "long",
-        year: "numeric",
+    if (endDate && typeof endDate === "string") {
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      whereClause.updatedAt = {
+        ...(whereClause.updatedAt || {}),
+        lte: end,
+      };
+    }
+
+    const [paidOrders, total] = await Promise.all([
+      prisma.affiliateOrder.findMany({
+        where: whereClause,
+        orderBy: { updatedAt: "desc" },
+        skip,
+        take: parsedLimit,
       }),
-      commissionsCount: 0, // Can be calculated if needed
+      prisma.affiliateOrder.count({
+        where: whereClause,
+      }),
+    ]);
+
+    const totalPaidAggregate = await prisma.affiliateOrder.aggregate({
+      where: {
+        affiliateId: affiliate.id,
+        status: "PAID",
+      },
+      _sum: { commissionAmount: true },
+    });
+
+    const formattedHistory = paidOrders.map((order) => ({
+      id: `COMM-${String(order.id).slice(-6).toUpperCase()}`,
+      date: order.createdAt.toISOString().split("T")[0],
+      orderId: order.orderId,
+      referralCode: order.referralCode || "N/A",
+      saleAmount: order.orderValue || 0,
+      commissionRate: order.commissionRate,
+      commissionAmount: order.commissionAmount || 0,
+      payoutDate:
+        order.status === "PAID" && order.updatedAt
+          ? order.updatedAt.toISOString().split("T")[0]
+          : null,
+      currency: order.currency || "USD",
+      paymentMethod: formatPayoutMethod(affiliate.paymentMethod),
+      payoutEmail: affiliate.paymentEmail || affiliate.user?.email || "",
+      status: (order.status || "PAID").toLowerCase(),
     }));
 
     res.json({
-      data: paginatedHistory,
+      data: formattedHistory,
+      totals: {
+        paidAmount: totalPaidAggregate._sum.commissionAmount || 0,
+        count: total,
+        currency: formattedHistory[0]?.currency || "USD",
+      },
       pagination: {
-        page: parseInt(page as string),
-        limit: parseInt(limit as string),
+        page: parsedPage,
+        limit: parsedLimit,
         total,
-        pages: Math.ceil(total / parseInt(limit as string)),
+        pages: Math.max(Math.ceil(total / parsedLimit), 1),
       },
     });
   } catch (error) {
@@ -143,29 +391,14 @@ router.get("/settings", authenticateToken, async (req: any, res) => {
 
     const affiliate = await prisma.affiliateProfile.findFirst({
       where: { userId },
+      include: { user: true },
     });
 
     if (!affiliate) {
       return res.status(404).json({ error: "Affiliate profile not found" });
     }
 
-    // Get payout settings (mock data for now)
-    const payoutSettings = {
-      minimumPayout: 50.0,
-      payoutMethod: "PayPal",
-      payoutEmail: (affiliate as any).user?.email || "",
-      payoutFrequency: "Monthly",
-      taxInfo: {
-        taxId: "",
-        businessName: "",
-        address: "",
-      },
-      notifications: {
-        payoutProcessed: true,
-        payoutPending: true,
-        payoutFailed: true,
-      },
-    };
+    const payoutSettings = await buildAffiliatePayoutSettings(affiliate);
 
     res.json(payoutSettings);
   } catch (error) {
@@ -178,64 +411,89 @@ router.get("/settings", authenticateToken, async (req: any, res) => {
 router.put("/settings", authenticateToken, async (req: any, res) => {
   try {
     const userId = req.user.id;
-    const settingsData = req.body;
 
-    // Validate input
-    const settingsSchema = z.object({
-      payoutMethod: z.enum(["PayPal", "Bank Transfer", "Check"]),
-      payoutEmail: z.string().email(),
-      payoutFrequency: z.enum(["Weekly", "Monthly", "Quarterly"]),
-      taxInfo: z
-        .object({
-          taxId: z.string().optional(),
-          businessName: z.string().optional(),
-          address: z.string().optional(),
-        })
-        .optional(),
-      notifications: z
-        .object({
-          payoutProcessed: z.boolean(),
-          payoutPending: z.boolean(),
-          payoutFailed: z.boolean(),
-        })
-        .optional(),
-    });
-
-    const validatedData = settingsSchema.parse(settingsData);
-
-    // Update affiliate profile with new settings
     const affiliate = await prisma.affiliateProfile.findFirst({
       where: { userId },
+      include: { user: true },
     });
 
     if (!affiliate) {
       return res.status(404).json({ error: "Affiliate profile not found" });
     }
 
-    // Update user email if changed
-    if (validatedData.payoutEmail !== (affiliate as any).user?.email) {
-      await prisma.user.update({
-        where: { id: userId },
-        data: { email: validatedData.payoutEmail },
-      });
-    }
-
-    // Store payout settings in affiliate profile (you might want to create a separate table for this)
-    await prisma.affiliateProfile.update({
-      where: { id: affiliate.id },
-      data: {
-        // Add payout settings fields to your schema if needed
-        updatedAt: new Date(),
-      },
+    const settingsSchema = z.object({
+      payoutMethod: z.string().min(1, "Payout method is required"),
+      payoutEmail: z.string().email(),
+      payoutFrequency: z
+        .enum(["Monthly", "Bi-Weekly", "Weekly", "Quarterly"])
+        .optional()
+        .default("Monthly"),
+      minimumPayout: z.number().min(0).optional().default(50),
+      bankDetails: z
+        .object({
+          accountHolder: z.string().min(1, "Account holder is required"),
+          bankName: z.string().optional(),
+          accountNumber: z.string().min(1, "Account number is required"),
+          routingNumber: z.string().optional(),
+          swiftCode: z.string().optional(),
+          iban: z.string().optional(),
+          currency: z.string().optional(),
+          notes: z.string().optional(),
+          address: z.string().optional(),
+        })
+        .nullable()
+        .optional(),
     });
 
-    res.json({ message: "Payout settings updated successfully" });
+    let validatedData;
+    try {
+      validatedData = settingsSchema.parse(req.body);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          error: "Invalid payout settings",
+          details: error.errors,
+        });
+      }
+      throw error;
+    }
+
+    let normalizedMethod: PaymentMethod;
+    try {
+      normalizedMethod = normalizePaymentMethod(validatedData.payoutMethod);
+    } catch (error: any) {
+      return res
+        .status(400)
+        .json({ error: error.message || "Invalid payout method" });
+    }
+
+    const bankPayload = {
+      payoutFrequency: validatedData.payoutFrequency || "Monthly",
+      minimumPayout: validatedData.minimumPayout ?? 50,
+      bankDetails: validatedData.bankDetails || null,
+    };
+
+    const updatedAffiliate = await prisma.affiliateProfile.update({
+      where: { id: affiliate.id },
+      data: {
+        paymentMethod: normalizedMethod,
+        paymentEmail: validatedData.payoutEmail,
+        bankAccount: JSON.stringify(bankPayload),
+        updatedAt: new Date(),
+      },
+      include: { user: true },
+    });
+
+    const payoutSettings = await buildAffiliatePayoutSettings(updatedAffiliate);
+
+    res.json(payoutSettings);
   } catch (error) {
     console.error("Error updating payout settings:", error);
     if (error instanceof z.ZodError) {
-      return res
-        .status(400)
-        .json({ error: "Invalid input data", details: error.errors });
+      return res.status(400).json({
+        error: "Invalid input data",
+        details: error.errors,
+      });
     }
     res.status(500).json({ error: "Failed to update payout settings" });
   }

@@ -6,6 +6,49 @@ import emailService from "../services/EmailService";
 
 const router: Router = express.Router();
 
+function parseBankAccountData(bankAccount?: string | null) {
+  if (!bankAccount) {
+    return {
+      bankDetails: null as Record<string, any> | null,
+      payoutFrequency: null as string | null,
+      minimumPayout: null as number | null,
+    };
+  }
+
+  try {
+    const parsed = JSON.parse(bankAccount);
+    if (parsed && typeof parsed === "object") {
+      return {
+        bankDetails: parsed.bankDetails || parsed || null,
+        payoutFrequency: parsed.payoutFrequency || null,
+        minimumPayout:
+          typeof parsed.minimumPayout === "number"
+            ? parsed.minimumPayout
+            : null,
+      };
+    }
+  } catch (error) {
+    console.warn("Failed to parse affiliate bank account details", error);
+  }
+
+  return {
+    bankDetails: null as Record<string, any> | null,
+    payoutFrequency: null as string | null,
+    minimumPayout: null as number | null,
+  };
+}
+
+function formatPayoutMethod(method?: string | null) {
+  if (!method) {
+    return "Not Set";
+  }
+  return method
+    .toLowerCase()
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
 // Validation schema for query parameters
 const commissionQuerySchema = z.object({
   page: z
@@ -208,6 +251,20 @@ router.get("/", authenticateToken, async (req: any, res) => {
           },
         });
 
+        const bankData = parseBankAccountData(order.affiliate.bankAccount);
+        const bankDetails = bankData.bankDetails
+          ? {
+              ...(bankData.bankDetails as Record<string, any>),
+              payoutMethod: formatPayoutMethod(order.affiliate.paymentMethod),
+              payoutEmail:
+                order.affiliate.paymentEmail ||
+                order.affiliate.user?.email ||
+                "",
+              payoutFrequency: bankData.payoutFrequency || "Monthly",
+              minimumPayout: bankData.minimumPayout ?? 50,
+            }
+          : null;
+
         return {
           id: order.id,
           amount: order.commissionAmount,
@@ -231,6 +288,7 @@ router.get("/", authenticateToken, async (req: any, res) => {
               description: `Order ${order.orderId}`,
             },
           },
+          bankDetails,
         };
       })
     );

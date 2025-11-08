@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { DataLoading } from "@/components/ui/loading";
 import { DataTable } from "@/components/dashboard/data-table";
 import {
@@ -33,10 +33,12 @@ import {
   XCircle,
   AlertCircle,
   RefreshCw,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { config } from "@/config/config";
 import { getAuthHeaders } from "@/lib/getAuthHeaders";
+import { Textarea } from "@/components/ui/textarea";
 
 interface Commission {
   id: string;
@@ -52,15 +54,53 @@ interface Commission {
   type: string;
 }
 
+interface CommissionSummary {
+  pendingAmount: number;
+  pendingCount: number;
+  approvedAmount: number;
+  approvedCount: number;
+  paidAmount: number;
+  paidCount: number;
+  nextPayoutDate: string | null;
+  nextPayoutAmount: number;
+  payoutMethod?: string;
+  payoutEmail?: string;
+  payoutFrequency?: string;
+  minimumPayout?: number;
+  currency?: string;
+  bankDetails?: BankDetails | null;
+}
+
+interface BankDetails {
+  accountHolder?: string;
+  bankName?: string;
+  accountNumber?: string;
+  routingNumber?: string;
+  swiftCode?: string;
+  iban?: string;
+  currency?: string;
+  notes?: string;
+  address?: string;
+  payoutMethod?: string;
+  payoutEmail?: string;
+  payoutFrequency?: string;
+  minimumPayout?: number;
+}
+
 interface PayoutHistoryItem {
   id: string;
   date: string;
   amount: number;
   status: string;
-  method: string;
-  transactionId: string;
-  period: string;
-  commissionsCount: number;
+  method?: string;
+  payoutEmail?: string;
+  orderId?: string;
+  referralCode?: string;
+  saleAmount?: number;
+  commissionRate?: number;
+  commissionAmount?: number;
+  payoutDate?: string | null;
+  currency?: string;
 }
 
 interface PayoutSettings {
@@ -68,10 +108,13 @@ interface PayoutSettings {
   payoutMethod: string;
   payoutEmail: string;
   payoutFrequency: string;
+  nextPayoutDate?: string | null;
+  lastPayoutDate?: string | null;
+  bankDetails?: BankDetails | null;
   taxInfo: {
     taxId: string;
     businessName: string;
-    address: string;
+    address: string | null;
   };
   notifications: {
     payoutProcessed: boolean;
@@ -80,13 +123,50 @@ interface PayoutSettings {
   };
 }
 
+interface BankDetailsForm {
+  accountHolder: string;
+  bankName: string;
+  accountNumber: string;
+  routingNumber: string;
+  swiftCode: string;
+  iban: string;
+  currency: string;
+  notes: string;
+  address: string;
+}
+
 export default function CommissionsPage() {
   const [selectedPeriod, setSelectedPeriod] = useState("30d");
   const [selectedTab, setSelectedTab] = useState("pending");
+  const [selectedStatus, setSelectedStatus] = useState("PENDING");
   const [pendingCommissions, setPendingCommissions] = useState<Commission[]>(
     []
   );
+  const [commissionSummary, setCommissionSummary] =
+    useState<CommissionSummary | null>(null);
   const [payoutHistory, setPayoutHistory] = useState<PayoutHistoryItem[]>([]);
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyTotalPages, setHistoryTotalPages] = useState(1);
+  const emptyBankDetails: BankDetailsForm = {
+    accountHolder: "",
+    bankName: "",
+    accountNumber: "",
+    routingNumber: "",
+    swiftCode: "",
+    iban: "",
+    currency: "",
+    notes: "",
+    address: "",
+  };
+  const [settingsForm, setSettingsForm] = useState({
+    payoutMethod: "PAYPAL",
+    payoutEmail: "",
+    payoutFrequency: "Monthly",
+    minimumPayout: 50,
+    bankDetails: emptyBankDetails,
+  });
+  const [initialSettingsForm, setInitialSettingsForm] = useState(settingsForm);
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [payoutSettings, setPayoutSettings] = useState<PayoutSettings | null>(
     null
   );
@@ -95,15 +175,79 @@ export default function CommissionsPage() {
   const [payoutRequestAmount, setPayoutRequestAmount] = useState("");
   const [payoutRequestReason, setPayoutRequestReason] = useState("");
 
+  const payoutMethodOptions = [
+    { value: "PAYPAL", label: "PayPal" },
+    { value: "BANK_TRANSFER", label: "Bank Transfer" },
+    { value: "STRIPE", label: "Stripe" },
+    { value: "CRYPTO", label: "Crypto" },
+    { value: "WISE", label: "Wise" },
+  ];
+
+  const payoutFrequencyOptions = [
+    { value: "Monthly", label: "Monthly" },
+    { value: "Bi-Weekly", label: "Bi-Weekly" },
+    { value: "Weekly", label: "Weekly" },
+    { value: "Quarterly", label: "Quarterly" },
+  ];
+
+  const hasBankDetails = useMemo(() => {
+    return Object.values(settingsForm.bankDetails).some((value) =>
+      value ? value.trim() !== "" : false
+    );
+  }, [settingsForm.bankDetails]);
+
+  const isSettingsDirty = useMemo(() => {
+    return JSON.stringify(settingsForm) !== JSON.stringify(initialSettingsForm);
+  }, [settingsForm, initialSettingsForm]);
+
+  const applySettingsResponse = (data: PayoutSettings) => {
+    setPayoutSettings(data);
+
+    const normalizedMethod = data.payoutMethod
+      ? data.payoutMethod.toUpperCase().replace(/\s+/g, "_")
+      : "PAYPAL";
+
+    const bankDetails: BankDetailsForm = {
+      ...emptyBankDetails,
+      accountHolder: data.bankDetails?.accountHolder || "",
+      bankName: data.bankDetails?.bankName || "",
+      accountNumber: data.bankDetails?.accountNumber || "",
+      routingNumber: data.bankDetails?.routingNumber || "",
+      swiftCode: data.bankDetails?.swiftCode || "",
+      iban: data.bankDetails?.iban || "",
+      currency: data.bankDetails?.currency || "",
+      notes: data.bankDetails?.notes || "",
+      address: data.bankDetails?.address || "",
+    };
+
+    const formState = {
+      payoutMethod: normalizedMethod,
+      payoutEmail: data.payoutEmail || "",
+      payoutFrequency: data.payoutFrequency || "Monthly",
+      minimumPayout: data.minimumPayout ?? 50,
+      bankDetails,
+    };
+
+    setSettingsForm(formState);
+    setInitialSettingsForm({
+      ...formState,
+      bankDetails: { ...bankDetails },
+    });
+  };
+
   useEffect(() => {
     fetchCommissionsData();
     fetchPayoutSettings();
-  }, [selectedPeriod]);
+  }, [selectedPeriod, selectedStatus]);
+
+  useEffect(() => {
+    fetchPayoutHistory(historyPage);
+  }, [historyPage]);
 
   const fetchCommissionsData = async () => {
     try {
       const response = await fetch(
-        `${config.apiUrl}/commissions/pending?period=${selectedPeriod}`,
+        `${config.apiUrl}/commissions/pending?period=${selectedPeriod}&status=${selectedStatus}`,
         {
           headers: getAuthHeaders(),
         }
@@ -112,6 +256,7 @@ export default function CommissionsPage() {
       if (response.ok) {
         const data = await response.json();
         setPendingCommissions(data.data || []);
+        setCommissionSummary(data.summary || null);
       } else {
         console.error("Failed to fetch commissions:", response.status);
         toast.error("Failed to load commissions data");
@@ -122,15 +267,26 @@ export default function CommissionsPage() {
     }
   };
 
-  const fetchPayoutHistory = async () => {
+  const fetchPayoutHistory = async (page = 1) => {
     try {
-      const response = await fetch(`${config.apiUrl}/commissions/history`, {
-        headers: getAuthHeaders(),
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: "10",
       });
+      const response = await fetch(
+        `${config.apiUrl}/commissions/history?${params.toString()}`,
+        {
+          headers: getAuthHeaders(),
+        }
+      );
 
       if (response.ok) {
         const data = await response.json();
         setPayoutHistory(data.data || []);
+        if (data.pagination) {
+          setHistoryPage(data.pagination.page || 1);
+          setHistoryTotalPages(data.pagination.pages || 1);
+        }
       } else {
         console.error("Failed to fetch payout history:", response.status);
         toast.error("Failed to load payout history");
@@ -149,7 +305,7 @@ export default function CommissionsPage() {
 
       if (response.ok) {
         const data = await response.json();
-        setPayoutSettings(data);
+        applySettingsResponse(data);
       } else {
         console.error("Failed to fetch payout settings:", response.status);
       }
@@ -164,7 +320,7 @@ export default function CommissionsPage() {
     setIsRefreshing(true);
     await Promise.all([
       fetchCommissionsData(),
-      fetchPayoutHistory(),
+      fetchPayoutHistory(historyPage),
       fetchPayoutSettings(),
     ]);
     setIsRefreshing(false);
@@ -206,12 +362,138 @@ export default function CommissionsPage() {
     }
   };
 
+  const handleSaveSettings = async () => {
+    if (isSavingSettings) return;
+
+    setIsSavingSettings(true);
+    try {
+      const trimmedBankDetails: BankDetailsForm = Object.fromEntries(
+        Object.entries(settingsForm.bankDetails).map(([key, value]) => [
+          key,
+          typeof value === "string" ? value.trim() : value,
+        ])
+      ) as BankDetailsForm;
+
+      let bankDetailsPayload: BankDetails | null = null;
+      if (hasBankDetails) {
+        if (
+          !trimmedBankDetails.accountHolder ||
+          !trimmedBankDetails.accountNumber
+        ) {
+          toast.error(
+            "Account holder and account number are required for bank details"
+          );
+          setIsSavingSettings(false);
+          return;
+        }
+        bankDetailsPayload = trimmedBankDetails;
+      }
+
+      const payload = {
+        payoutMethod: settingsForm.payoutMethod,
+        payoutEmail: settingsForm.payoutEmail,
+        payoutFrequency: settingsForm.payoutFrequency,
+        minimumPayout: Number(settingsForm.minimumPayout) || 0,
+        bankDetails: bankDetailsPayload,
+      };
+
+      const response = await fetch(`${config.apiUrl}/commissions/settings`, {
+        method: "PUT",
+        headers: getAuthHeaders(),
+        body: JSON.stringify(payload),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        applySettingsResponse(data);
+        toast.success("Payout settings updated");
+        fetchCommissionsData();
+      } else {
+        const error = await response.json();
+        toast.error(error.error || "Failed to update payout settings");
+      }
+    } catch (error) {
+      console.error("Error saving payout settings:", error);
+      toast.error("Failed to update payout settings");
+    } finally {
+      setIsSavingSettings(false);
+    }
+  };
+
+  const handleClearBankDetails = async () => {
+    if (isSavingSettings) return;
+
+    setIsSavingSettings(true);
+    try {
+      const payload = {
+        payoutMethod: settingsForm.payoutMethod,
+        payoutEmail: settingsForm.payoutEmail,
+        payoutFrequency: settingsForm.payoutFrequency,
+        minimumPayout: Number(settingsForm.minimumPayout) || 0,
+        bankDetails: null,
+      };
+
+      const response = await fetch(`${config.apiUrl}/commissions/settings`, {
+        method: "PUT",
+        headers: getAuthHeaders(),
+        body: JSON.stringify(payload),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        applySettingsResponse(data);
+        toast.success("Bank details removed");
+        fetchCommissionsData();
+      } else {
+        const error = await response.json();
+        toast.error(error.error || "Failed to remove bank details");
+      }
+    } catch (error) {
+      console.error("Error clearing bank details:", error);
+      toast.error("Failed to remove bank details");
+    } finally {
+      setIsSavingSettings(false);
+    }
+  };
+
+  const formatCurrency = (value: number, currencyOverride?: string) => {
+    const currency = currencyOverride || commissionSummary?.currency || "USD";
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency,
+    }).format(value || 0);
+  };
+
+  const formatDate = (value: string | null) => {
+    if (!value) return "N/A";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return new Intl.DateTimeFormat("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    }).format(date);
+  };
+
   const getStatusBadge = (status: string) => {
+    if (!status) {
+      return (
+        <Badge variant="secondary">
+          <Clock className="w-3 h-3 mr-1" />
+          Pending
+        </Badge>
+      );
+    }
+
+    const normalizedStatus = status.toLowerCase();
     const variants = {
       pending: "secondary",
       completed: "default",
       failed: "destructive",
       processing: "default",
+      approved: "default",
+      paid: "default",
+      cancelled: "destructive",
     } as const;
 
     const icons = {
@@ -219,26 +501,54 @@ export default function CommissionsPage() {
       completed: CheckCircle,
       failed: XCircle,
       processing: Clock,
+      approved: CheckCircle,
+      paid: CheckCircle,
+      cancelled: XCircle,
     };
 
-    const Icon = icons[status as keyof typeof icons];
+    const iconKey = normalizedStatus as keyof typeof icons;
+    const variantKey = normalizedStatus as keyof typeof variants;
+    const Icon = icons[iconKey] || Clock;
+    const variant = variants[variantKey] || "secondary";
+    const label =
+      normalizedStatus.charAt(0).toUpperCase() +
+      normalizedStatus.slice(1).replace(/_/g, " ");
 
     return (
-      <Badge variant={variants[status as keyof typeof variants]}>
+      <Badge variant={variant}>
         <Icon className="w-3 h-3 mr-1" />
-        {status.charAt(0).toUpperCase() + status.slice(1)}
+        {label}
       </Badge>
     );
   };
 
-  // Calculate totals
-  const totalPendingAmount = pendingCommissions.reduce(
-    (sum, comm) => sum + comm.commissionAmount,
-    0
-  );
-  const totalPaidAmount = payoutHistory
-    .filter((payout) => payout.status === "completed")
-    .reduce((sum, payout) => sum + payout.amount, 0);
+  const totalPendingAmount =
+    commissionSummary?.pendingAmount ||
+    pendingCommissions.reduce((sum, comm) => sum + comm.commissionAmount, 0);
+  const totalPaidAmount =
+    commissionSummary?.paidAmount ||
+    payoutHistory
+      .filter((payout) => payout.status === "completed")
+      .reduce((sum, payout) => sum + payout.amount, 0);
+  const nextPayoutDate = commissionSummary?.nextPayoutDate
+    ? formatDate(commissionSummary.nextPayoutDate)
+    : formatDate(payoutSettings?.nextPayoutDate || null);
+  const nextPayoutAmount =
+    commissionSummary?.nextPayoutAmount || totalPendingAmount;
+  const payoutMethodDisplay =
+    commissionSummary?.payoutMethod ||
+    payoutSettings?.payoutMethod ||
+    "Not Set";
+  const payoutEmailDisplay =
+    commissionSummary?.payoutEmail ||
+    payoutSettings?.payoutEmail ||
+    "No email set";
+  const payoutFrequencyDisplay =
+    commissionSummary?.payoutFrequency ||
+    payoutSettings?.payoutFrequency ||
+    "Monthly";
+  const minimumPayoutAmount =
+    commissionSummary?.minimumPayout || payoutSettings?.minimumPayout || 50;
 
   if (isLoading) {
     return <DataLoading message="Loading commissions..." />;
@@ -286,10 +596,11 @@ export default function CommissionsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ${totalPendingAmount.toFixed(2)}
+              {formatCurrency(totalPendingAmount)}
             </div>
             <p className="text-xs text-muted-foreground">
-              {pendingCommissions.length} commissions
+              {commissionSummary?.pendingCount ?? pendingCommissions.length}{" "}
+              commissions
             </p>
           </CardContent>
         </Card>
@@ -301,10 +612,12 @@ export default function CommissionsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ${totalPaidAmount.toFixed(2)}
+              {formatCurrency(totalPaidAmount)}
             </div>
             <p className="text-xs text-muted-foreground">
-              {payoutHistory.filter((p) => p.status === "completed").length}{" "}
+              {commissionSummary?.paidCount ??
+                payoutHistory.filter((p) => p.status === "completed")
+                  .length}{" "}
               payouts
             </p>
           </CardContent>
@@ -316,13 +629,14 @@ export default function CommissionsPage() {
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {payoutSettings?.payoutFrequency || "Monthly"}
-            </div>
+            <div className="text-2xl font-bold">{payoutFrequencyDisplay}</div>
             <p className="text-xs text-muted-foreground">
-              {payoutSettings?.minimumPayout
-                ? `Min: $${payoutSettings.minimumPayout}`
-                : "No minimum"}
+              {minimumPayoutAmount
+                ? `Next: ${nextPayoutDate}`
+                : "No upcoming payout"}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Amount: {formatCurrency(nextPayoutAmount)}
             </p>
           </CardContent>
         </Card>
@@ -333,11 +647,9 @@ export default function CommissionsPage() {
             <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {payoutSettings?.payoutMethod || "Not Set"}
-            </div>
+            <div className="text-2xl font-bold">{payoutMethodDisplay}</div>
             <p className="text-xs text-muted-foreground">
-              {payoutSettings?.payoutEmail || "No email set"}
+              {payoutEmailDisplay}
             </p>
           </CardContent>
         </Card>
@@ -363,22 +675,40 @@ export default function CommissionsPage() {
                 <div>
                   <CardTitle>Pending Commissions</CardTitle>
                   <CardDescription>
-                    Commissions waiting to be paid out
+                    Track your commissions by status and payout schedule
                   </CardDescription>
                 </div>
-                <Select
-                  value={selectedPeriod}
-                  onValueChange={setSelectedPeriod}
-                >
-                  <SelectTrigger className="w-full sm:w-40">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="7d">Last 7 days</SelectItem>
-                    <SelectItem value="30d">Last 30 days</SelectItem>
-                    <SelectItem value="90d">Last 90 days</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="flex flex-col lg:flex-row gap-3">
+                  <Select
+                    value={selectedStatus}
+                    onValueChange={setSelectedStatus}
+                  >
+                    <SelectTrigger className="w-full lg:w-48">
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="PENDING">Pending</SelectItem>
+                      <SelectItem value="APPROVED">Approved</SelectItem>
+                      <SelectItem value="PAID">Paid</SelectItem>
+                      <SelectItem value="ALL">All statuses</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select
+                    value={selectedPeriod}
+                    onValueChange={setSelectedPeriod}
+                  >
+                    <SelectTrigger className="w-full lg:w-40">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="7d">Last 7 days</SelectItem>
+                      <SelectItem value="30d">Last 30 days</SelectItem>
+                      <SelectItem value="90d">Last 90 days</SelectItem>
+                      <SelectItem value="180d">Last 180 days</SelectItem>
+                      <SelectItem value="all">All time</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -409,6 +739,7 @@ export default function CommissionsPage() {
                         <th className="text-left p-4 font-medium">
                           Commission
                         </th>
+                        <th className="text-left p-4 font-medium">Status</th>
                         <th className="text-left p-4 font-medium">
                           Expected Payout
                         </th>
@@ -427,19 +758,24 @@ export default function CommissionsPage() {
                           <td className="p-4">{commission.customer}</td>
                           <td className="p-4">{commission.offer}</td>
                           <td className="p-4">
-                            ${commission.saleAmount.toFixed(2)}
+                            {formatCurrency(commission.saleAmount)}
                           </td>
                           <td className="p-4">
                             <div className="flex items-center space-x-2">
                               <span className="font-medium">
-                                ${commission.commissionAmount.toFixed(2)}
+                                {formatCurrency(commission.commissionAmount)}
                               </span>
                               <Badge variant="outline">
                                 {commission.commissionRate}%
                               </Badge>
                             </div>
                           </td>
-                          <td className="p-4">{commission.expectedPayout}</td>
+                          <td className="p-4">
+                            {getStatusBadge(commission.status)}
+                          </td>
+                          <td className="p-4">
+                            {formatDate(commission.expectedPayout)}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -450,104 +786,194 @@ export default function CommissionsPage() {
           </Card>
 
           {/* Payout Request */}
-          {totalPendingAmount >= (payoutSettings?.minimumPayout || 50) && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Request Payout</CardTitle>
-                <CardDescription>
-                  Request a payout for your pending commissions
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="amount">Amount</Label>
-                    <Input
-                      id="amount"
-                      type="number"
-                      placeholder={`Max: $${totalPendingAmount.toFixed(2)}`}
-                      value={payoutRequestAmount}
-                      onChange={(e) => setPayoutRequestAmount(e.target.value)}
-                      max={totalPendingAmount}
-                    />
+          {selectedStatus === "PENDING" &&
+            totalPendingAmount >= minimumPayoutAmount && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Request Payout</CardTitle>
+                  <CardDescription>
+                    Request a payout for your pending commissions
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="amount">Amount</Label>
+                      <Input
+                        id="amount"
+                        type="number"
+                        placeholder={`Max: ${formatCurrency(
+                          totalPendingAmount
+                        )}`}
+                        value={payoutRequestAmount}
+                        onChange={(e) => setPayoutRequestAmount(e.target.value)}
+                        max={totalPendingAmount}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="reason">Reason (Optional)</Label>
+                      <Input
+                        id="reason"
+                        placeholder="Monthly payout request"
+                        value={payoutRequestReason}
+                        onChange={(e) => setPayoutRequestReason(e.target.value)}
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <Label htmlFor="reason">Reason (Optional)</Label>
-                    <Input
-                      id="reason"
-                      placeholder="Monthly payout request"
-                      value={payoutRequestReason}
-                      onChange={(e) => setPayoutRequestReason(e.target.value)}
-                    />
-                  </div>
-                </div>
-                <Button
-                  onClick={handleRequestPayout}
-                  className="w-full md:w-auto"
-                >
-                  Request Payout
-                </Button>
-              </CardContent>
-            </Card>
-          )}
+                  <Button
+                    onClick={handleRequestPayout}
+                    className="w-full md:w-auto"
+                  >
+                    Request Payout
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
         </TabsContent>
 
         {/* Payout History Tab */}
         <TabsContent value="history" className="space-y-6">
-          <Card>
+          <Card className="border border-muted">
             <CardHeader>
-              <CardTitle>Payout History</CardTitle>
-              <CardDescription>
-                Your completed and failed payouts
-              </CardDescription>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <CardTitle>Payout History</CardTitle>
+                  <CardDescription>
+                    Commissions that have already been paid to you
+                  </CardDescription>
+                </div>
+                {historyTotalPages > 1 && (
+                  <span className="text-sm text-muted-foreground">
+                    Page {historyPage} of {historyTotalPages}
+                  </span>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               {payoutHistory.length === 0 ? (
                 <div className="text-center py-8">
                   <CreditCard className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                   <h3 className="text-lg font-semibold mb-2">
-                    No Payout History
+                    No Paid Commissions Yet
                   </h3>
                   <p className="text-muted-foreground">
-                    You haven't received any payouts yet.
+                    Once payouts are processed, they will appear here with full
+                    details.
                   </p>
                 </div>
               ) : (
-                <div className="rounded-md border">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left p-4 font-medium">Payout ID</th>
-                        <th className="text-left p-4 font-medium">Date</th>
-                        <th className="text-left p-4 font-medium">Amount</th>
-                        <th className="text-left p-4 font-medium">Method</th>
-                        <th className="text-left p-4 font-medium">Status</th>
-                        <th className="text-left p-4 font-medium">Reference</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {payoutHistory.map((payout) => (
-                        <tr
-                          key={payout.id}
-                          className="border-b hover:bg-muted/50"
-                        >
-                          <td className="p-4 font-mono text-sm">{payout.id}</td>
-                          <td className="p-4">{payout.date}</td>
-                          <td className="p-4 font-medium">
-                            ${payout.amount.toFixed(2)}
-                          </td>
-                          <td className="p-4">{payout.method}</td>
-                          <td className="p-4">
-                            {getStatusBadge(payout.status)}
-                          </td>
-                          <td className="p-4 font-mono text-sm">
-                            {payout.transactionId}
-                          </td>
+                <>
+                  <div className="rounded-md border overflow-x-auto">
+                    <table className="w-full min-w-[800px]">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left p-4 font-medium">
+                            Commission ID
+                          </th>
+                          <th className="text-left p-4 font-medium">
+                            Payout Date
+                          </th>
+                          <th className="text-left p-4 font-medium">
+                            Sale Amount
+                          </th>
+                          <th className="text-left p-4 font-medium">
+                            Commission
+                          </th>
+                          <th className="text-left p-4 font-medium">Offer</th>
+                          <th className="text-left p-4 font-medium">
+                            Payout Method
+                          </th>
+                          <th className="text-left p-4 font-medium">Status</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {payoutHistory.map((payout) => (
+                          <tr
+                            key={payout.id}
+                            className="border-b hover:bg-muted/50"
+                          >
+                            <td className="p-4 font-mono text-sm">
+                              {payout.id}
+                            </td>
+                            <td className="p-4">
+                              {formatDate(payout.payoutDate || payout.date)}
+                            </td>
+                            <td className="p-4 font-medium">
+                              {formatCurrency(
+                                payout.saleAmount || payout.amount,
+                                payout.currency
+                              )}
+                            </td>
+                            <td className="p-4">
+                              <div className="flex items-center space-x-2">
+                                <span className="font-medium">
+                                  {formatCurrency(
+                                    payout.commissionAmount || payout.amount,
+                                    payout.currency
+                                  )}
+                                </span>
+                                {payout.commissionRate !== undefined && (
+                                  <Badge variant="outline">
+                                    {payout.commissionRate}%
+                                  </Badge>
+                                )}
+                              </div>
+                            </td>
+                            <td className="p-4">
+                              {payout.referralCode || payout.orderId || "N/A"}
+                            </td>
+                            <td className="p-4">
+                              <div className="flex flex-col">
+                                <span>
+                                  {payout.method ||
+                                    commissionSummary?.payoutMethod ||
+                                    "Paid"}
+                                </span>
+                                {payout.payoutEmail && (
+                                  <span className="text-xs text-muted-foreground">
+                                    {payout.payoutEmail}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="p-4">
+                              {getStatusBadge(payout.status)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {historyTotalPages > 1 && (
+                    <div className="flex items-center justify-between mt-4">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={historyPage <= 1}
+                        onClick={() =>
+                          setHistoryPage((prev) => Math.max(prev - 1, 1))
+                        }
+                      >
+                        Previous
+                      </Button>
+                      <span className="text-sm text-muted-foreground">
+                        Page {historyPage} of {historyTotalPages}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={historyPage >= historyTotalPages}
+                        onClick={() =>
+                          setHistoryPage((prev) =>
+                            Math.min(prev + 1, historyTotalPages)
+                          )
+                        }
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>
@@ -559,47 +985,314 @@ export default function CommissionsPage() {
             <CardHeader>
               <CardTitle>Payout Settings</CardTitle>
               <CardDescription>
-                Configure your payout preferences
+                Configure how you would like to receive your payouts. These
+                details are shared securely with the admin team.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {payoutSettings && (
+              <form
+                className="space-y-6"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleSaveSettings();
+                }}
+              >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label>Payout Method</Label>
-                    <div className="p-3 border rounded-md bg-muted/50">
-                      {payoutSettings.payoutMethod}
-                    </div>
+                    <Select
+                      value={settingsForm.payoutMethod}
+                      onValueChange={(value) =>
+                        setSettingsForm((prev) => ({
+                          ...prev,
+                          payoutMethod: value,
+                        }))
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a payout method" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {payoutMethodOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="space-y-2">
                     <Label>Payout Email</Label>
-                    <div className="p-3 border rounded-md bg-muted/50">
-                      {payoutSettings.payoutEmail}
-                    </div>
+                    <Input
+                      type="email"
+                      value={settingsForm.payoutEmail}
+                      onChange={(e) =>
+                        setSettingsForm((prev) => ({
+                          ...prev,
+                          payoutEmail: e.target.value,
+                        }))
+                      }
+                      placeholder="you@example.com"
+                      required
+                    />
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Frequency</Label>
-                    <div className="p-3 border rounded-md bg-muted/50">
-                      {payoutSettings.payoutFrequency}
-                    </div>
+                    <Label>Payout Frequency</Label>
+                    <Select
+                      value={settingsForm.payoutFrequency}
+                      onValueChange={(value) =>
+                        setSettingsForm((prev) => ({
+                          ...prev,
+                          payoutFrequency: value,
+                        }))
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select frequency" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {payoutFrequencyOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="space-y-2">
                     <Label>Minimum Payout</Label>
-                    <div className="p-3 border rounded-md bg-muted/50">
-                      ${payoutSettings.minimumPayout.toFixed(2)}
+                    <Input
+                      type="number"
+                      min={0}
+                      step={1}
+                      value={settingsForm.minimumPayout}
+                      onChange={(e) =>
+                        setSettingsForm((prev) => ({
+                          ...prev,
+                          minimumPayout: Number(e.target.value),
+                        }))
+                      }
+                    />
+                  </div>
+                </div>
+
+                <div className="border rounded-lg p-4 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-semibold">Bank Details</h3>
+                      <p className="text-xs text-muted-foreground">
+                        Provide the bank information where you would like your
+                        payouts to be deposited.
+                      </p>
+                    </div>
+                    {hasBankDetails && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleClearBankDetails}
+                        disabled={isSavingSettings}
+                      >
+                        Remove Bank Details
+                      </Button>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Account Holder *</Label>
+                      <Input
+                        value={settingsForm.bankDetails.accountHolder}
+                        onChange={(e) =>
+                          setSettingsForm((prev) => ({
+                            ...prev,
+                            bankDetails: {
+                              ...prev.bankDetails,
+                              accountHolder: e.target.value,
+                            },
+                          }))
+                        }
+                        placeholder="John Doe"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Bank Name</Label>
+                      <Input
+                        value={settingsForm.bankDetails.bankName}
+                        onChange={(e) =>
+                          setSettingsForm((prev) => ({
+                            ...prev,
+                            bankDetails: {
+                              ...prev.bankDetails,
+                              bankName: e.target.value,
+                            },
+                          }))
+                        }
+                        placeholder="Bank of Example"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Account Number *</Label>
+                      <Input
+                        value={settingsForm.bankDetails.accountNumber}
+                        onChange={(e) =>
+                          setSettingsForm((prev) => ({
+                            ...prev,
+                            bankDetails: {
+                              ...prev.bankDetails,
+                              accountNumber: e.target.value,
+                            },
+                          }))
+                        }
+                        placeholder="1234567890"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Routing Number</Label>
+                      <Input
+                        value={settingsForm.bankDetails.routingNumber}
+                        onChange={(e) =>
+                          setSettingsForm((prev) => ({
+                            ...prev,
+                            bankDetails: {
+                              ...prev.bankDetails,
+                              routingNumber: e.target.value,
+                            },
+                          }))
+                        }
+                        placeholder="110000000"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>SWIFT / BIC</Label>
+                      <Input
+                        value={settingsForm.bankDetails.swiftCode}
+                        onChange={(e) =>
+                          setSettingsForm((prev) => ({
+                            ...prev,
+                            bankDetails: {
+                              ...prev.bankDetails,
+                              swiftCode: e.target.value,
+                            },
+                          }))
+                        }
+                        placeholder="ABCDEF12"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>IBAN</Label>
+                      <Input
+                        value={settingsForm.bankDetails.iban}
+                        onChange={(e) =>
+                          setSettingsForm((prev) => ({
+                            ...prev,
+                            bankDetails: {
+                              ...prev.bankDetails,
+                              iban: e.target.value,
+                            },
+                          }))
+                        }
+                        placeholder="GB33BUKB20201555555555"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Currency</Label>
+                      <Input
+                        value={settingsForm.bankDetails.currency}
+                        onChange={(e) =>
+                          setSettingsForm((prev) => ({
+                            ...prev,
+                            bankDetails: {
+                              ...prev.bankDetails,
+                              currency: e.target.value,
+                            },
+                          }))
+                        }
+                        placeholder="USD"
+                      />
+                    </div>
+
+                    <div className="space-y-2 md:col-span-2">
+                      <Label>Bank Address</Label>
+                      <Input
+                        value={settingsForm.bankDetails.address}
+                        onChange={(e) =>
+                          setSettingsForm((prev) => ({
+                            ...prev,
+                            bankDetails: {
+                              ...prev.bankDetails,
+                              address: e.target.value,
+                            },
+                          }))
+                        }
+                        placeholder="123 Example Street, New York, NY"
+                      />
+                    </div>
+
+                    <div className="space-y-2 md:col-span-2">
+                      <Label>Additional Notes</Label>
+                      <Textarea
+                        value={settingsForm.bankDetails.notes}
+                        onChange={(e) =>
+                          setSettingsForm((prev) => ({
+                            ...prev,
+                            bankDetails: {
+                              ...prev.bankDetails,
+                              notes: e.target.value,
+                            },
+                          }))
+                        }
+                        placeholder="Any additional instructions for payouts"
+                      />
                     </div>
                   </div>
                 </div>
-              )}
 
-              <div className="pt-4 border-t">
-                <p className="text-sm text-muted-foreground">
-                  To update your payout settings, please contact support.
-                </p>
-              </div>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Button
+                    type="submit"
+                    disabled={isSavingSettings || !isSettingsDirty}
+                  >
+                    {isSavingSettings ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      "Save Changes"
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={isSavingSettings || !isSettingsDirty}
+                    onClick={() =>
+                      setSettingsForm({
+                        ...initialSettingsForm,
+                        bankDetails: { ...initialSettingsForm.bankDetails },
+                      })
+                    }
+                  >
+                    Reset
+                  </Button>
+                </div>
+
+                {payoutSettings?.lastPayoutDate && (
+                  <div className="text-xs text-muted-foreground">
+                    Last payout processed on{" "}
+                    {formatDate(payoutSettings.lastPayoutDate)}
+                  </div>
+                )}
+              </form>
             </CardContent>
           </Card>
         </TabsContent>

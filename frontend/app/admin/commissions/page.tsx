@@ -30,6 +30,13 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   DollarSign,
   TrendingUp,
   Users,
@@ -53,6 +60,7 @@ interface Commission {
   status: "PENDING" | "APPROVED" | "PAID" | "CANCELLED";
   createdAt: string;
   payoutDate?: string;
+  bankDetails?: CommissionBankDetails | null;
   affiliate: {
     id: string;
     user: {
@@ -93,6 +101,22 @@ interface CommissionAnalytics {
   }>;
 }
 
+interface CommissionBankDetails {
+  accountHolder?: string;
+  bankName?: string;
+  accountNumber?: string;
+  routingNumber?: string;
+  swiftCode?: string;
+  iban?: string;
+  currency?: string;
+  notes?: string;
+  address?: string;
+  payoutMethod?: string;
+  payoutEmail?: string;
+  payoutFrequency?: string;
+  minimumPayout?: number;
+}
+
 export default function CommissionsPage() {
   const [commissions, setCommissions] = useState<Commission[]>([]);
   const [analytics, setAnalytics] = useState<CommissionAnalytics | null>(null);
@@ -116,6 +140,63 @@ export default function CommissionsPage() {
     total: 0,
     pages: 0,
   });
+  const [bankDetailsModal, setBankDetailsModal] = useState<{
+    isOpen: boolean;
+    affiliateName: string;
+    bankDetails: CommissionBankDetails | null;
+  }>({
+    isOpen: false,
+    affiliateName: "",
+    bankDetails: null,
+  });
+
+  const formatMethodLabel = (method?: string | null) => {
+    if (!method) return "Not Set";
+    return method
+      .toLowerCase()
+      .split("_")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
+  };
+
+  const renderDetail = (
+    label: string,
+    value?: string | number | null,
+    formatter?: (val: string) => string
+  ) => {
+    const displayValue =
+      value === undefined || value === null || value === ""
+        ? "Not provided"
+        : formatter
+        ? formatter(String(value))
+        : String(value);
+
+    return (
+      <div className="space-y-1">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+          {label}
+        </p>
+        <p className="text-sm font-semibold text-foreground break-words">
+          {displayValue}
+        </p>
+      </div>
+    );
+  };
+
+  const openBankDetailsModal = (
+    affiliateName: string,
+    bankDetails: CommissionBankDetails | null
+  ) => {
+    setBankDetailsModal({
+      isOpen: true,
+      affiliateName,
+      bankDetails,
+    });
+  };
+
+  const closeBankDetailsModal = () => {
+    setBankDetailsModal((prev) => ({ ...prev, isOpen: false }));
+  };
 
   // Fetch analytics on mount and when filters change
   useEffect(() => {
@@ -580,6 +661,7 @@ export default function CommissionsPage() {
                   <TableHead>Rate</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Created</TableHead>
+                  <TableHead>Bank Details</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -624,7 +706,27 @@ export default function CommissionsPage() {
                         )}
                       </TableCell>
                       <TableCell>
-                        <div className="flex gap-2">
+                        {commission.bankDetails ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              openBankDetailsModal(
+                                `${commission.affiliate.user.firstName} ${commission.affiliate.user.lastName}`,
+                                commission.bankDetails ?? null
+                              )
+                            }
+                          >
+                            <Eye className="h-4 w-4 mr-2" /> View
+                          </Button>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">
+                            Not provided
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-2">
                           <Button
                             variant="outline"
                             size="sm"
@@ -715,6 +817,99 @@ export default function CommissionsPage() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog
+        open={bankDetailsModal.isOpen}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) {
+            closeBankDetailsModal();
+          }
+        }}
+      >
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Bank Details</DialogTitle>
+            <DialogDescription>
+              {bankDetailsModal.affiliateName || "Affiliate information"}
+            </DialogDescription>
+          </DialogHeader>
+
+          {bankDetailsModal.bankDetails ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {renderDetail(
+                  "Account Holder",
+                  bankDetailsModal.bankDetails.accountHolder
+                )}
+                {renderDetail(
+                  "Bank Name",
+                  bankDetailsModal.bankDetails.bankName
+                )}
+                {renderDetail(
+                  "Account Number",
+                  bankDetailsModal.bankDetails.accountNumber
+                )}
+                {renderDetail(
+                  "Routing Number",
+                  bankDetailsModal.bankDetails.routingNumber
+                )}
+                {renderDetail(
+                  "SWIFT / BIC",
+                  bankDetailsModal.bankDetails.swiftCode
+                )}
+                {renderDetail("IBAN", bankDetailsModal.bankDetails.iban)}
+                {renderDetail(
+                  "Currency",
+                  bankDetailsModal.bankDetails.currency
+                )}
+                {renderDetail(
+                  "Payout Method",
+                  bankDetailsModal.bankDetails.payoutMethod
+                )}
+                {renderDetail(
+                  "Payout Email",
+                  bankDetailsModal.bankDetails.payoutEmail
+                )}
+                {renderDetail(
+                  "Payout Frequency",
+                  bankDetailsModal.bankDetails.payoutFrequency
+                )}
+                {renderDetail(
+                  "Minimum Payout",
+                  bankDetailsModal.bankDetails.minimumPayout,
+                  (val) => `$${Number(val).toFixed(2)}`
+                )}
+              </div>
+
+              {bankDetailsModal.bankDetails.address && (
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    Bank Address
+                  </p>
+                  <p className="text-sm font-semibold whitespace-pre-wrap">
+                    {bankDetailsModal.bankDetails.address}
+                  </p>
+                </div>
+              )}
+
+              {bankDetailsModal.bankDetails.notes && (
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    Notes
+                  </p>
+                  <p className="text-sm font-semibold whitespace-pre-wrap">
+                    {bankDetailsModal.bankDetails.notes}
+                  </p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              This affiliate has not provided bank details yet.
+            </p>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
