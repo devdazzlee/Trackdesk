@@ -1,6 +1,5 @@
 "use client"
 
-import { useState } from "react"
 import { format } from "date-fns"
 import { Calendar as CalendarIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -16,20 +15,27 @@ interface DatePickerProps {
   className?: string
 }
 
-export function DatePicker({ value, onChange, placeholder = "Pick a date", className }: DatePickerProps) {
+export function DatePicker({
+  value,
+  onChange,
+  placeholder = "dd/mm/yyyy",
+  className,
+}: DatePickerProps) {
   return (
     <Popover>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
           className={cn(
-            "w-full justify-start text-left font-normal",
+            "w-full h-11 rounded-lg px-4 justify-between text-left font-normal",
             !value && "text-muted-foreground",
             className
           )}
         >
-          <CalendarIcon className="mr-2 h-4 w-4" />
-          {value ? format(value, "PPP") : <span>{placeholder}</span>}
+          <span>
+            {value ? format(value, "dd/MM/yyyy") : <span>{placeholder}</span>}
+          </span>
+          <CalendarIcon className="h-4 w-4 text-muted-foreground" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0">
@@ -58,24 +64,26 @@ export function DateRangePicker({ value, onChange, placeholder = "Pick a date ra
         <Button
           variant="outline"
           className={cn(
-            "w-full justify-start text-left font-normal",
+            "w-full h-11 rounded-lg px-4 justify-between text-left font-normal",
             !value?.from && "text-muted-foreground",
             className
           )}
         >
-          <CalendarIcon className="mr-2 h-4 w-4" />
-          {value?.from ? (
-            value.to ? (
-              <>
-                {format(value.from, "LLL dd, y")} -{" "}
-                {format(value.to, "LLL dd, y")}
-              </>
+          <span>
+            {value?.from ? (
+              value.to ? (
+                <>
+                  {format(value.from, "dd/MM/yyyy")} -{" "}
+                  {format(value.to, "dd/MM/yyyy")}
+                </>
+              ) : (
+                format(value.from, "dd/MM/yyyy")
+              )
             ) : (
-              format(value.from, "LLL dd, y")
-            )
-          ) : (
-            <span>{placeholder}</span>
-          )}
+              <span>{placeholder}</span>
+            )}
+          </span>
+          <CalendarIcon className="h-4 w-4 text-muted-foreground" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">

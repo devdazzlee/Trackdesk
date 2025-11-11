@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Card,
   CardContent,
@@ -36,6 +36,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   Users,
   UserPlus,
@@ -90,9 +91,15 @@ export default function AffiliatesManagementPage() {
   const [affiliates, setAffiliates] = useState<Affiliate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [tierFilter, setTierFilter] = useState("all");
+  const [fromDate, setFromDate] = useState<Date | undefined>(undefined);
+  const [toDate, setToDate] = useState<Date | undefined>(undefined);
+  const [sortBy, setSortBy] = useState<"createdAt" | "name">("createdAt");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const PAGE_SIZE = 10;
 
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedAffiliate, setSelectedAffiliate] = useState<Affiliate | null>(
@@ -112,17 +119,26 @@ export default function AffiliatesManagementPage() {
 
   useEffect(() => {
     fetchAffiliates();
-  }, [statusFilter, tierFilter]);
+  }, [statusFilter, tierFilter, currentPage]);
 
   const filtersActive =
     searchQuery.trim() !== "" ||
     statusFilter !== "all" ||
-    tierFilter !== "all";
+    tierFilter !== "all" ||
+    fromDate !== undefined ||
+    toDate !== undefined ||
+    sortBy !== "createdAt" ||
+    sortOrder !== "desc";
 
   const handleResetFilters = () => {
     setSearchQuery("");
     setStatusFilter("all");
     setTierFilter("all");
+    setFromDate(undefined);
+    setToDate(undefined);
+    setSortBy("createdAt");
+    setSortOrder("desc");
+    setCurrentPage(1);
   };
 
   const fetchAffiliates = async () => {
@@ -132,6 +148,7 @@ export default function AffiliatesManagementPage() {
       if (statusFilter !== "all")
         params.append("status", statusFilter.toUpperCase());
       if (tierFilter !== "all") params.append("tier", tierFilter.toUpperCase());
+      params.append("limit", "500");
 
       const response = await fetch(
         `${config.apiUrl}/admin/affiliates?${params.toString()}`,
@@ -312,11 +329,67 @@ export default function AffiliatesManagementPage() {
     );
   };
 
-  const filteredAffiliates = affiliates.filter(
-    (aff) =>
-      aff.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      aff.email.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredAffiliates = useMemo(() => {
+    let result = [...affiliates];
+
+    if (searchQuery.trim() !== "") {
+      const query = searchQuery.trim().toLowerCase();
+      result = result.filter(
+        (aff) =>
+          aff.name.toLowerCase().includes(query) ||
+          aff.email.toLowerCase().includes(query)
+      );
+    }
+
+    if (fromDate) {
+      const start = new Date(fromDate);
+      start.setHours(0, 0, 0, 0);
+      result = result.filter((aff) => {
+        const joined = new Date(aff.joinDate);
+        return joined >= start;
+      });
+    }
+
+    if (toDate) {
+      const end = new Date(toDate);
+      end.setHours(23, 59, 59, 999);
+      result = result.filter((aff) => {
+        const joined = new Date(aff.joinDate);
+        return joined <= end;
+      });
+    }
+
+    if (sortBy === "createdAt") {
+      result.sort((a, b) => {
+        const aDate = new Date(a.joinDate).getTime();
+        const bDate = new Date(b.joinDate).getTime();
+        return sortOrder === "asc" ? aDate - bDate : bDate - aDate;
+      });
+    } else if (sortBy === "name") {
+      result.sort((a, b) => {
+        const aName = a.name.toLowerCase();
+        const bName = b.name.toLowerCase();
+        if (aName < bName) return sortOrder === "asc" ? -1 : 1;
+        if (aName > bName) return sortOrder === "asc" ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return result;
+  }, [affiliates, searchQuery, fromDate, toDate, sortBy, sortOrder]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredAffiliates.length / PAGE_SIZE));
+
+  const paginatedAffiliates = useMemo(() => {
+    const startIndex = (currentPage - 1) * PAGE_SIZE;
+    return filteredAffiliates.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [filteredAffiliates, currentPage]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [totalPages, currentPage]);
 
   if (isLoading) {
     return <AdminLoading message="Loading affiliates..." />;
@@ -349,13 +422,15 @@ export default function AffiliatesManagementPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Total Affiliates
-            </CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Total Affiliates
+              </CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{affiliates.length}</div>
+            <div className="text-2xl font-bold">
+              {filteredAffiliates.length}
+            </div>
             <p className="text-xs text-muted-foreground">
               Registered affiliates
             </p>
@@ -369,8 +444,9 @@ export default function AffiliatesManagementPage() {
           <CardContent>
             <div className="text-2xl font-bold">
               {
-                affiliates.filter((a) => a.status.toLowerCase() === "active")
-                  .length
+                filteredAffiliates.filter(
+                  (a) => a.status.toLowerCase() === "active"
+                ).length
               }
             </div>
             <p className="text-xs text-muted-foreground">Active accounts</p>
@@ -384,8 +460,9 @@ export default function AffiliatesManagementPage() {
           <CardContent>
             <div className="text-2xl font-bold">
               {
-                affiliates.filter((a) => a.status.toLowerCase() === "pending")
-                  .length
+                filteredAffiliates.filter(
+                  (a) => a.status.toLowerCase() === "pending"
+                ).length
               }
             </div>
             <p className="text-xs text-muted-foreground">Awaiting approval</p>
@@ -401,7 +478,7 @@ export default function AffiliatesManagementPage() {
           <CardContent>
             <div className="text-2xl font-bold">
               $
-              {affiliates
+              {filteredAffiliates
                 .reduce((sum, a) => sum + a.totalEarnings, 0)
                 .toFixed(2)}
             </div>
@@ -414,41 +491,145 @@ export default function AffiliatesManagementPage() {
 
       {/* Filters */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search affiliates..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
+        <CardHeader className="pb-2">
+          <div className="space-y-1">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              Filters
+            </CardTitle>
+            <CardDescription>
+              Refine the affiliate list by name, status, or tier.
+            </CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="space-y-1">
+              <Label>Status</Label>
+              <Select
+                value={statusFilter}
+                onValueChange={(value) => {
+                  setStatusFilter(value);
+                  setCurrentPage(1);
+                }}
+              >
+                <SelectTrigger className="h-11 rounded-lg">
+                  <SelectValue placeholder="All Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="suspended">Suspended</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label>Tier</Label>
+              <Select
+                value={tierFilter}
+                onValueChange={(value) => {
+                  setTierFilter(value);
+                  setCurrentPage(1);
+                }}
+              >
+                <SelectTrigger className="h-11 rounded-lg">
+                  <SelectValue placeholder="All Tiers" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="bronze">Bronze</SelectItem>
+                  <SelectItem value="silver">Silver</SelectItem>
+                  <SelectItem value="gold">Gold</SelectItem>
+                  <SelectItem value="platinum">Platinum</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label>Search Affiliate</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Name or email..."
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="pl-10 h-11"
+                />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label>From Date</Label>
+              <DatePicker
+                value={fromDate}
+                onChange={(date) => {
+                  setFromDate(date);
+                  setCurrentPage(1);
+                }}
+                placeholder="dd/mm/yyyy"
+                className="h-11 rounded-lg"
               />
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="All Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="suspended">Suspended</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={tierFilter} onValueChange={setTierFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="All Tiers" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Tiers</SelectItem>
-                <SelectItem value="bronze">Bronze</SelectItem>
-                <SelectItem value="silver">Silver</SelectItem>
-                <SelectItem value="gold">Gold</SelectItem>
-                <SelectItem value="platinum">Platinum</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="space-y-1">
+              <Label>To Date</Label>
+              <DatePicker
+                value={toDate}
+                onChange={(date) => {
+                  setToDate(date);
+                  setCurrentPage(1);
+                }}
+                placeholder="dd/mm/yyyy"
+                className="h-11 rounded-lg"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Sort By</Label>
+              <Select
+                value={sortBy}
+                onValueChange={(value: "createdAt" | "name") => {
+                  setSortBy(value);
+                }}
+              >
+                <SelectTrigger className="h-11 rounded-lg">
+                  <SelectValue placeholder="Sort By" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="createdAt">Date Created</SelectItem>
+                  <SelectItem value="name">Name</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label>Order</Label>
+              <Select
+                value={sortOrder}
+                onValueChange={(value: "asc" | "desc") => {
+                  setSortOrder(value);
+                }}
+              >
+                <SelectTrigger className="h-11 rounded-lg">
+                  <SelectValue placeholder="Order" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="asc">Ascending</SelectItem>
+                  <SelectItem value="desc">Descending</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-end">
+              <Button
+                variant="outline"
+                className="gap-2 h-11 rounded-lg w-full sm:w-auto"
+                onClick={handleResetFilters}
+                disabled={!filtersActive}
+              >
+                <RefreshCw className="h-4 w-4" />
+                Clear Filters
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -489,7 +670,7 @@ export default function AffiliatesManagementPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredAffiliates.map((affiliate) => (
+                  paginatedAffiliates.map((affiliate) => (
                     <TableRow key={affiliate.id}>
                       <TableCell>
                         <div>
@@ -555,6 +736,29 @@ export default function AffiliatesManagementPage() {
               </TableBody>
             </Table>
           </div>
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between mt-4">
+              <Button
+                variant="outline"
+                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+              >
+                Previous
+              </Button>
+              <span className="text-sm text-muted-foreground">
+                Page {currentPage} of {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                onClick={() =>
+                  setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                }
+                disabled={currentPage === totalPages}
+              >
+                Next
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 
