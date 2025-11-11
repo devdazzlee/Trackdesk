@@ -95,7 +95,6 @@ const affiliateNavItems = [
     subItems: [
       { title: "My Referral Codes", href: "/dashboard/referrals" },
       { title: "Referral Analytics", href: "/dashboard/referrals/analytics" },
-      { title: "Shareable Links", href: "/dashboard/referrals/share" },
     ],
   },
   {

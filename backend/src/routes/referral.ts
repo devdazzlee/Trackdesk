@@ -45,8 +45,7 @@ router.post("/codes", authenticateToken, async (req: any, res) => {
     const schema = z.object({
       commissionRate: z.number().min(0).max(100),
       productId: z.string().optional(),
-      maxUses: z.number().positive().optional(),
-      expiresAt: z.string().optional(),
+      expiresAt: z.string(),
     });
 
     const data = schema.parse(req.body);
@@ -68,20 +67,20 @@ router.post("/codes", authenticateToken, async (req: any, res) => {
 
     // Parse expiresAt date if provided
     let expiresAtDate: Date | undefined;
-    if (data.expiresAt && data.expiresAt.trim() !== "") {
-      try {
-        expiresAtDate = new Date(data.expiresAt);
-        // Validate that the date is valid
-        if (isNaN(expiresAtDate.getTime())) {
-          return res.status(400).json({
-            error: "Invalid expiration date format. Please use a valid date.",
-          });
-        }
-      } catch (error) {
+    try {
+      const normalized = data.expiresAt.includes("T")
+        ? data.expiresAt
+        : `${data.expiresAt}T00:00:00`;
+      expiresAtDate = new Date(normalized);
+      if (isNaN(expiresAtDate.getTime())) {
         return res.status(400).json({
           error: "Invalid expiration date format. Please use a valid date.",
         });
       }
+    } catch (error) {
+      return res.status(400).json({
+        error: "Invalid expiration date format. Please use a valid date.",
+      });
     }
 
     const referralCode = await ReferralSystemModel.generateReferralCode(
@@ -90,7 +89,6 @@ router.post("/codes", authenticateToken, async (req: any, res) => {
         type: "BOTH", // Default to BOTH, type field is no longer exposed in UI
         commissionRate: data.commissionRate || affiliate.commissionRate || 10,
         productId: data.productId,
-        maxUses: data.maxUses,
         expiresAt: expiresAtDate,
       }
     );
@@ -330,7 +328,6 @@ router.put("/codes/:id", authenticateToken, async (req: any, res) => {
     const schema = z.object({
       // commissionRate removed - only admins can change this via affiliate profile
       productId: z.string().optional().nullable(),
-      maxUses: z.number().positive().optional().nullable(),
       expiresAt: z.string().optional().nullable(),
       isActive: z.boolean().optional(),
     });
@@ -369,7 +366,10 @@ router.put("/codes/:id", authenticateToken, async (req: any, res) => {
         expiresAtDate = null;
       } else {
         try {
-          expiresAtDate = new Date(data.expiresAt);
+          const normalized = data.expiresAt.includes("T")
+            ? data.expiresAt
+            : `${data.expiresAt}T00:00:00`;
+          expiresAtDate = new Date(normalized);
           if (isNaN(expiresAtDate.getTime())) {
             return res.status(400).json({
               error: "Invalid expiration date format. Please use a valid date.",
@@ -387,7 +387,6 @@ router.put("/codes/:id", authenticateToken, async (req: any, res) => {
     const updateData: any = {};
     // Commission rate is not updated - only admins can change it via affiliate profile
     if (data.productId !== undefined) updateData.productId = data.productId;
-    if (data.maxUses !== undefined) updateData.maxUses = data.maxUses;
     if (data.expiresAt !== undefined) updateData.expiresAt = expiresAtDate;
     if (data.isActive !== undefined) updateData.isActive = data.isActive;
 
@@ -515,65 +514,183 @@ router.get("/analytics", authenticateToken, async (req: any, res) => {
       affiliate.id
     );
 
-    // Get usage data
-    const usageData = await prisma.referralUsage.findMany({
+    const identifiers = referralCodes
+      .map((code) => [
+        code.id,
+        code.code,
+        code.code.split("-")[0],
+        code.customSlug,
+      ])
+      .flat()
+      .filter((value): value is string => !!value);
+
+    // Get orders as conversions
+    const orders = await prisma.affiliateOrder.findMany({
       where: {
+        affiliateId: affiliate.id,
         referralCode: {
-          affiliateId: affiliate.id,
+          in: identifiers,
         },
         createdAt: {
           gte: startDate,
         },
       },
-      include: {
-        referralCode: true,
+    });
+
+    const clicksByCode = await prisma.affiliateClick.groupBy({
+      by: ["referralCode"],
+      where: {
+        affiliateId: affiliate.id,
+        referralCode: { in: identifiers },
+        createdAt: { gte: startDate },
       },
+      _count: { id: true },
     });
 
     // Calculate analytics
-    const analytics = {
-      totalReferrals: usageData.length,
-      totalCommissions: usageData.reduce(
-        (sum, usage) => sum + (usage.commissionAmount || 0),
-        0
-      ),
-      conversionRate:
-        referralCodes.length > 0
-          ? (usageData.length /
-              referralCodes.reduce(
-                (sum, code) => sum + (code.currentUses || 0),
-                0
-              )) *
-            100
-          : 0,
-      topProducts: referralCodes
-        .map((code) => ({
-          productId: code.id,
+    const totalReferrals = orders.length;
+    const totalCommissions = orders.reduce(
+      (sum, order) => sum + (order.commissionAmount || 0),
+      0
+    );
+    const totalRevenue = orders.reduce(
+      (sum, order) => sum + (order.orderValue || 0),
+      0
+    );
+
+    const totalClicks = clicksByCode.reduce(
+      (sum, aggregate) => sum + aggregate._count.id,
+      0
+    );
+
+    const topProducts = referralCodes
+      .map((code) => {
+        const productOrders = orders.filter(
+          (order) =>
+            order.productId === code.productId ||
+            order.referralCode === code.code ||
+            order.referralCode === code.code.split("-")[0]
+        );
+
+        return {
+          productId: code.productId || code.id,
           productName: code.code,
-          referrals: code.currentUses || 0,
-          commissions: usageData
-            .filter((usage) => usage.referralCodeId === code.id)
-            .reduce((sum, usage) => sum + (usage.commissionAmount || 0), 0),
-        }))
-        .sort((a, b) => b.commissions - a.commissions)
-        .slice(0, 5),
-      dailyStats: [
-        // Generate sample daily stats for the last 7 days
-        { date: "2024-10-09", referrals: 2, commissions: 25.5 },
-        { date: "2024-10-10", referrals: 1, commissions: 12.75 },
-        { date: "2024-10-11", referrals: 3, commissions: 38.25 },
-        { date: "2024-10-12", referrals: 0, commissions: 0 },
-        { date: "2024-10-13", referrals: 2, commissions: 25.5 },
-        { date: "2024-10-14", referrals: 1, commissions: 12.75 },
-        { date: "2024-10-15", referrals: 4, commissions: 51.0 },
-      ],
-      platformStats: [
-        { platform: "facebook", clicks: 45, conversions: 3, revenue: 38.25 },
-        { platform: "twitter", clicks: 32, conversions: 2, revenue: 25.5 },
-        { platform: "instagram", clicks: 28, conversions: 1, revenue: 12.75 },
-        { platform: "linkedin", clicks: 18, conversions: 1, revenue: 12.75 },
-        { platform: "tiktok", clicks: 15, conversions: 0, revenue: 0 },
-      ],
+          referrals: productOrders.length,
+          commissions: productOrders.reduce(
+            (sum, order) => sum + (order.commissionAmount || 0),
+            0
+          ),
+          conversionRate:
+            (clicksByCode.find(
+              (aggregate) => aggregate.referralCode === code.code
+            )?._count.id || 0) > 0
+              ? (productOrders.length /
+                  (clicksByCode.find(
+                    (aggregate) => aggregate.referralCode === code.code
+                  )?._count.id || 1)) *
+                100
+              : 0,
+        };
+      })
+      .sort((a, b) => b.commissions - a.commissions)
+      .slice(0, 5);
+
+    const dayDiff = Math.ceil(
+      (now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
+    );
+
+    const dailyStats = Array.from({ length: dayDiff }).map((_, index) => {
+      const date = new Date(
+        startDate.getTime() + index * 24 * 60 * 60 * 1000
+      );
+      const ordersForDay = orders.filter(
+        (order) =>
+          order.createdAt >= new Date(date.setHours(0, 0, 0, 0)) &&
+          order.createdAt <= new Date(date.setHours(23, 59, 59, 999))
+      );
+
+      return {
+        date: new Date(
+          startDate.getTime() + index * 24 * 60 * 60 * 1000
+        ).toISOString().split("T")[0],
+        referrals: ordersForDay.length,
+        commissions: ordersForDay.reduce(
+          (sum, order) => sum + (order.commissionAmount || 0),
+          0
+        ),
+      };
+    });
+
+    const ordersByUtm = await prisma.affiliateOrder.groupBy({
+      by: ["utmSource"],
+      where: {
+        affiliateId: affiliate.id,
+        createdAt: { gte: startDate },
+      },
+      _sum: { commissionAmount: true },
+      _count: { id: true },
+    });
+
+    const clicksByPlatform = await prisma.affiliateClick.groupBy({
+      by: ["utmSource"],
+      where: {
+        affiliateId: affiliate.id,
+        createdAt: { gte: startDate },
+        NOT: [{ utmSource: null }, { utmSource: "" }],
+      },
+      _count: { id: true },
+    });
+
+    const directClicksCount = await prisma.affiliateClick.count({
+      where: {
+        affiliateId: affiliate.id,
+        createdAt: { gte: startDate },
+        OR: [{ utmSource: null }, { utmSource: "" }],
+      },
+    });
+
+    const platformStats = [
+      ...ordersByUtm.map((platform) => ({
+        platform: platform.utmSource || "Unknown",
+        clicks:
+          clicksByPlatform.find(
+            (click) => click.utmSource === platform.utmSource
+          )?._count.id || 0,
+        conversions: platform._count.id,
+        revenue: platform._sum.commissionAmount || 0,
+      })),
+    ];
+
+    if (directClicksCount > 0) {
+      platformStats.push({
+        platform: "Direct",
+        clicks: directClicksCount,
+        conversions: orders.filter(
+          (order) =>
+            !order.utmSource ||
+            order.utmSource.trim() === "" ||
+            order.utmSource.toLowerCase() === "direct"
+        ).length,
+        revenue: orders
+          .filter(
+            (order) =>
+              !order.utmSource ||
+              order.utmSource.trim() === "" ||
+              order.utmSource.toLowerCase() === "direct"
+          )
+          .reduce((sum, order) => sum + (order.commissionAmount || 0), 0),
+      });
+    }
+
+    const analytics = {
+      totalReferrals,
+      totalRevenue,
+      totalCommissions,
+      conversionRate:
+        totalClicks > 0 ? (totalReferrals / totalClicks) * 100 : 0,
+      topProducts,
+      dailyStats,
+      platformStats,
     };
 
     res.json(analytics);

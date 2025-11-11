@@ -31,12 +31,14 @@ import { getAuthHeaders } from "@/lib/getAuthHeaders";
 interface ReferralAnalytics {
   totalReferrals: number;
   totalCommissions: number;
+  totalRevenue: number;
   conversionRate: number;
   topProducts: Array<{
     productId: string;
     productName: string;
     referrals: number;
     commissions: number;
+    conversionRate?: number;
   }>;
   dailyStats: Array<{
     date: string;
@@ -57,6 +59,7 @@ export default function ReferralAnalyticsPage() {
   const [timeRange, setTimeRange] = useState("30d");
 
   useEffect(() => {
+    setIsLoading(true);
     fetchAnalytics();
   }, [timeRange]);
 
@@ -78,6 +81,38 @@ export default function ReferralAnalyticsPage() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleExport = () => {
+    if (!analytics) return;
+
+    const exportData = {
+      period: timeRange,
+      generatedAt: new Date().toISOString(),
+      totals: {
+        totalReferrals: analytics.totalReferrals,
+        totalRevenue: analytics.totalRevenue,
+        totalCommissions: analytics.totalCommissions,
+        conversionRate: analytics.conversionRate,
+      },
+      dailyStats: analytics.dailyStats,
+      platformStats: analytics.platformStats,
+      topProducts: analytics.topProducts,
+    };
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `referral-analytics-${timeRange}-${new Date()
+      .toISOString()
+      .split("T")[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   if (isLoading) {
@@ -109,7 +144,12 @@ export default function ReferralAnalyticsPage() {
               <SelectItem value="90d">Last 90 days</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" className="w-full sm:w-auto">
+          <Button
+            variant="outline"
+            className="w-full sm:w-auto"
+            onClick={handleExport}
+            disabled={!analytics}
+          >
             <Download className="w-4 h-4 mr-2" />
             Export
           </Button>
@@ -145,7 +185,7 @@ export default function ReferralAnalyticsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-gray-900">
-                ${analytics.totalCommissions.toFixed(2)}
+                ${analytics.totalRevenue.toFixed(2)}
               </div>
               <p className="text-xs text-muted-foreground">
                 <TrendingUp className="w-3 h-3 inline mr-1" />
@@ -295,11 +335,14 @@ export default function ReferralAnalyticsPage() {
                         ${product.commissions.toFixed(2)}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        {(
-                          (product.commissions / product.referrals) *
-                          100
-                        ).toFixed(1)}
-                        % avg commission
+                        {product.conversionRate != null
+                          ? `${product.conversionRate.toFixed(1)}% conversion rate`
+                          : product.referrals > 0
+                            ? `${(
+                                (product.commissions / product.referrals) *
+                                100
+                              ).toFixed(1)}% avg commission`
+                            : "0.0% avg commission"}
                       </p>
                     </div>
                   </div>

@@ -3,6 +3,14 @@ import crypto from "crypto";
 
 const prisma = new PrismaClient();
 
+const getShortUrlBase = () =>
+  (
+    process.env.SHORT_URL_DOMAIN ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    process.env.FRONTEND_URL ||
+    "http://localhost:3000"
+  ).replace(/\/$/, "");
+
 export interface GenerateLinkData {
   url: string;
   websiteId?: string;
@@ -102,7 +110,7 @@ export class LinksService {
     }
 
     // Create short URL (you can customize the domain)
-    const shortUrl = `${process.env.SHORT_URL_DOMAIN || "https://track.link"}/${slug}`;
+    const shortUrl = `${getShortUrlBase()}/link/${slug}`;
 
     // The URL is already generated in the format: {domain}?websiteId={websiteId}&ref={referralCode}
     // So we can use it directly as the affiliate URL
@@ -164,19 +172,85 @@ export class LinksService {
       orderBy: { createdAt: "desc" },
     });
 
-    const mappedLinks = links.map((link) => ({
-      id: link.id,
-      name: link.customSlug || link.id,
-      url: link.originalUrl,
-      shortUrl: link.shortUrl,
-      trackingCode: link.customSlug || link.id,
-      campaignName: link.offer?.name || "Direct Link",
-      clicks: link.clicks,
-      conversions: link.conversions,
-      earnings: link.earnings,
-      status: link.isActive ? "Active" : "Inactive",
-      createdAt: link.createdAt,
-    }));
+    // Fetch aggregated performance metrics for each link
+    const [orderAggregates, clickAggregates] = await Promise.all([
+      prisma.affiliateOrder.groupBy({
+        by: ["referralCode"],
+        where: {
+          affiliateId: affiliate.id,
+          referralCode: {
+            in: links
+              .map((link) => [
+                link.customSlug,
+                link.customSlug?.split("-")[0],
+                link.id,
+              ])
+              .flat()
+              .filter((code): code is string => !!code),
+          },
+        },
+        _sum: {
+          commissionAmount: true,
+          orderValue: true,
+        },
+        _count: {
+          id: true,
+        },
+      }),
+      prisma.affiliateClick.groupBy({
+        by: ["referralCode"],
+        where: {
+          affiliateId: affiliate.id,
+          referralCode: {
+            in: links
+              .map((link) => [
+                link.customSlug,
+                link.customSlug?.split("-")[0],
+                link.id,
+              ])
+              .flat()
+              .filter((code): code is string => !!code),
+          },
+        },
+        _count: { id: true },
+      }),
+    ]);
+
+    const shortUrlBase = getShortUrlBase();
+
+    const mappedLinks = links.map((link) => {
+      const identifiers = [
+        link.customSlug,
+        link.customSlug?.split("-")[0],
+        link.id,
+      ].filter((value): value is string => !!value);
+
+      const linkClicks =
+        clickAggregates.find((aggregate) =>
+          identifiers.includes(aggregate.referralCode || "")
+        )?._count.id || 0;
+
+      const linkOrders = orderAggregates.find((aggregate) =>
+        identifiers.includes(aggregate.referralCode || "")
+      );
+
+      const conversions = linkOrders?._count.id || 0;
+      const earnings = linkOrders?._sum.commissionAmount || 0;
+
+      return {
+        id: link.id,
+        name: link.customSlug || link.id,
+        url: link.originalUrl,
+        shortUrl: `${shortUrlBase}/link/${link.customSlug || link.id}`,
+        trackingCode: link.customSlug || link.id,
+        campaignName: link.offer?.name || "Direct Link",
+        clicks: linkClicks,
+        conversions,
+        earnings,
+        status: link.isActive ? "Active" : "Inactive",
+        createdAt: link.createdAt,
+      };
+    });
 
     console.log(
       "LinksService.getMyLinks - Raw database links:",
@@ -214,23 +288,143 @@ export class LinksService {
     }
 
     // Get click details using tracking code
+    const identifiers = [
+      link.referralCode,
+      link.customSlug,
+      link.customSlug?.split("-")[0],
+      link.id,
+    ].filter((value): value is string => !!value);
+
     const clicks = await prisma.affiliateClick.findMany({
       where: {
         affiliateId: affiliate.id,
-        referralCode: link.customSlug || link.id,
+        referralCode: { in: identifiers },
       },
       orderBy: { createdAt: "desc" },
       take: 100,
     });
 
+    const totalClicks = await prisma.affiliateClick.count({
+      where: {
+        affiliateId: affiliate.id,
+        referralCode: { in: identifiers },
+      },
+    });
+
+    const totalConversions = await prisma.affiliateOrder.count({
+      where: {
+        affiliateId: affiliate.id,
+        referralCode: { in: identifiers },
+      },
+    });
+
+    const totalEarnings = await prisma.affiliateOrder.aggregate({
+      where: {
+        affiliateId: affiliate.id,
+        referralCode: { in: identifiers },
+      },
+      _sum: { commissionAmount: true },
+    });
+
+    const totalRevenue = await prisma.affiliateOrder.aggregate({
+      where: {
+        affiliateId: affiliate.id,
+        referralCode: { in: identifiers },
+      },
+      _sum: { orderValue: true },
+    });
+
     return {
       link,
       clicks,
-      totalClicks: link.clicks,
-      totalConversions: link.conversions,
-      totalEarnings: link.earnings,
+      totalClicks,
+      totalConversions,
+      totalEarnings: totalEarnings._sum.commissionAmount || 0,
+      totalRevenue: totalRevenue._sum.orderValue || 0,
       conversionRate:
-        link.clicks > 0 ? (link.conversions / link.clicks) * 100 : 0,
+        totalClicks > 0 ? (totalConversions / totalClicks) * 100 : 0,
+    };
+  }
+
+  async getPublicLink(trackingCode: string) {
+    const link = await prisma.affiliateLink.findFirst({
+      where: {
+        OR: [
+          { customSlug: trackingCode },
+          { shortUrl: { contains: trackingCode } },
+        ],
+        isActive: true,
+      },
+      include: {
+        affiliate: {
+          include: {
+            user: {
+              select: {
+                firstName: true,
+                lastName: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!link) {
+      throw new Error("Link not found");
+    }
+
+    const identifiers = [
+      link.customSlug,
+      link.customSlug?.split("-")[0],
+      link.id,
+    ].filter((value): value is string => !!value);
+
+    const [clicksCount, conversionsCount, earningsAggregate] = await Promise.all([
+      prisma.affiliateClick.count({
+        where: {
+          affiliateId: link.affiliateId,
+          referralCode: { in: identifiers },
+        },
+      }),
+      prisma.affiliateOrder.count({
+        where: {
+          affiliateId: link.affiliateId,
+          referralCode: { in: identifiers },
+        },
+      }),
+      prisma.affiliateOrder.aggregate({
+        where: {
+          affiliateId: link.affiliateId,
+          referralCode: { in: identifiers },
+        },
+        _sum: { commissionAmount: true, orderValue: true },
+      }),
+    ]);
+
+    const shortUrlBase = getShortUrlBase();
+
+    return {
+      id: link.id,
+      name: link.customSlug || link.id,
+      originalUrl: link.originalUrl,
+      shortUrl: `${shortUrlBase}/link/${link.customSlug || link.id}`,
+      trackingCode: link.customSlug || link.id,
+      createdAt: link.createdAt,
+      affiliate:
+        link.affiliate && link.affiliate.user
+          ? {
+              id: link.affiliateId,
+              name: `${link.affiliate.user.firstName} ${link.affiliate.user.lastName}`,
+            }
+        : null,
+      stats: {
+        clicks: clicksCount,
+        conversions: conversionsCount,
+        earnings: earningsAggregate._sum.commissionAmount || 0,
+        revenue: earningsAggregate._sum.orderValue || 0,
+        conversionRate:
+          clicksCount > 0 ? (conversionsCount / clicksCount) * 100 : 0,
+      },
     };
   }
 

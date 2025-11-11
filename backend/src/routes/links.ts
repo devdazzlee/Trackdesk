@@ -153,6 +153,28 @@ router.get(
   }
 );
 
+// Public link details
+router.get("/public/:trackingCode", async (req: Request, res: Response) => {
+  try {
+    const { trackingCode } = req.params;
+    const link = await LinksService.getPublicLink(trackingCode);
+
+    res.json({
+      success: true,
+      link,
+    });
+  } catch (error: any) {
+    console.error("Error fetching public link:", error);
+    if (error instanceof Error && error.message === "Link not found") {
+      return res.status(404).json({ success: false, error: error.message });
+    }
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch link details",
+    });
+  }
+});
+
 // Update link status
 router.patch(
   "/:linkId/status",

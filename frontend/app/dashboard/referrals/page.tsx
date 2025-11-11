@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { DeleteConfirmationModal } from "@/components/modals/delete-confirmation-modal";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   Dialog,
   DialogContent,
@@ -33,8 +34,6 @@ import {
 import {
   Copy,
   Plus,
-  Share2,
-  QrCode,
   Eye,
   TrendingUp,
   DollarSign,
@@ -73,26 +72,16 @@ interface ReferralStats {
   }>;
 }
 
-interface ShareableLinks {
-  referralCode: string;
-  links: Record<string, string>;
-  qrCode: string;
-}
-
 export default function ReferralsPage() {
   const { user } = useAuth();
   const [referralCodes, setReferralCodes] = useState<ReferralCode[]>([]);
   const [stats, setStats] = useState<ReferralStats | null>(null);
-  const [shareableLinks, setShareableLinks] = useState<ShareableLinks | null>(
-    null
-  );
   const [isLoading, setIsLoading] = useState(true);
   const [isCreatingCode, setIsCreatingCode] = useState(false);
   const [isUpdatingCode, setIsUpdatingCode] = useState(false);
   const [isDeletingCode, setIsDeletingCode] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
-  const [showShareDialog, setShowShareDialog] = useState(false);
   const [deleteModal, setDeleteModal] = useState<{
     isOpen: boolean;
     codeId: string | null;
@@ -103,12 +92,39 @@ export default function ReferralsPage() {
     useState<number>(10);
 
   // Form state for creating referral code
-  const [newCode, setNewCode] = useState({
+  type NewReferralCode = {
+    commissionRate: number;
+    expiresAt: Date;
+  };
+
+  const [newCode, setNewCode] = useState<NewReferralCode>({
     commissionRate: 10, // Will be set from affiliate profile
-    productId: "",
-    maxUses: "",
-    expiresAt: "",
+    expiresAt: new Date(),
   });
+
+  const formatDateOnly = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  const parseDateOnly = (value?: string | null) => {
+    if (!value) return undefined;
+    const normalized = value.includes("T") ? value.split("T")[0] : value;
+    const [year, month, day] = normalized.split("-").map(Number);
+    if (
+      Number.isNaN(year) ||
+      Number.isNaN(month) ||
+      Number.isNaN(day) ||
+      !year ||
+      !month ||
+      !day
+    ) {
+      return undefined;
+    }
+    return new Date(year, month - 1, day);
+  };
 
   useEffect(() => {
     fetchReferralData();
@@ -116,26 +132,13 @@ export default function ReferralsPage() {
 
   const fetchReferralData = async () => {
     try {
-      const [codesResponse, statsResponse, linksResponse, profileResponse] =
+      const [codesResponse, statsResponse, profileResponse] =
         await Promise.all([
           fetch(`${config.apiUrl}/referral/codes`, {
             headers: getAuthHeaders(),
           }),
           fetch(`${config.apiUrl}/referral/stats`, {
             headers: getAuthHeaders(),
-          }),
-          fetch(`${config.apiUrl}/referral/shareable-links`, {
-            method: "POST",
-            headers: getAuthHeaders(),
-            body: JSON.stringify({
-              platforms: [
-                "facebook",
-                "twitter",
-                "instagram",
-                "linkedin",
-                "tiktok",
-              ],
-            }),
           }),
           fetch(`${config.apiUrl}/settings/profile`, {
             headers: getAuthHeaders(),
@@ -160,11 +163,6 @@ export default function ReferralsPage() {
         setStats(statsData);
       }
 
-      if (linksResponse.ok) {
-        const linksData = await linksResponse.json();
-        setShareableLinks(linksData);
-      }
-
       // Fetch affiliate profile to get commission rate
       if (profileResponse.ok) {
         const profileData = await profileResponse.json();
@@ -187,6 +185,11 @@ export default function ReferralsPage() {
   };
 
   const createReferralCode = async () => {
+    if (!newCode.expiresAt) {
+      toast.error("Please select an expiration date");
+      return;
+    }
+
     setIsCreatingCode(true);
     try {
       const response = await fetch(`${config.apiUrl}/referral/codes`, {
@@ -194,8 +197,7 @@ export default function ReferralsPage() {
         headers: getAuthHeaders(),
         body: JSON.stringify({
           commissionRate: newCode.commissionRate,
-          maxUses: newCode.maxUses ? parseInt(newCode.maxUses) : undefined,
-          expiresAt: newCode.expiresAt || undefined,
+          expiresAt: formatDateOnly(newCode.expiresAt),
         }),
       });
 
@@ -204,9 +206,7 @@ export default function ReferralsPage() {
         setShowCreateDialog(false);
         setNewCode({
           commissionRate: affiliateCommissionRate,
-          productId: "",
-          maxUses: "",
-          expiresAt: "",
+          expiresAt: new Date(),
         });
         fetchReferralData();
       } else {
@@ -223,10 +223,15 @@ export default function ReferralsPage() {
   const handleEditClick = (code: ReferralCode) => {
     // Use the actual commissionRate from the code object
     // This should be the value from the database
+    const normalizedExpires =
+      code.expiresAt && code.expiresAt.includes("T")
+        ? code.expiresAt.split("T")[0]
+        : formatDateOnly(code.expiresAt ? new Date(code.expiresAt) : new Date());
     setEditingCode({
       ...code,
       commissionRate:
         code.commissionRate != null ? Number(code.commissionRate) : 0,
+      expiresAt: normalizedExpires,
     });
     setShowEditDialog(true);
   };
@@ -234,20 +239,13 @@ export default function ReferralsPage() {
   const handleUpdateReferralCode = async () => {
     if (!editingCode) return;
 
+    if (!editingCode.expiresAt) {
+      toast.error("Please select an expiration date");
+      return;
+    }
+
     setIsUpdatingCode(true);
     try {
-      // Format expiresAt for datetime-local input
-      let expiresAtValue: string | null = null;
-      if (editingCode.expiresAt) {
-        const date = new Date(editingCode.expiresAt);
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, "0");
-        const day = String(date.getDate()).padStart(2, "0");
-        const hours = String(date.getHours()).padStart(2, "0");
-        const minutes = String(date.getMinutes()).padStart(2, "0");
-        expiresAtValue = `${year}-${month}-${day}T${hours}:${minutes}`;
-      }
-
       const response = await fetch(
         `${config.apiUrl}/referral/codes/${editingCode.id}`,
         {
@@ -256,8 +254,7 @@ export default function ReferralsPage() {
           body: JSON.stringify({
             // Commission rate is not sent in update - it's controlled by admin only
             productId: editingCode.productId || null,
-            maxUses: editingCode.maxUses || null,
-            expiresAt: expiresAtValue || null,
+            expiresAt: editingCode.expiresAt,
             isActive: editingCode.isActive,
           }),
         }
@@ -346,14 +343,6 @@ export default function ReferralsPage() {
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
-          <Button
-            onClick={() => setShowShareDialog(true)}
-            variant="outline"
-            className="w-full sm:w-auto"
-          >
-            <Share2 className="w-4 h-4 mr-2" />
-            Share Links
-          </Button>
           <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
             <DialogTrigger asChild>
               <Button className="w-full sm:w-auto">
@@ -388,27 +377,15 @@ export default function ReferralsPage() {
                   </p>
                 </div>
                 <div>
-                  <Label htmlFor="maxUses">Max Uses (optional)</Label>
-                  <Input
-                    id="maxUses"
-                    type="number"
-                    min="1"
-                    value={newCode.maxUses}
-                    onChange={(e) =>
-                      setNewCode({ ...newCode, maxUses: e.target.value })
-                    }
-                    placeholder="Leave empty for unlimited"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="expiresAt">Expires At (optional)</Label>
-                  <Input
-                    id="expiresAt"
-                    type="datetime-local"
+                  <Label>Expires At</Label>
+                  <DatePicker
                     value={newCode.expiresAt}
-                    onChange={(e) =>
-                      setNewCode({ ...newCode, expiresAt: e.target.value })
-                    }
+                    onChange={(date) => {
+                      if (date) {
+                        setNewCode({ ...newCode, expiresAt: date });
+                      }
+                    }}
+                    placeholder="Select expiration date"
                   />
                 </div>
               </div>
@@ -581,7 +558,8 @@ export default function ReferralsPage() {
                       <p className="font-medium text-gray-700">Expires</p>
                       <p className="text-muted-foreground">
                         {code.expiresAt
-                          ? new Date(code.expiresAt).toLocaleDateString()
+                          ? parseDateOnly(code.expiresAt)?.toLocaleDateString() ??
+                            "Never"
                           : "Never"}
                       </p>
                     </div>
@@ -592,80 +570,6 @@ export default function ReferralsPage() {
           )}
         </div>
       </div>
-
-      {/* Share Links Dialog */}
-      <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Share Your Referral Links</DialogTitle>
-            <DialogDescription>
-              Copy and share these links across different platforms to start
-              earning commissions.
-            </DialogDescription>
-          </DialogHeader>
-          {shareableLinks && (
-            <div className="space-y-4">
-              <div>
-                <Label>Your Referral Code</Label>
-                <div className="flex gap-2">
-                  <Input value={shareableLinks.referralCode} readOnly />
-                  <Button
-                    variant="outline"
-                    onClick={() =>
-                      copyToClipboard(
-                        shareableLinks.referralCode,
-                        "Referral code"
-                      )
-                    }
-                  >
-                    <Copy className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {Object.entries(shareableLinks.links).map(([platform, url]) => (
-                  <div key={platform} className="space-y-2">
-                    <Label className="capitalize">{platform}</Label>
-                    <div className="flex gap-2">
-                      <Input value={url} readOnly className="text-xs" />
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => copyToClipboard(url, `${platform} link`)}
-                      >
-                        <Copy className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div>
-                <Label>QR Code</Label>
-                <div className="flex gap-2">
-                  <Input
-                    value={shareableLinks.qrCode}
-                    readOnly
-                    className="text-xs"
-                  />
-                  <Button
-                    variant="outline"
-                    onClick={() =>
-                      copyToClipboard(shareableLinks.qrCode, "QR code link")
-                    }
-                  >
-                    <QrCode className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button onClick={() => setShowShareDialog(false)}>Done</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Edit Referral Code Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
@@ -709,56 +613,16 @@ export default function ReferralsPage() {
                 </p>
               </div>
               <div>
-                <Label htmlFor="editMaxUses">Max Uses (optional)</Label>
-                <Input
-                  id="editMaxUses"
-                  type="number"
-                  min="1"
-                  value={editingCode.maxUses || ""}
-                  onChange={(e) =>
+                <Label>Expires At</Label>
+                <DatePicker
+                  value={parseDateOnly(editingCode.expiresAt)}
+                  onChange={(date) => {
+                    if (!date) return;
                     setEditingCode({
                       ...editingCode,
-                      maxUses: e.target.value
-                        ? parseInt(e.target.value)
-                        : undefined,
-                    })
-                  }
-                  placeholder="Leave empty for unlimited"
-                />
-              </div>
-              <div>
-                <Label htmlFor="editExpiresAt">Expires At (optional)</Label>
-                <Input
-                  id="editExpiresAt"
-                  type="datetime-local"
-                  value={
-                    editingCode.expiresAt
-                      ? (() => {
-                          const date = new Date(editingCode.expiresAt);
-                          const year = date.getFullYear();
-                          const month = String(date.getMonth() + 1).padStart(
-                            2,
-                            "0"
-                          );
-                          const day = String(date.getDate()).padStart(2, "0");
-                          const hours = String(date.getHours()).padStart(
-                            2,
-                            "0"
-                          );
-                          const minutes = String(date.getMinutes()).padStart(
-                            2,
-                            "0"
-                          );
-                          return `${year}-${month}-${day}T${hours}:${minutes}`;
-                        })()
-                      : ""
-                  }
-                  onChange={(e) =>
-                    setEditingCode({
-                      ...editingCode,
-                      expiresAt: e.target.value || undefined,
-                    })
-                  }
+                      expiresAt: formatDateOnly(date),
+                    });
+                  }}
                 />
               </div>
               <div className="flex items-center space-x-2">

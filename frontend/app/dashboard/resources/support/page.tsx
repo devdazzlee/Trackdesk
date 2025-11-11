@@ -37,6 +37,14 @@ import { toast } from "sonner";
 import { config } from "@/config/config";
 import { getAuthHeaders } from "@/lib/getAuthHeaders";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface SupportTicket {
   id: string;
@@ -122,6 +130,10 @@ export default function ContactSupportPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showTicketDialog, setShowTicketDialog] = useState(false);
+  const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(
+    null
+  );
 
   const [formData, setFormData] = useState({
     subject: "",
@@ -236,6 +248,11 @@ export default function ContactSupportPage() {
         {priority}
       </Badge>
     );
+  };
+
+  const handleViewTicket = (ticket: SupportTicket) => {
+    setSelectedTicket(ticket);
+    setShowTicketDialog(true);
   };
 
   return (
@@ -498,7 +515,11 @@ export default function ContactSupportPage() {
                             </Badge>
                           </div>
                         </div>
-                        <Button variant="outline" size="sm">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleViewTicket(ticket)}
+                        >
                           <ExternalLink className="w-4 h-4 mr-1" />
                           View
                         </Button>
@@ -519,6 +540,65 @@ export default function ContactSupportPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={showTicketDialog} onOpenChange={setShowTicketDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedTicket ? selectedTicket.subject : "Ticket details"}
+            </DialogTitle>
+            <DialogDescription>
+              Review full information about your support ticket.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedTicket && (
+            <div className="space-y-4">
+              <div className="flex flex-wrap gap-2">
+                {getStatusBadge(selectedTicket.status)}
+                {getPriorityBadge(selectedTicket.priority)}
+                <Badge variant="outline">{selectedTicket.category}</Badge>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                <div>
+                  <span className="font-medium text-muted-foreground">
+                    Ticket ID
+                  </span>
+                  <p>{selectedTicket.id}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-muted-foreground">
+                    Messages
+                  </span>
+                  <p>{selectedTicket.messages}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-muted-foreground">
+                    Created
+                  </span>
+                  <p>{new Date(selectedTicket.createdAt).toLocaleString()}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-muted-foreground">
+                    Updated
+                  </span>
+                  <p>{new Date(selectedTicket.updatedAt).toLocaleString()}</p>
+                </div>
+              </div>
+              <div className="rounded-md border p-3 bg-muted/50 text-sm">
+                <span className="font-medium text-muted-foreground">
+                  Last response
+                </span>
+                <p className="mt-1">{selectedTicket.lastResponse}</p>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowTicketDialog(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

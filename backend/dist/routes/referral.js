@@ -40,8 +40,7 @@ router.post("/codes", auth_1.authenticateToken, async (req, res) => {
         const schema = zod_1.z.object({
             commissionRate: zod_1.z.number().min(0).max(100),
             productId: zod_1.z.string().optional(),
-            maxUses: zod_1.z.number().positive().optional(),
-            expiresAt: zod_1.z.string().optional(),
+            expiresAt: zod_1.z.string(),
         });
         const data = schema.parse(req.body);
         const affiliate = await prisma_1.prisma.affiliateProfile.findUnique({
@@ -56,26 +55,26 @@ router.post("/codes", auth_1.authenticateToken, async (req, res) => {
             });
         }
         let expiresAtDate;
-        if (data.expiresAt && data.expiresAt.trim() !== "") {
-            try {
-                expiresAtDate = new Date(data.expiresAt);
-                if (isNaN(expiresAtDate.getTime())) {
-                    return res.status(400).json({
-                        error: "Invalid expiration date format. Please use a valid date.",
-                    });
-                }
-            }
-            catch (error) {
+        try {
+            const normalized = data.expiresAt.includes("T")
+                ? data.expiresAt
+                : `${data.expiresAt}T00:00:00`;
+            expiresAtDate = new Date(normalized);
+            if (isNaN(expiresAtDate.getTime())) {
                 return res.status(400).json({
                     error: "Invalid expiration date format. Please use a valid date.",
                 });
             }
         }
+        catch (error) {
+            return res.status(400).json({
+                error: "Invalid expiration date format. Please use a valid date.",
+            });
+        }
         const referralCode = await ReferralSystem_1.ReferralSystemModel.generateReferralCode(affiliate.id, {
             type: "BOTH",
             commissionRate: data.commissionRate || affiliate.commissionRate || 10,
             productId: data.productId,
-            maxUses: data.maxUses,
             expiresAt: expiresAtDate,
         });
         res.status(201).json(referralCode);
@@ -262,12 +261,11 @@ router.put("/codes/:id", auth_1.authenticateToken, async (req, res) => {
                 .json({ error: "Only affiliates can update referral codes" });
         }
         const { id } = req.params;
-        const schema = zod_1.z.object({
-            productId: zod_1.z.string().optional().nullable(),
-            maxUses: zod_1.z.number().positive().optional().nullable(),
-            expiresAt: zod_1.z.string().optional().nullable(),
-            isActive: zod_1.z.boolean().optional(),
-        });
+    const schema = zod_1.z.object({
+        productId: zod_1.z.string().optional().nullable(),
+        expiresAt: zod_1.z.string().optional().nullable(),
+        isActive: zod_1.z.boolean().optional(),
+    });
         const data = schema.parse(req.body);
         const referralCode = await prisma_1.prisma.referralCode.findUnique({
             where: { id },
@@ -288,14 +286,17 @@ router.put("/codes/:id", auth_1.authenticateToken, async (req, res) => {
                 error: "You don't have permission to update this referral code",
             });
         }
-        let expiresAtDate = undefined;
+    let expiresAtDate = undefined;
         if (data.expiresAt !== undefined) {
             if (data.expiresAt === null || data.expiresAt === "") {
                 expiresAtDate = null;
             }
             else {
                 try {
-                    expiresAtDate = new Date(data.expiresAt);
+                const normalized = data.expiresAt.includes("T")
+                    ? data.expiresAt
+                    : `${data.expiresAt}T00:00:00`;
+                expiresAtDate = new Date(normalized);
                     if (isNaN(expiresAtDate.getTime())) {
                         return res.status(400).json({
                             error: "Invalid expiration date format. Please use a valid date.",
@@ -312,8 +313,6 @@ router.put("/codes/:id", auth_1.authenticateToken, async (req, res) => {
         const updateData = {};
         if (data.productId !== undefined)
             updateData.productId = data.productId;
-        if (data.maxUses !== undefined)
-            updateData.maxUses = data.maxUses;
         if (data.expiresAt !== undefined)
             updateData.expiresAt = expiresAtDate;
         if (data.isActive !== undefined)

@@ -102,6 +102,7 @@ interface LinkStats {
   totalConversions: number;
   totalEarnings: number;
   conversionRate: number;
+  totalRevenue?: number;
 }
 
 interface Website {
@@ -237,7 +238,18 @@ export default function LinksPage() {
           "Link IDs received:",
           data.links?.map((link: any) => ({ id: link.id, name: link.name }))
         );
-        setMyLinks(data.links || []);
+
+        const origin =
+          typeof window !== "undefined" ? window.location.origin : "";
+
+        const formattedLinks = (data.links || []).map((link: AffiliateLink) => ({
+          ...link,
+          shortUrl: origin
+            ? `${origin}/link/${link.trackingCode}`
+            : link.shortUrl,
+        }));
+
+        setMyLinks(formattedLinks);
       } else {
         const error = await response.json();
         console.error("Failed to fetch links:", error.error || response.status);
