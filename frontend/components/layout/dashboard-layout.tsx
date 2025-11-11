@@ -288,14 +288,14 @@ export default function DashboardLayout({
       <div className="flex h-16 items-center px-6 border-b">
         <Link href="/" className="flex items-center space-x-2">
           <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-teal-600 rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-sm">A</span>
+            <span className="text-white font-bold text-sm">L</span>
           </div>
           <span className="font-bold text-lg">
             {userType === "admin"
-              ? "Trackdesk Admin"
+              ? "Licorice Admin"
               : userType === "manager"
-              ? "Trackdesk Manager"
-              : "Trackdesk"}
+              ? "Licorice Affiliate Manager"
+              : "Licorice Affiliate"}
           </span>
         </Link>
       </div>

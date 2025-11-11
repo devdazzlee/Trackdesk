@@ -114,6 +114,17 @@ export default function AffiliatesManagementPage() {
     fetchAffiliates();
   }, [statusFilter, tierFilter]);
 
+  const filtersActive =
+    searchQuery.trim() !== "" ||
+    statusFilter !== "all" ||
+    tierFilter !== "all";
+
+  const handleResetFilters = () => {
+    setSearchQuery("");
+    setStatusFilter("all");
+    setTierFilter("all");
+  };
+
   const fetchAffiliates = async () => {
     setIsLoading(true);
     try {

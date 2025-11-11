@@ -159,7 +159,7 @@ export default function CommissionsPage() {
     address: "",
   };
   const [settingsForm, setSettingsForm] = useState({
-    payoutMethod: "PAYPAL",
+    payoutMethod: "BANK_TRANSFER",
     payoutEmail: "",
     payoutFrequency: "Monthly",
     minimumPayout: 50,
@@ -171,17 +171,28 @@ export default function CommissionsPage() {
     null
   );
   const [isLoading, setIsLoading] = useState(true);
+  const [pendingLoading, setPendingLoading] = useState(true);
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [settingsLoading, setSettingsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [payoutRequestAmount, setPayoutRequestAmount] = useState("");
   const [payoutRequestReason, setPayoutRequestReason] = useState("");
 
   const payoutMethodOptions = [
-    { value: "PAYPAL", label: "PayPal" },
-    { value: "BANK_TRANSFER", label: "Bank Transfer" },
-    { value: "STRIPE", label: "Stripe" },
-    { value: "CRYPTO", label: "Crypto" },
-    { value: "WISE", label: "Wise" },
+    { value: "BANK_TRANSFER", label: "Manual Payout" },
   ];
+
+  const formatPayoutMethodDisplay = (method?: string | null) => {
+    if (!method) return undefined;
+
+    const normalized = method.toUpperCase().replace(/\s+/g, "_");
+
+    if (normalized === "BANK_TRANSFER") {
+      return "Manual Payout";
+    }
+
+    return method;
+  };
 
   const payoutFrequencyOptions = [
     { value: "Monthly", label: "Monthly" },
@@ -205,7 +216,7 @@ export default function CommissionsPage() {
 
     const normalizedMethod = data.payoutMethod
       ? data.payoutMethod.toUpperCase().replace(/\s+/g, "_")
-      : "PAYPAL";
+      : "BANK_TRANSFER";
 
     const bankDetails: BankDetailsForm = {
       ...emptyBankDetails,
@@ -245,6 +256,7 @@ export default function CommissionsPage() {
   }, [historyPage]);
 
   const fetchCommissionsData = async () => {
+    setPendingLoading(true);
     try {
       const response = await fetch(
         `${config.apiUrl}/commissions/pending?period=${selectedPeriod}&status=${selectedStatus}`,
@@ -264,10 +276,13 @@ export default function CommissionsPage() {
     } catch (error) {
       console.error("Error fetching commissions:", error);
       toast.error("Failed to load commissions data");
+    } finally {
+      setPendingLoading(false);
     }
   };
 
   const fetchPayoutHistory = async (page = 1) => {
+    setHistoryLoading(true);
     try {
       const params = new URLSearchParams({
         page: page.toString(),
@@ -294,10 +309,13 @@ export default function CommissionsPage() {
     } catch (error) {
       console.error("Error fetching payout history:", error);
       toast.error("Failed to load payout history");
+    } finally {
+      setHistoryLoading(false);
     }
   };
 
   const fetchPayoutSettings = async () => {
+    setSettingsLoading(true);
     try {
       const response = await fetch(`${config.apiUrl}/commissions/settings`, {
         headers: getAuthHeaders(),
@@ -312,6 +330,7 @@ export default function CommissionsPage() {
     } catch (error) {
       console.error("Error fetching payout settings:", error);
     } finally {
+      setSettingsLoading(false);
       setIsLoading(false);
     }
   };
@@ -536,8 +555,8 @@ export default function CommissionsPage() {
   const nextPayoutAmount =
     commissionSummary?.nextPayoutAmount || totalPendingAmount;
   const payoutMethodDisplay =
-    commissionSummary?.payoutMethod ||
-    payoutSettings?.payoutMethod ||
+    formatPayoutMethodDisplay(commissionSummary?.payoutMethod) ||
+    formatPayoutMethodDisplay(payoutSettings?.payoutMethod) ||
     "Not Set";
   const payoutEmailDisplay =
     commissionSummary?.payoutEmail ||
@@ -712,7 +731,12 @@ export default function CommissionsPage() {
               </div>
             </CardHeader>
             <CardContent>
-              {pendingCommissions.length === 0 ? (
+              {pendingLoading ? (
+                <div className="py-16 flex flex-col items-center justify-center text-muted-foreground">
+                  <Loader2 className="w-8 h-8 animate-spin mb-3" />
+                  <p>Loading commissions...</p>
+                </div>
+              ) : pendingCommissions.length === 0 ? (
                 <div className="text-center py-8">
                   <Clock className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                   <h3 className="text-lg font-semibold mb-2">
@@ -785,50 +809,6 @@ export default function CommissionsPage() {
             </CardContent>
           </Card>
 
-          {/* Payout Request */}
-          {selectedStatus === "PENDING" &&
-            totalPendingAmount >= minimumPayoutAmount && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Request Payout</CardTitle>
-                  <CardDescription>
-                    Request a payout for your pending commissions
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="amount">Amount</Label>
-                      <Input
-                        id="amount"
-                        type="number"
-                        placeholder={`Max: ${formatCurrency(
-                          totalPendingAmount
-                        )}`}
-                        value={payoutRequestAmount}
-                        onChange={(e) => setPayoutRequestAmount(e.target.value)}
-                        max={totalPendingAmount}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="reason">Reason (Optional)</Label>
-                      <Input
-                        id="reason"
-                        placeholder="Monthly payout request"
-                        value={payoutRequestReason}
-                        onChange={(e) => setPayoutRequestReason(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <Button
-                    onClick={handleRequestPayout}
-                    className="w-full md:w-auto"
-                  >
-                    Request Payout
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
         </TabsContent>
 
         {/* Payout History Tab */}
@@ -850,7 +830,12 @@ export default function CommissionsPage() {
               </div>
             </CardHeader>
             <CardContent>
-              {payoutHistory.length === 0 ? (
+              {historyLoading ? (
+                <div className="py-16 flex flex-col items-center justify-center text-muted-foreground">
+                  <Loader2 className="w-8 h-8 animate-spin mb-3" />
+                  <p>Loading payout history...</p>
+                </div>
+              ) : payoutHistory.length === 0 ? (
                 <div className="text-center py-8">
                   <CreditCard className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                   <h3 className="text-lg font-semibold mb-2">
@@ -990,6 +975,12 @@ export default function CommissionsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              {settingsLoading ? (
+                <div className="py-16 flex flex-col items-center justify-center text-muted-foreground">
+                  <Loader2 className="w-8 h-8 animate-spin mb-3" />
+                  <p>Loading payout settings...</p>
+                </div>
+              ) : (
               <form
                 className="space-y-6"
                 onSubmit={(e) => {
@@ -1293,6 +1284,7 @@ export default function CommissionsPage() {
                   </div>
                 )}
               </form>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

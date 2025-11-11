@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { AdminLoading, ErrorState } from "@/components/ui/loading";
 import {
   Card,
@@ -63,6 +63,20 @@ export default function AdminProfileSettingsPage() {
     phone: "",
     department: "",
   });
+
+  const avatarUrl = useMemo(() => {
+    const avatar = profile?.user.avatar;
+    if (!avatar) return "";
+
+    if (/^https?:\/\//i.test(avatar)) {
+      return avatar;
+    }
+
+    const apiBaseUrl = config.apiUrl.replace(/\/api\/?$/, "");
+    const normalizedPath = avatar.startsWith("/") ? avatar : `/${avatar}`;
+
+    return `${apiBaseUrl}${normalizedPath}`;
+  }, [profile?.user.avatar]);
 
   useEffect(() => {
     fetchProfile();
@@ -149,7 +163,7 @@ export default function AdminProfileSettingsPage() {
         `${config.apiUrl}/admin/settings/profile/avatar`,
         {
           method: "POST",
-          headers: getAuthHeaders(),
+          headers: getAuthHeaders({ contentType: null }),
           body: formData,
         }
       );
@@ -249,11 +263,7 @@ export default function AdminProfileSettingsPage() {
                 <div className="relative">
                   <Avatar className="h-24 w-24">
                     <AvatarImage
-                      src={
-                        profile.user.avatar
-                          ? `http://localhost:3003${profile.user.avatar}`
-                          : ""
-                      }
+                        src={avatarUrl}
                       alt={`${profile.user.firstName} ${profile.user.lastName}`}
                     />
                     <AvatarFallback className="text-lg">

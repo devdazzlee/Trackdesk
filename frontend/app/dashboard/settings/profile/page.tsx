@@ -19,8 +19,6 @@ import {
   User,
   Mail,
   Phone,
-  Building2,
-  Globe,
   Save,
   RefreshCw,
   Upload,
@@ -54,7 +52,7 @@ interface UserProfile {
 }
 
 export default function ProfileSettingsPage() {
-  const { refreshUser } = useAuth();
+  const { refreshUser, updateUser } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -114,7 +112,15 @@ export default function ProfileSettingsPage() {
 
       if (response.ok) {
         toast.success("Profile updated successfully");
-        fetchProfile(); // Refresh profile data
+        await fetchProfile(); // Refresh profile data
+
+        // Optimistically update auth context so sidebar/header reflects changes immediately
+        updateUser({
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+        });
+
+        await refreshUser(); // Ensure context and storage stay in sync
       } else {
         const error = await response.json();
         toast.error(error.error || "Failed to update profile");
@@ -152,9 +158,14 @@ export default function ProfileSettingsPage() {
       const formData = new FormData();
       formData.append("avatar", file);
 
+      const token =
+        typeof window !== "undefined"
+          ? localStorage.getItem("accessToken")
+          : null;
+
       const response = await fetch(`${config.apiUrl}/upload/avatar`, {
         method: "POST",
-        headers: getAuthHeaders(),
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         body: formData,
       });
 
@@ -165,8 +176,10 @@ export default function ProfileSettingsPage() {
         // Refresh profile to show new avatar in this page
         await fetchProfile();
 
-        // Immediately refresh auth context to update navbar/sidebar
-        // This ensures the avatar is synced across all components
+        // Update auth context immediately
+        updateUser({ avatar: data.url });
+
+        // Ensure global state/localStorage stay synchronized
         await refreshUser();
       } else {
         const error = await response.json();
@@ -403,51 +416,6 @@ export default function ProfileSettingsPage() {
           </div>
         </CardContent>
       </Card>
-
-      {/* Business Information */}
-      {profile.affiliate && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Business Information</CardTitle>
-            <CardDescription>
-              Update your affiliate business details
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="companyName">Company Name</Label>
-              <div className="relative">
-                <Building2 className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="companyName"
-                  value={formData.companyName}
-                  onChange={(e) =>
-                    setFormData({ ...formData, companyName: e.target.value })
-                  }
-                  className="pl-10"
-                  placeholder="Your Company LLC"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="website">Website URL</Label>
-              <div className="relative">
-                <Globe className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="website"
-                  value={formData.website}
-                  onChange={(e) =>
-                    setFormData({ ...formData, website: e.target.value })
-                  }
-                  className="pl-10"
-                  placeholder="https://yourwebsite.com"
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Save Button */}
       <div className="flex justify-end">
