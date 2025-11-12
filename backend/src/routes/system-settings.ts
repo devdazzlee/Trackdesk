@@ -2,6 +2,7 @@ import express, { Router } from "express";
 import { authenticateToken } from "../middleware/auth";
 import { PrismaClient } from "@prisma/client";
 import { z } from "zod";
+import { SystemSettingsService } from "../services/SystemSettingsService";
 
 const router: Router = express.Router();
 const prisma = new PrismaClient();
@@ -21,7 +22,7 @@ router.get("/", authenticateToken, async (req: any, res) => {
       where: { accountId: ACCOUNT_ID },
     });
 
-    // If no settings exist, create default settings
+    // If no settings exist, create default settings with commission settings
     if (!settings) {
       settings = await prisma.systemSettings.create({
         data: {
@@ -32,6 +33,13 @@ router.get("/", authenticateToken, async (req: any, res) => {
             timezone: "America/New_York",
             currency: "USD",
             language: "en",
+            commissionSettings: {
+              defaultRate: 15,
+              minimumPayout: 50.0,
+              payoutFrequency: "Monthly",
+              approvalPeriod: 30,
+              cookieDuration: 30,
+            },
           },
           security: {
             twoFactorRequired: false,
@@ -58,21 +66,47 @@ router.get("/", authenticateToken, async (req: any, res) => {
       });
     }
 
-    // Get commission settings from database
-    let commissionSettings = {
-      defaultRate: 5, // Default fallback
-      minimumPayout: 50.0,
-      payoutFrequency: "Monthly",
-      approvalPeriod: 30,
-      cookieDuration: 30,
-    };
-
-    // Check if commission settings are stored in the general settings
+    // Get commission settings directly from database
+    let commissionSettings = null;
+    
     if (
       settings.general &&
       typeof settings.general === "object" &&
       "commissionSettings" in settings.general
     ) {
+      commissionSettings = (settings.general as any).commissionSettings;
+    }
+
+    // If commission settings don't exist in database, initialize them
+    // Also update if defaultRate is 10% or less (old default) to 15%
+    if (!commissionSettings || (commissionSettings.defaultRate && commissionSettings.defaultRate <= 10)) {
+      const existingGeneral =
+        settings.general && typeof settings.general === "object"
+          ? (settings.general as Record<string, any>)
+          : {};
+
+      // Preserve existing values if they exist, but update defaultRate to 15% if it's 10% or less
+      const updatedCommissionSettings = commissionSettings ? {
+        ...commissionSettings,
+        defaultRate: commissionSettings.defaultRate <= 10 ? 15 : commissionSettings.defaultRate,
+      } : {
+        defaultRate: 15,
+        minimumPayout: 50.0,
+        payoutFrequency: "Monthly",
+        approvalPeriod: 30,
+        cookieDuration: 30,
+      };
+
+      settings = await prisma.systemSettings.update({
+        where: { accountId: ACCOUNT_ID },
+        data: {
+          general: {
+            ...existingGeneral,
+            commissionSettings: updatedCommissionSettings,
+          },
+        },
+      });
+
       commissionSettings = (settings.general as any).commissionSettings;
     }
 
@@ -181,7 +215,7 @@ router.post("/commission/preview", authenticateToken, async (req: any, res) => {
       where: { accountId: ACCOUNT_ID },
     });
 
-    let currentDefaultRate = 5; // Default fallback
+    let currentDefaultRate = 15; // Default fallback
     if (
       currentSettings?.general &&
       typeof currentSettings.general === "object" &&
@@ -273,7 +307,7 @@ router.put("/commission", authenticateToken, async (req: any, res) => {
       where: { accountId: ACCOUNT_ID },
     });
 
-    let currentDefaultRate = 5; // Default fallback
+    let currentDefaultRate = 15; // Default fallback
     if (
       currentSettings?.general &&
       typeof currentSettings.general === "object" &&
@@ -285,12 +319,8 @@ router.put("/commission", authenticateToken, async (req: any, res) => {
       }
     }
 
-    // Find affiliates that are using the current default rate (will be affected)
+    // Find ALL affiliates that will be affected when updating commission rates
     const affectedAffiliates = await prisma.affiliateProfile.findMany({
-      where: {
-        commissionRate: currentDefaultRate,
-        tier: "BRONZE", // Only BRONZE tier affiliates use default rates
-      },
       select: {
         id: true,
         userId: true,
@@ -349,14 +379,13 @@ router.put("/commission", authenticateToken, async (req: any, res) => {
       },
     });
 
+    SystemSettingsService.clearCache();
+
     let updatedAffiliates = 0;
 
-    // Only update affiliate rates if explicitly requested
-    // IMPORTANT: Only update affiliates that are currently using the default rate
-    // Affiliates with custom commission rates should NOT be affected
+    // Update ALL affiliate rates if explicitly requested
     if (data.updateAffiliates && affectedAffiliates.length > 0) {
-      // Update only affiliates that are currently using the default rate
-      // This preserves custom commission rates for affiliates who have been manually set
+      // Update ALL affiliates to use the new default rate
       const updateResult = await prisma.affiliateProfile.updateMany({
         where: {
           id: {
@@ -369,6 +398,18 @@ router.put("/commission", authenticateToken, async (req: any, res) => {
       });
 
       updatedAffiliates = updateResult.count;
+
+      // Update all referral codes for all affiliates to use the new commission rate
+      await prisma.referralCode.updateMany({
+        where: {
+          affiliateId: {
+            in: affectedAffiliates.map((affiliate) => affiliate.id),
+          },
+        },
+        data: {
+          commissionRate: data.defaultRate,
+        },
+      });
 
       // Log individual affiliate updates for all updated affiliates
       for (const affiliate of affectedAffiliates) {
@@ -383,8 +424,7 @@ router.put("/commission", authenticateToken, async (req: any, res) => {
               affiliateEmail: affiliate.user.email,
               oldRate: affiliate.commissionRate,
               newRate: data.defaultRate,
-              reason:
-                "Default commission rate change - only affiliates using default rate were updated",
+              reason: "Default commission rate change - all affiliates updated",
             },
           },
         });

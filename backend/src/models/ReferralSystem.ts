@@ -1,5 +1,6 @@
 import { prisma } from "../lib/prisma";
 import { z } from "zod";
+import { SystemSettingsService } from "../services/SystemSettingsService";
 
 export interface ReferralCode {
   id: string;
@@ -49,7 +50,7 @@ export class ReferralSystemModel {
     affiliateId: string,
     data: {
       type: "SIGNUP" | "PRODUCT" | "BOTH";
-      commissionRate: number;
+      commissionRate?: number;
       productId?: string;
       maxUses?: number;
       expiresAt?: Date;
@@ -80,12 +81,16 @@ export class ReferralSystemModel {
       throw new Error("Unable to generate unique referral code");
     }
 
+    const commissionRate =
+      data.commissionRate ??
+      (await SystemSettingsService.getDefaultCommissionRate());
+
     const referralCode = await prisma.referralCode.create({
       data: {
         affiliateId,
         code,
         type: data.type,
-        commissionRate: data.commissionRate,
+        commissionRate,
         productId: data.productId,
         maxUses: data.maxUses,
         expiresAt: data.expiresAt,

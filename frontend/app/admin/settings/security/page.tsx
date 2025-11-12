@@ -116,10 +116,10 @@ export default function SecuritySettingsPage() {
   };
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6 p-4 md:p-6 lg:p-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Security Settings</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">Security Settings</h1>
           <p className="text-muted-foreground">
             Manage your account security and access controls
           </p>
@@ -130,9 +130,10 @@ export default function SecuritySettingsPage() {
         </Badge>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Password Change */}
-        <Card>
+      <div className="flex justify-center">
+        <div className="w-full max-w-2xl">
+          {/* Password Change */}
+          <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Key className="h-5 w-5" />
@@ -140,7 +141,7 @@ export default function SecuritySettingsPage() {
             </CardTitle>
             <CardDescription>Update your account password</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="current-password">Current Password</Label>
               <div className="relative">
@@ -154,6 +155,7 @@ export default function SecuritySettingsPage() {
                       currentPassword: e.target.value,
                     }))
                   }
+                  className="pr-10 h-11"
                 />
                 <Button
                   type="button"
@@ -163,9 +165,9 @@ export default function SecuritySettingsPage() {
                   onClick={() => setShowCurrentPassword(!showCurrentPassword)}
                 >
                   {showCurrentPassword ? (
-                    <EyeOff className="h-4 w-4" />
+                    <EyeOff className="h-4 w-4 text-muted-foreground" />
                   ) : (
-                    <Eye className="h-4 w-4" />
+                    <Eye className="h-4 w-4 text-muted-foreground" />
                   )}
                 </Button>
               </div>
@@ -184,6 +186,7 @@ export default function SecuritySettingsPage() {
                       newPassword: e.target.value,
                     }))
                   }
+                  className="pr-10 h-11"
                 />
                 <Button
                   type="button"
@@ -193,9 +196,9 @@ export default function SecuritySettingsPage() {
                   onClick={() => setShowNewPassword(!showNewPassword)}
                 >
                   {showNewPassword ? (
-                    <EyeOff className="h-4 w-4" />
+                    <EyeOff className="h-4 w-4 text-muted-foreground" />
                   ) : (
-                    <Eye className="h-4 w-4" />
+                    <Eye className="h-4 w-4 text-muted-foreground" />
                   )}
                 </Button>
               </div>
@@ -214,6 +217,7 @@ export default function SecuritySettingsPage() {
                       confirmPassword: e.target.value,
                     }))
                   }
+                  className="pr-10 h-11"
                 />
                 <Button
                   type="button"
@@ -223,9 +227,9 @@ export default function SecuritySettingsPage() {
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 >
                   {showConfirmPassword ? (
-                    <EyeOff className="h-4 w-4" />
+                    <EyeOff className="h-4 w-4 text-muted-foreground" />
                   ) : (
-                    <Eye className="h-4 w-4" />
+                    <Eye className="h-4 w-4 text-muted-foreground" />
                   )}
                 </Button>
               </div>
@@ -259,7 +263,8 @@ export default function SecuritySettingsPage() {
             <Button
               onClick={handleChangePassword}
               disabled={isLoading}
-              className="w-full"
+              className="w-full h-11"
+              size="lg"
             >
               {isLoading ? (
                 <>
@@ -275,6 +280,7 @@ export default function SecuritySettingsPage() {
             </Button>
           </CardContent>
         </Card>
+        </div>
       </div>
     </div>
   );

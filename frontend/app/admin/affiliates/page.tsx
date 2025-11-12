@@ -51,6 +51,7 @@ import {
   MoreVertical,
   Edit,
   Trash2,
+  Loader2,
 } from "lucide-react";
 import {
   Tooltip,
@@ -111,6 +112,7 @@ export default function AffiliatesManagementPage() {
     affiliateName: string | null;
   }>({ isOpen: false, affiliateId: null, affiliateName: null });
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [editForm, setEditForm] = useState({
     status: "",
     tier: "",
@@ -192,6 +194,7 @@ export default function AffiliatesManagementPage() {
   const handleSaveChanges = async () => {
     if (!selectedAffiliate) return;
 
+    setIsSaving(true);
     try {
       // Update status
       if (editForm.status !== selectedAffiliate.status.toUpperCase()) {
@@ -250,6 +253,7 @@ export default function AffiliatesManagementPage() {
               }
 
               toast.error(errorMessage);
+              setIsSaving(false);
               return;
             }
           }
@@ -264,6 +268,8 @@ export default function AffiliatesManagementPage() {
     } catch (error) {
       console.error("Error updating affiliate:", error);
       toast.error("Failed to update affiliate");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -557,7 +563,7 @@ export default function AffiliatesManagementPage() {
                     setSearchQuery(e.target.value);
                     setCurrentPage(1);
                   }}
-                  className="pl-10 h-11"
+                  className="pl-10 h-11 rounded-lg"
                 />
               </div>
             </div>
@@ -622,7 +628,7 @@ export default function AffiliatesManagementPage() {
             <div className="flex items-end">
               <Button
                 variant="outline"
-                className="gap-2 h-11 rounded-lg w-full sm:w-auto"
+                className="gap-2 h-11 rounded-lg w-full"
                 onClick={handleResetFilters}
                 disabled={!filtersActive}
               >
@@ -846,10 +852,17 @@ export default function AffiliatesManagementPage() {
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+            <Button 
+              variant="outline" 
+              onClick={() => setEditDialogOpen(false)}
+              disabled={isSaving}
+            >
               Cancel
             </Button>
-            <Button onClick={handleSaveChanges}>Save Changes</Button>
+            <Button onClick={handleSaveChanges} disabled={isSaving}>
+              {isSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              {isSaving ? "Saving..." : "Save Changes"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

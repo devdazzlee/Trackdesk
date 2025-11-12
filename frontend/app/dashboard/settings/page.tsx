@@ -38,6 +38,14 @@ const settingsItems = [
     bgColor: "bg-green-100",
   },
   {
+    title: "Commission Payout Settings",
+    description: "Add bank details and manage payout preferences",
+    icon: CreditCard,
+    href: "/dashboard/commissions",
+    color: "text-indigo-600",
+    bgColor: "bg-indigo-100",
+  },
+  {
     title: "Websites",
     description:
       "Manage your websites and get Website IDs for tracking integration",

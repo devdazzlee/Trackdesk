@@ -65,12 +65,13 @@ router.get(
       }
 
       // Fetch both payouts and paid commissions
-      // First, get paid commissions with details
+      // Get individual paid commissions (not grouped by affiliate)
       const paidCommissionsData = await prisma.affiliateOrder.findMany({
         where: {
           status: "PAID",
         },
         select: {
+          id: true,
           affiliateId: true,
           commissionAmount: true,
           createdAt: true,
@@ -80,46 +81,10 @@ router.get(
         },
       });
 
-      // Group by affiliate
-      const paidCommissionsMap = new Map<
-        string,
-        {
-          totalAmount: number;
-          count: number;
-          latestDate: Date;
-        }
-      >();
-
-      paidCommissionsData.forEach((pc) => {
-        const existing = paidCommissionsMap.get(pc.affiliateId);
-        if (existing) {
-          existing.totalAmount += pc.commissionAmount;
-          existing.count += 1;
-          if (pc.createdAt > existing.latestDate) {
-            existing.latestDate = pc.createdAt;
-          }
-        } else {
-          paidCommissionsMap.set(pc.affiliateId, {
-            totalAmount: pc.commissionAmount,
-            count: 1,
-            latestDate: pc.createdAt,
-          });
-        }
-      });
-
-      const paidCommissions = Array.from(paidCommissionsMap.entries()).map(
-        ([affiliateId, data]) => ({
-          affiliateId,
-          _sum: { commissionAmount: data.totalAmount },
-          _count: { id: data.count },
-          latestDate: data.latestDate,
-        })
-      );
-
-      // Get affiliate IDs with paid commissions
-      const affiliateIdsWithPaidCommissions = paidCommissions.map(
-        (pc) => pc.affiliateId
-      );
+      // Get unique affiliate IDs from paid commissions
+      const affiliateIdsWithPaidCommissions = [
+        ...new Set(paidCommissionsData.map((pc) => pc.affiliateId)),
+      ];
 
       // Get affiliate details
       const affiliatesWithPaidCommissions =
@@ -139,23 +104,24 @@ router.get(
           },
         });
 
-      // Create payout entries from paid commissions
-      const commissionBasedPayouts = paidCommissions.map((pc) => {
+      // Create individual payout entries from each paid commission (not grouped)
+      const commissionBasedPayouts = paidCommissionsData.map((pc) => {
         const affiliate = affiliatesWithPaidCommissions.find(
           (a) => a.id === pc.affiliateId
         );
+        const paymentMethod = affiliate?.paymentMethod || "PAYPAL";
         return {
-          id: `COMM-${pc.affiliateId}`, // Use commission prefix
+          id: `COMM-${pc.id}`, // Use individual commission ID
           affiliateId: pc.affiliateId,
           affiliateName: affiliate?.user
             ? `${affiliate.user.firstName} ${affiliate.user.lastName}`
             : "Unknown Affiliate",
-          amount: pc._sum.commissionAmount || 0,
-          method: affiliate?.paymentMethod || "PAYPAL",
+          amount: pc.commissionAmount,
+          method: formatPaymentMethod(paymentMethod), // Format payment method
           status: "completed", // Paid commissions are completed payouts
-          requestDate: pc.latestDate.toISOString().split("T")[0], // Use most recent paid commission date
+          requestDate: pc.createdAt.toISOString().split("T")[0], // Use individual commission date
           email: affiliate?.user?.email || "",
-          commissionsCount: pc._count.id,
+          commissionsCount: 1, // Each entry represents one commission
           source: "commission", // Mark as from commission
         };
       });

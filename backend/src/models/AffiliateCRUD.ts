@@ -1,5 +1,6 @@
 import { prisma } from '../lib/prisma';
 import * as bcrypt from 'bcryptjs';
+import { SystemSettingsService } from '../services/SystemSettingsService';
 
 export interface AffiliateProfile {
   id: string;
@@ -62,18 +63,23 @@ export interface AffiliateDocument {
 
 export class AffiliateCRUDModel {
   static async create(data: Partial<AffiliateProfile>): Promise<AffiliateProfile> {
+    const defaultCommissionRate =
+      await SystemSettingsService.getDefaultCommissionRate();
+    const commissionRate =
+      data.commissionRate ?? defaultCommissionRate;
+
     return await prisma.affiliateProfile.create({
       data: {
         userId: data.userId!,
         companyName: data.companyName,
         website: data.website,
         socialMedia: data.socialMedia,
-        paymentMethod: data.paymentMethod || 'PAYPAL',
+        paymentMethod: data.paymentMethod || 'BANK_TRANSFER',
         paymentEmail: data.paymentEmail,
         taxId: data.taxId,
         address: data.address,
         tier: data.tier || 'BRONZE',
-        commissionRate: data.commissionRate || 30.0,
+        commissionRate,
         totalEarnings: data.totalEarnings || 0,
         totalClicks: data.totalClicks || 0,
         totalConversions: data.totalConversions || 0,

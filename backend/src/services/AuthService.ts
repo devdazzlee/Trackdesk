@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import emailService, { EmailService } from "./EmailService";
 import crypto from "crypto";
+import { SystemSettingsService } from "./SystemSettingsService";
 
 const prisma = new PrismaClient();
 
@@ -60,10 +61,13 @@ export class AuthService {
 
     // Create profile based on role
     if (data.role === "AFFILIATE" || !data.role) {
+      const defaultCommissionRate =
+        await SystemSettingsService.getDefaultCommissionRate();
       await prisma.affiliateProfile.create({
         data: {
           userId: user.id,
-          paymentMethod: "PAYPAL",
+          paymentMethod: "BANK_TRANSFER",
+          commissionRate: defaultCommissionRate,
         },
       });
     } else if (data.role === "ADMIN") {

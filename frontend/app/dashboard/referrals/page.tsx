@@ -89,7 +89,7 @@ export default function ReferralsPage() {
   }>({ isOpen: false, codeId: null, codeName: null });
   const [editingCode, setEditingCode] = useState<ReferralCode | null>(null);
   const [affiliateCommissionRate, setAffiliateCommissionRate] =
-    useState<number>(10);
+    useState<number>(15);
 
   // Form state for creating referral code
   type NewReferralCode = {
@@ -98,7 +98,7 @@ export default function ReferralsPage() {
   };
 
   const [newCode, setNewCode] = useState<NewReferralCode>({
-    commissionRate: 10, // Will be set from affiliate profile
+    commissionRate: 15, // Will be set from system settings
     expiresAt: new Date(),
   });
 
@@ -130,9 +130,34 @@ export default function ReferralsPage() {
     fetchReferralData();
   }, []);
 
+  // Refresh commission rate from system settings when create dialog opens
+  useEffect(() => {
+    if (showCreateDialog) {
+      const fetchSystemSettings = async () => {
+        try {
+          const settingsResponse = await fetch(`${config.apiUrl}/system/settings`, {
+            headers: getAuthHeaders(),
+          });
+          if (settingsResponse.ok) {
+            const settingsData = await settingsResponse.json();
+            if (settingsData.commission?.defaultRate) {
+              setNewCode((prev) => ({
+                ...prev,
+                commissionRate: settingsData.commission.defaultRate,
+              }));
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching system settings:", error);
+        }
+      };
+      fetchSystemSettings();
+    }
+  }, [showCreateDialog]);
+
   const fetchReferralData = async () => {
     try {
-      const [codesResponse, statsResponse, profileResponse] =
+      const [codesResponse, statsResponse, profileResponse, settingsResponse] =
         await Promise.all([
           fetch(`${config.apiUrl}/referral/codes`, {
             headers: getAuthHeaders(),
@@ -141,6 +166,9 @@ export default function ReferralsPage() {
             headers: getAuthHeaders(),
           }),
           fetch(`${config.apiUrl}/settings/profile`, {
+            headers: getAuthHeaders(),
+          }),
+          fetch(`${config.apiUrl}/system/settings`, {
             headers: getAuthHeaders(),
           }),
         ]);
@@ -163,19 +191,29 @@ export default function ReferralsPage() {
         setStats(statsData);
       }
 
-      // Fetch affiliate profile to get commission rate
+      // Get default commission rate from system settings (not from affiliate profile)
+      let defaultCommissionRate = 15; // Fallback
+      if (settingsResponse.ok) {
+        const settingsData = await settingsResponse.json();
+        if (settingsData.commission?.defaultRate) {
+          defaultCommissionRate = settingsData.commission.defaultRate;
+        }
+      }
+
+      // Fetch affiliate profile to get their current commission rate (for display only)
       if (profileResponse.ok) {
         const profileData = await profileResponse.json();
         if (profileData.affiliate?.commissionRate) {
           const commissionRate = profileData.affiliate.commissionRate;
           setAffiliateCommissionRate(commissionRate);
-          // Update newCode with actual commission rate
-          setNewCode((prev) => ({
-            ...prev,
-            commissionRate: commissionRate,
-          }));
         }
       }
+
+      // Use system default commission rate for new codes
+      setNewCode((prev) => ({
+        ...prev,
+        commissionRate: defaultCommissionRate,
+      }));
     } catch (error) {
       console.error("Error fetching referral data:", error);
       toast.error("Failed to load referral data");
@@ -204,8 +242,19 @@ export default function ReferralsPage() {
       if (response.ok) {
         toast.success("Referral code created successfully!");
         setShowCreateDialog(false);
+        // Reset to system default commission rate
+        const settingsResponse = await fetch(`${config.apiUrl}/system/settings`, {
+          headers: getAuthHeaders(),
+        });
+        let defaultCommissionRate = 15;
+        if (settingsResponse.ok) {
+          const settingsData = await settingsResponse.json();
+          if (settingsData.commission?.defaultRate) {
+            defaultCommissionRate = settingsData.commission.defaultRate;
+          }
+        }
         setNewCode({
-          commissionRate: affiliateCommissionRate,
+          commissionRate: defaultCommissionRate,
           expiresAt: new Date(),
         });
         fetchReferralData();
@@ -372,8 +421,7 @@ export default function ReferralsPage() {
                     readOnly
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    Your commission rate: {affiliateCommissionRate}% (Only
-                    admins can change this)
+                    Using system default commission rate: {newCode.commissionRate}% (Updated from System Settings)
                   </p>
                 </div>
                 <div>

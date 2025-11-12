@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { SystemSettingsService } from "../services/SystemSettingsService";
 
 const prisma = new PrismaClient();
 
@@ -319,6 +320,9 @@ export class RegistrationModel {
     });
 
     // Create affiliate profile
+    const defaultCommissionRate =
+      await SystemSettingsService.getDefaultCommissionRate();
+
     const affiliate = await prisma.affiliateProfile.create({
       data: {
         userId: user.id,
@@ -331,6 +335,7 @@ export class RegistrationModel {
         paymentMethod: "BANK_TRANSFER",
         status: "ACTIVE",
         tier: (form.settings as any).defaultTierId || "BRONZE",
+        commissionRate: defaultCommissionRate,
       },
     });
 

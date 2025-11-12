@@ -24,49 +24,28 @@ import {
   Settings,
   Save,
   DollarSign,
-  Users,
   Shield,
-  Bell,
-  AlertCircle,
-  CheckCircle,
-  Calendar,
-  CreditCard,
-  RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { config } from "@/config/config";
 import { getAuthHeaders } from "@/lib/getAuthHeaders";
-import CommissionImpactModal from "@/components/modals/commission-impact-modal";
 
-interface SystemStatus {
-  systemHealth: {
-    status: string;
-    database: boolean;
-    paymentSystem: boolean;
-    uptime: number;
-  };
-  statistics: {
-    totalAffiliates: number;
-    totalOrders: number;
-    totalCommissions: number;
-  };
-  lastBackup: {
-    timestamp: string;
-    status: string;
-  };
-}
 
 export default function SystemSettingsPage() {
   const [isLoading, setIsLoading] = useState(false);
-  const [isFetchingStatus, setIsFetchingStatus] = useState(false);
-  const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null);
-  const [showImpactModal, setShowImpactModal] = useState(false);
-  const [pendingCommissionRate, setPendingCommissionRate] = useState<
-    number | null
-  >(null);
-  const [originalCommissionRate, setOriginalCommissionRate] =
-    useState<number>(5);
-  const [settings, setSettings] = useState({
+  const [settings, setSettings] = useState<{
+    general: any;
+    commission: {
+      defaultRate: number;
+      minimumPayout: number;
+      payoutFrequency: string;
+      approvalPeriod: number;
+      cookieDuration: number;
+    } | null;
+    affiliate: any;
+    security: any;
+    notifications: any;
+  }>({
     // General Settings
     general: {
       programName: "AffiliateHub",
@@ -75,14 +54,8 @@ export default function SystemSettingsPage() {
       currency: "USD",
       language: "en",
     },
-    // Commission Settings
-    commission: {
-      defaultRate: 30,
-      minimumPayout: 50.0,
-      payoutFrequency: "Monthly",
-      approvalPeriod: 30,
-      cookieDuration: 30,
-    },
+    // Commission Settings - will be loaded from API
+    commission: null,
     // Affiliate Settings
     affiliate: {
       autoApprove: false,
@@ -111,7 +84,6 @@ export default function SystemSettingsPage() {
 
   useEffect(() => {
     fetchSettings();
-    fetchSystemStatus();
   }, []);
 
   const fetchSettings = async () => {
@@ -124,6 +96,14 @@ export default function SystemSettingsPage() {
       if (response.ok) {
         const data = await response.json();
         console.log("Fetched settings data:", data); // Debug log
+        
+        // Commission settings must come from API - no fallback
+        if (!data.commission) {
+          console.error("Commission settings not found in API response");
+          toast.error("Commission settings not found. Please refresh the page.");
+          return;
+        }
+        
         setSettings({
           general: data.general || {
             programName: "Trackdesk",
@@ -132,13 +112,7 @@ export default function SystemSettingsPage() {
             currency: "USD",
             language: "en",
           },
-          commission: data.commission || {
-            defaultRate: 5,
-            minimumPayout: 50.0,
-            payoutFrequency: "Monthly",
-            approvalPeriod: 30,
-            cookieDuration: 30,
-          },
+          commission: data.commission,
           affiliate: data.affiliate || {
             autoApprove: false,
             requireApproval: true,
@@ -162,10 +136,6 @@ export default function SystemSettingsPage() {
           },
         });
 
-        // Track original commission rate for comparison
-        if (data.commission?.defaultRate) {
-          setOriginalCommissionRate(data.commission.defaultRate);
-        }
       } else {
         console.error("Failed to fetch settings:", response.status);
         toast.error("Failed to load settings");
@@ -176,25 +146,6 @@ export default function SystemSettingsPage() {
     }
   };
 
-  const fetchSystemStatus = async () => {
-    setIsFetchingStatus(true);
-    try {
-      const response = await fetch(`${config.apiUrl}/system/settings/status`, {
-        headers: getAuthHeaders(),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setSystemStatus(data);
-      } else {
-        console.error("Failed to fetch system status:", response.status);
-      }
-    } catch (error) {
-      console.error("Error fetching system status:", error);
-    } finally {
-      setIsFetchingStatus(false);
-    }
-  };
 
   const handleSaveGeneral = async () => {
     setIsLoading(true);
@@ -226,18 +177,8 @@ export default function SystemSettingsPage() {
   };
 
   const handleSaveCommission = async () => {
-    // Check if default rate is changing
-    const newDefaultRate = settings.commission.defaultRate;
-
-    // If rate is changing, show impact modal
-    if (newDefaultRate !== originalCommissionRate) {
-      setPendingCommissionRate(newDefaultRate);
-      setShowImpactModal(true);
-      return;
-    }
-
-    // If no rate change, save directly
-    await saveCommissionSettings(false);
+    // Always update all affiliates when commission rate changes
+    await saveCommissionSettings(true);
   };
 
   const saveCommissionSettings = async (updateAffiliates: boolean) => {
@@ -307,14 +248,9 @@ export default function SystemSettingsPage() {
       toast.error("Failed to update commission settings");
     } finally {
       setIsLoading(false);
-      setShowImpactModal(false);
-      setPendingCommissionRate(null);
     }
   };
 
-  const handleImpactModalConfirm = (updateAffiliates: boolean) => {
-    saveCommissionSettings(updateAffiliates);
-  };
 
   const handleSettingChange = (section: string, key: string, value: any) => {
     setSettings((prev) => ({
@@ -325,6 +261,29 @@ export default function SystemSettingsPage() {
       },
     }));
   };
+
+  // Don't render commission settings if not loaded from API
+  if (!settings.commission) {
+    return (
+      <div className="p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">System Settings</h1>
+            <p className="text-slate-600">
+              Configure your affiliate program settings
+            </p>
+          </div>
+          <Badge variant="secondary" className="flex items-center gap-2">
+            <Shield className="h-3 w-3" />
+            Admin
+          </Badge>
+        </div>
+        <div className="text-center py-8">
+          <p className="text-muted-foreground">Loading commission settings...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -576,172 +535,6 @@ export default function SystemSettingsPage() {
         </CardContent>
       </Card>
 
-      {/* System Status */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>System Status</CardTitle>
-              <CardDescription>
-                Current system health and status
-              </CardDescription>
-            </div>
-            <Button
-              onClick={fetchSystemStatus}
-              disabled={isFetchingStatus}
-              variant="outline"
-              size="sm"
-            >
-              <RefreshCw
-                className={`h-4 w-4 mr-2 ${
-                  isFetchingStatus ? "animate-spin" : ""
-                }`}
-              />
-              Refresh
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {systemStatus ? (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                <div className="text-center">
-                  <div
-                    className={`w-12 h-12 ${
-                      systemStatus.systemHealth.status === "operational"
-                        ? "bg-green-100"
-                        : "bg-red-100"
-                    } rounded-full flex items-center justify-center mx-auto mb-3`}
-                  >
-                    {systemStatus.systemHealth.status === "operational" ? (
-                      <CheckCircle className="h-6 w-6 text-green-600" />
-                    ) : (
-                      <AlertCircle className="h-6 w-6 text-red-600" />
-                    )}
-                  </div>
-                  <h3 className="font-medium text-slate-900 mb-1">
-                    System Health
-                  </h3>
-                  <Badge
-                    variant="default"
-                    className={
-                      systemStatus.systemHealth.status === "operational"
-                        ? "bg-green-600"
-                        : "bg-red-600"
-                    }
-                  >
-                    {systemStatus.systemHealth.status === "operational"
-                      ? "Operational"
-                      : "Down"}
-                  </Badge>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Uptime: {systemStatus.systemHealth.uptime}%
-                  </p>
-                </div>
-                <div className="text-center">
-                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <Calendar className="h-6 w-6 text-blue-600" />
-                  </div>
-                  <h3 className="font-medium text-slate-900 mb-1">
-                    Last Backup
-                  </h3>
-                  <Badge variant="outline">
-                    {new Date(
-                      systemStatus.lastBackup.timestamp
-                    ).toLocaleString()}
-                  </Badge>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Status: {systemStatus.lastBackup.status}
-                  </p>
-                </div>
-                <div className="text-center">
-                  <div
-                    className={`w-12 h-12 ${
-                      systemStatus.systemHealth.paymentSystem
-                        ? "bg-green-100"
-                        : "bg-red-100"
-                    } rounded-full flex items-center justify-center mx-auto mb-3`}
-                  >
-                    <CreditCard
-                      className={`h-6 w-6 ${
-                        systemStatus.systemHealth.paymentSystem
-                          ? "text-green-600"
-                          : "text-red-600"
-                      }`}
-                    />
-                  </div>
-                  <h3 className="font-medium text-slate-900 mb-1">
-                    Payment System
-                  </h3>
-                  <Badge
-                    variant="default"
-                    className={
-                      systemStatus.systemHealth.paymentSystem
-                        ? "bg-green-600"
-                        : "bg-red-600"
-                    }
-                  >
-                    {systemStatus.systemHealth.paymentSystem
-                      ? "Connected"
-                      : "Disconnected"}
-                  </Badge>
-                </div>
-              </div>
-
-              {/* Statistics */}
-              <div className="pt-6 border-t">
-                <h3 className="font-semibold mb-4">System Statistics</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-slate-50 p-4 rounded-lg">
-                    <p className="text-sm text-muted-foreground">
-                      Total Affiliates
-                    </p>
-                    <p className="text-2xl font-bold">
-                      {systemStatus.statistics.totalAffiliates}
-                    </p>
-                  </div>
-                  <div className="bg-slate-50 p-4 rounded-lg">
-                    <p className="text-sm text-muted-foreground">
-                      Total Orders
-                    </p>
-                    <p className="text-2xl font-bold">
-                      {systemStatus.statistics.totalOrders}
-                    </p>
-                  </div>
-                  <div className="bg-slate-50 p-4 rounded-lg">
-                    <p className="text-sm text-muted-foreground">
-                      Total Commissions
-                    </p>
-                    <p className="text-2xl font-bold">
-                      ${systemStatus.statistics.totalCommissions.toFixed(2)}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className="text-center py-8">
-              <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
-              <p className="text-muted-foreground">Loading system status...</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Commission Impact Modal */}
-      {pendingCommissionRate && (
-        <CommissionImpactModal
-          isOpen={showImpactModal}
-          onClose={() => {
-            setShowImpactModal(false);
-            setPendingCommissionRate(null);
-          }}
-          onConfirm={handleImpactModalConfirm}
-          newDefaultRate={pendingCommissionRate}
-          currentDefaultRate={originalCommissionRate}
-          isLoading={isLoading}
-        />
-      )}
     </div>
   );
 }

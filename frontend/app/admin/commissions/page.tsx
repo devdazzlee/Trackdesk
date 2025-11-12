@@ -52,6 +52,7 @@ import { toast } from "sonner";
 import { getAuthHeaders } from "@/lib/getAuthHeaders";
 import { config } from "@/config/config";
 import { Loader2 } from "lucide-react";
+import { DatePicker } from "@/components/ui/date-picker";
 
 interface Commission {
   id: string;
@@ -117,6 +118,22 @@ interface CommissionBankDetails {
   minimumPayout?: number;
 }
 
+type SortByOption =
+  | "createdAt"
+  | "commissionAmount"
+  | "orderValue"
+  | "status";
+
+type FiltersState = {
+  status: string;
+  affiliateId: string;
+  affiliateSearch: string;
+  dateFrom: Date | undefined;
+  dateTo: Date | undefined;
+  sortBy: SortByOption;
+  sortOrder: "asc" | "desc";
+};
+
 export default function CommissionsPage() {
   const [commissions, setCommissions] = useState<Commission[]>([]);
   const [analytics, setAnalytics] = useState<CommissionAnalytics | null>(null);
@@ -125,12 +142,12 @@ export default function CommissionsPage() {
   const [updatingCommissions, setUpdatingCommissions] = useState<
     Map<string, string>
   >(new Map()); // Track which commission is being updated and the action type
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState<FiltersState>({
     status: "all",
     affiliateId: "",
     affiliateSearch: "", // Search by affiliate name or email
-    dateFrom: "",
-    dateTo: "",
+    dateFrom: undefined,
+    dateTo: undefined,
     sortBy: "createdAt",
     sortOrder: "desc",
   });
@@ -263,11 +280,15 @@ export default function CommissionsPage() {
       }
 
       if (filters.dateFrom) {
-        params.append("dateFrom", filters.dateFrom);
+        const from = new Date(filters.dateFrom);
+        from.setHours(0, 0, 0, 0);
+        params.append("dateFrom", from.toISOString());
       }
 
       if (filters.dateTo) {
-        params.append("dateTo", filters.dateTo);
+        const to = new Date(filters.dateTo);
+        to.setHours(23, 59, 59, 999);
+        params.append("dateTo", to.toISOString());
       }
 
       if (filters.sortBy) {
@@ -507,20 +528,73 @@ export default function CommissionsPage() {
 
       {/* Filters */}
       <Card>
-        <CardHeader>
-          <CardTitle>Filters</CardTitle>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            Filters
+          </CardTitle>
+          <CardDescription className="text-sm text-muted-foreground">
+            Refine the commissions list by status, affiliate, date range, and sort order.
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div>
-              <Label htmlFor="status">Status</Label>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="space-y-1">
+              <Label>Search Affiliate</Label>
+              <Input
+                type="text"
+                placeholder="Name or email..."
+                value={filters.affiliateSearch}
+                onChange={(e) => {
+                  setFilters((prev) => ({
+                    ...prev,
+                    affiliateSearch: e.target.value,
+                  }));
+                  setPagination((prev) => ({ ...prev, page: 1 }));
+                }}
+                className="h-11 rounded-lg"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>From Date</Label>
+              <DatePicker
+                value={filters.dateFrom}
+                onChange={(date) => {
+                  setFilters((prev) => ({
+                    ...prev,
+                    dateFrom: date,
+                  }));
+                  setPagination((prev) => ({ ...prev, page: 1 }));
+                }}
+                placeholder="dd/mm/yyyy"
+                className="h-11 rounded-lg"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>To Date</Label>
+              <DatePicker
+                value={filters.dateTo}
+                onChange={(date) => {
+                  setFilters((prev) => ({
+                    ...prev,
+                    dateTo: date,
+                  }));
+                  setPagination((prev) => ({ ...prev, page: 1 }));
+                }}
+                placeholder="dd/mm/yyyy"
+                className="h-11 rounded-lg"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Status</Label>
               <Select
                 value={filters.status}
-                onValueChange={(value) =>
-                  setFilters({ ...filters, status: value })
-                }
+                onValueChange={(value) => {
+                  setFilters((prev) => ({ ...prev, status: value }));
+                  setPagination((prev) => ({ ...prev, page: 1 }));
+                }}
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-11 rounded-lg">
                   <SelectValue placeholder="All statuses" />
                 </SelectTrigger>
                 <SelectContent>
@@ -532,51 +606,19 @@ export default function CommissionsPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <Label htmlFor="affiliateSearch">Search Affiliate</Label>
-              <Input
-                id="affiliateSearch"
-                type="text"
-                placeholder="Name or email..."
-                value={filters.affiliateSearch}
-                onChange={(e) =>
-                  setFilters({ ...filters, affiliateSearch: e.target.value })
-                }
-              />
-            </div>
-            <div>
-              <Label htmlFor="dateFrom">From Date</Label>
-              <Input
-                id="dateFrom"
-                type="date"
-                value={filters.dateFrom}
-                onChange={(e) =>
-                  setFilters({ ...filters, dateFrom: e.target.value })
-                }
-              />
-            </div>
-            <div>
-              <Label htmlFor="dateTo">To Date</Label>
-              <Input
-                id="dateTo"
-                type="date"
-                value={filters.dateTo}
-                onChange={(e) =>
-                  setFilters({ ...filters, dateTo: e.target.value })
-                }
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
-            <div>
-              <Label htmlFor="sortBy">Sort By</Label>
+            <div className="space-y-1">
+              <Label>Sort By</Label>
               <Select
                 value={filters.sortBy}
-                onValueChange={(value) =>
-                  setFilters({ ...filters, sortBy: value })
-                }
+                onValueChange={(value) => {
+                  setFilters((prev) => ({
+                    ...prev,
+                    sortBy: value as SortByOption,
+                  }));
+                  setPagination((prev) => ({ ...prev, page: 1 }));
+                }}
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-11 rounded-lg">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -589,15 +631,19 @@ export default function CommissionsPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <Label htmlFor="sortOrder">Order</Label>
+            <div className="space-y-1">
+              <Label>Order</Label>
               <Select
                 value={filters.sortOrder}
-                onValueChange={(value) =>
-                  setFilters({ ...filters, sortOrder: value })
-                }
+                onValueChange={(value) => {
+                  setFilters((prev) => ({
+                    ...prev,
+                    sortOrder: value as "asc" | "desc",
+                  }));
+                  setPagination((prev) => ({ ...prev, page: 1 }));
+                }}
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-11 rounded-lg">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -613,17 +659,17 @@ export default function CommissionsPage() {
                     status: "all",
                     affiliateId: "",
                     affiliateSearch: "",
-                    dateFrom: "",
-                    dateTo: "",
+                    dateFrom: undefined,
+                    dateTo: undefined,
                     sortBy: "createdAt",
                     sortOrder: "desc",
                   });
-                  setPagination({ ...pagination, page: 1 });
+                  setPagination((prev) => ({ ...prev, page: 1 }));
                 }}
                 variant="outline"
-                className="w-full"
+                className="w-full h-11 rounded-lg gap-2"
               >
-                <Filter className="w-4 h-4 mr-2" />
+                <Filter className="w-4 h-4" />
                 Clear Filters
               </Button>
             </div>

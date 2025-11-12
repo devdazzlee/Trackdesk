@@ -28,7 +28,6 @@ import {
   Copy,
   Check,
   Trash2,
-  Info,
   Shield,
   Edit,
 } from "lucide-react";
@@ -293,45 +292,6 @@ export default function AdminWebsitesSettingsPage() {
           </Badge>
         </div>
 
-        {/* Info Card */}
-        <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950/20">
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Info className="h-5 w-5 text-blue-600" />
-              <CardTitle className="text-blue-900 dark:text-blue-100">
-                What is a Website ID?
-              </CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-blue-800 dark:text-blue-200">
-              A <strong>Website ID</strong> is a unique identifier for each of
-              your websites that you'll use in your Next.js projects. This ID
-              tells Trackdesk which website the tracking events are coming from.
-            </p>
-            <div className="mt-4 p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 rounded-lg">
-              <p className="text-sm text-green-800 dark:text-green-200 flex items-center gap-2">
-                <Shield className="h-4 w-4" />
-                <strong>Admin Access:</strong> You have full permissions to
-                create, edit, and delete websites. All changes affect all users
-                in the system.
-              </p>
-            </div>
-            <div className="mt-4 space-y-2 text-sm">
-              <p className="font-semibold text-blue-900 dark:text-blue-100">
-                Use this Website ID in your{" "}
-                <code className="bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">
-                  .env.local
-                </code>{" "}
-                file:
-              </p>
-              <code className="block bg-blue-100 dark:bg-blue-900 p-3 rounded text-xs">
-                NEXT_PUBLIC_TRACKDESK_WEBSITE_ID=your-website-id-here
-              </code>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Create New Website */}
         <Card>
           <CardHeader>
@@ -553,54 +513,6 @@ export default function AdminWebsitesSettingsPage() {
                 ))}
               </div>
             )}
-          </CardContent>
-        </Card>
-
-        {/* Quick Reference */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Reference</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <h4 className="font-semibold mb-2">1. Get Your Website ID</h4>
-              <p className="text-sm text-muted-foreground">
-                Create a website above and copy its Website ID. Each Next.js
-                project needs its own unique Website ID.
-              </p>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-2">
-                2. Add to Your Next.js Project
-              </h4>
-              <p className="text-sm text-muted-foreground">
-                Create{" "}
-                <code className="bg-muted px-2 py-1 rounded">
-                  frontend/.env.local
-                </code>{" "}
-                and add:
-              </p>
-              <code className="block bg-muted p-3 rounded mt-2 text-xs">
-                NEXT_PUBLIC_TRACKDESK_WEBSITE_ID=your-website-id-here
-                <br />
-                NEXT_PUBLIC_TRACKDESK_API_URL=http://localhost:3003/api
-                <br />
-                NEXT_PUBLIC_TRACKDESK_DEBUG=true
-              </code>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-2">3. Use Referral Codes</h4>
-              <p className="text-sm text-muted-foreground">
-                Affiliates can share links like:{" "}
-                <code className="bg-muted px-2 py-1 rounded">
-                  https://your-website.com/?ref=AFF_0AGXXR
-                </code>
-              </p>
-              <p className="text-sm text-muted-foreground mt-2">
-                The tracking script will automatically capture the referral code
-                and track clicks/orders.
-              </p>
-            </div>
           </CardContent>
         </Card>
 

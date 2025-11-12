@@ -179,7 +179,11 @@ export default function CommissionsPage() {
   const [payoutRequestReason, setPayoutRequestReason] = useState("");
 
   const payoutMethodOptions = [
-    { value: "BANK_TRANSFER", label: "Manual Payout" },
+    { value: "PAYPAL", label: "Manual Payout" },
+    { value: "BANK_TRANSFER", label: "Bank Transfer" },
+    { value: "STRIPE", label: "Stripe" },
+    { value: "CRYPTO", label: "Crypto Wallet" },
+    { value: "WISE", label: "Wise" },
   ];
 
   const formatPayoutMethodDisplay = (method?: string | null) => {
@@ -187,11 +191,14 @@ export default function CommissionsPage() {
 
     const normalized = method.toUpperCase().replace(/\s+/g, "_");
 
-    if (normalized === "BANK_TRANSFER") {
+    if (normalized === "BANK_TRANSFER" || normalized === "PAYPAL") {
       return "Manual Payout";
     }
 
-    return method;
+    return method
+      .toString()
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (char) => char.toUpperCase());
   };
 
   const payoutFrequencyOptions = [

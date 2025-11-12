@@ -3,6 +3,7 @@ import { z } from "zod";
 import { authenticateToken } from "../middleware/auth";
 import { ReferralSystemModel } from "../models/ReferralSystem";
 import { prisma } from "../lib/prisma";
+import { SystemSettingsService } from "../services/SystemSettingsService";
 
 const router: Router = express.Router();
 
@@ -43,7 +44,7 @@ router.post("/codes", authenticateToken, async (req: any, res) => {
     }
 
     const schema = z.object({
-      commissionRate: z.number().min(0).max(100),
+      commissionRate: z.number().min(0).max(100).optional(),
       productId: z.string().optional(),
       expiresAt: z.string(),
     });
@@ -58,8 +59,19 @@ router.post("/codes", authenticateToken, async (req: any, res) => {
       return res.status(404).json({ error: "Affiliate profile not found" });
     }
 
+    // Always use system default commission rate from settings
+    const defaultCommissionRate =
+      await SystemSettingsService.getDefaultCommissionRate();
+    // Use provided rate, or fall back to system default (not affiliate's rate)
+    const commissionRateValue =
+      data.commissionRate ?? defaultCommissionRate;
+
     // Validate commission rate against affiliate's tier limits
-    if (data.commissionRate > affiliate.commissionRate) {
+    if (
+      affiliate.commissionRate !== null &&
+      affiliate.commissionRate !== undefined &&
+      commissionRateValue > affiliate.commissionRate
+    ) {
       return res.status(400).json({
         error: `Commission rate cannot exceed your tier limit of ${affiliate.commissionRate}%`,
       });
@@ -87,7 +99,7 @@ router.post("/codes", authenticateToken, async (req: any, res) => {
       affiliate.id,
       {
         type: "BOTH", // Default to BOTH, type field is no longer exposed in UI
-        commissionRate: data.commissionRate || affiliate.commissionRate || 10,
+        commissionRate: commissionRateValue,
         productId: data.productId,
         expiresAt: expiresAtDate,
       }
