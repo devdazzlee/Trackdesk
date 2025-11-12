@@ -38,7 +38,7 @@ export interface ReferralStats {
 export declare class ReferralSystemModel {
     static generateReferralCode(affiliateId: string, data: {
         type: "SIGNUP" | "PRODUCT" | "BOTH";
-        commissionRate: number;
+        commissionRate?: number;
         productId?: string;
         maxUses?: number;
         expiresAt?: Date;

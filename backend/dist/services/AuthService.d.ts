@@ -39,13 +39,14 @@ export declare class AuthService {
             role: import(".prisma/client").$Enums.UserRole;
             avatar: string;
             affiliateProfile: {
+                website: string | null;
+                tier: import(".prisma/client").$Enums.AffiliateTier;
                 id: string;
-                status: string;
-                phone: string | null;
                 createdAt: Date;
                 updatedAt: Date;
+                status: string;
+                phone: string | null;
                 companyName: string | null;
-                website: string | null;
                 socialMedia: import("@prisma/client/runtime/library").JsonValue | null;
                 paymentMethod: import(".prisma/client").$Enums.PaymentMethod;
                 paymentEmail: string | null;
@@ -53,7 +54,6 @@ export declare class AuthService {
                 address: import("@prisma/client/runtime/library").JsonValue | null;
                 bankAccount: string | null;
                 kycVerified: boolean;
-                tier: import(".prisma/client").$Enums.AffiliateTier;
                 commissionRate: number;
                 totalEarnings: number;
                 totalClicks: number;
@@ -94,13 +94,14 @@ export declare class AuthService {
         createdAt: Date;
         lastLoginAt: Date;
         affiliateProfile: {
+            website: string | null;
+            tier: import(".prisma/client").$Enums.AffiliateTier;
             id: string;
-            status: string;
-            phone: string | null;
             createdAt: Date;
             updatedAt: Date;
+            status: string;
+            phone: string | null;
             companyName: string | null;
-            website: string | null;
             socialMedia: import("@prisma/client/runtime/library").JsonValue | null;
             paymentMethod: import(".prisma/client").$Enums.PaymentMethod;
             paymentEmail: string | null;
@@ -108,7 +109,6 @@ export declare class AuthService {
             address: import("@prisma/client/runtime/library").JsonValue | null;
             bankAccount: string | null;
             kycVerified: boolean;
-            tier: import(".prisma/client").$Enums.AffiliateTier;
             commissionRate: number;
             totalEarnings: number;
             totalClicks: number;
@@ -128,13 +128,14 @@ export declare class AuthService {
     }>;
     updateProfile(userId: string, data: UpdateProfileData): Promise<{
         affiliateProfile: {
+            website: string | null;
+            tier: import(".prisma/client").$Enums.AffiliateTier;
             id: string;
-            status: string;
-            phone: string | null;
             createdAt: Date;
             updatedAt: Date;
+            status: string;
+            phone: string | null;
             companyName: string | null;
-            website: string | null;
             socialMedia: import("@prisma/client/runtime/library").JsonValue | null;
             paymentMethod: import(".prisma/client").$Enums.PaymentMethod;
             paymentEmail: string | null;
@@ -142,7 +143,6 @@ export declare class AuthService {
             address: import("@prisma/client/runtime/library").JsonValue | null;
             bankAccount: string | null;
             kycVerified: boolean;
-            tier: import(".prisma/client").$Enums.AffiliateTier;
             commissionRate: number;
             totalEarnings: number;
             totalClicks: number;
@@ -160,12 +160,14 @@ export declare class AuthService {
             department: string | null;
         };
     } & {
+        role: import(".prisma/client").$Enums.UserRole;
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
         email: string;
         password: string;
         firstName: string;
         lastName: string;
-        role: import(".prisma/client").$Enums.UserRole;
         status: import(".prisma/client").$Enums.UserStatus;
         avatar: string | null;
         phone: string | null;
@@ -173,8 +175,6 @@ export declare class AuthService {
         language: string;
         twoFactorEnabled: boolean;
         twoFactorSecret: string | null;
-        createdAt: Date;
-        updatedAt: Date;
         lastLoginAt: Date | null;
     }>;
     changePassword(userId: string, currentPassword: string, newPassword: string): Promise<void>;

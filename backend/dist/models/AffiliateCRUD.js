@@ -2,20 +2,23 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AffiliateCRUDModel = void 0;
 const prisma_1 = require("../lib/prisma");
+const SystemSettingsService_1 = require("../services/SystemSettingsService");
 class AffiliateCRUDModel {
     static async create(data) {
+        const defaultCommissionRate = await SystemSettingsService_1.SystemSettingsService.getDefaultCommissionRate();
+        const commissionRate = data.commissionRate ?? defaultCommissionRate;
         return await prisma_1.prisma.affiliateProfile.create({
             data: {
                 userId: data.userId,
                 companyName: data.companyName,
                 website: data.website,
                 socialMedia: data.socialMedia,
-                paymentMethod: data.paymentMethod || 'PAYPAL',
+                paymentMethod: data.paymentMethod || 'BANK_TRANSFER',
                 paymentEmail: data.paymentEmail,
                 taxId: data.taxId,
                 address: data.address,
                 tier: data.tier || 'BRONZE',
-                commissionRate: data.commissionRate || 30.0,
+                commissionRate,
                 totalEarnings: data.totalEarnings || 0,
                 totalClicks: data.totalClicks || 0,
                 totalConversions: data.totalConversions || 0,

@@ -7,6 +7,7 @@ const express_1 = __importDefault(require("express"));
 const auth_1 = require("../middleware/auth");
 const client_1 = require("@prisma/client");
 const zod_1 = require("zod");
+const SystemSettingsService_1 = require("../services/SystemSettingsService");
 const router = express_1.default.Router();
 const prisma = new client_1.PrismaClient();
 const ACCOUNT_ID = "default";
@@ -30,6 +31,13 @@ router.get("/", auth_1.authenticateToken, async (req, res) => {
                         timezone: "America/New_York",
                         currency: "USD",
                         language: "en",
+                        commissionSettings: {
+                            defaultRate: 15,
+                            minimumPayout: 50.0,
+                            payoutFrequency: "Monthly",
+                            approvalPeriod: 30,
+                            cookieDuration: 30,
+                        },
                     },
                     security: {
                         twoFactorRequired: false,
@@ -55,16 +63,35 @@ router.get("/", auth_1.authenticateToken, async (req, res) => {
                 },
             });
         }
-        let commissionSettings = {
-            defaultRate: 5,
-            minimumPayout: 50.0,
-            payoutFrequency: "Monthly",
-            approvalPeriod: 30,
-            cookieDuration: 30,
-        };
+        let commissionSettings = null;
         if (settings.general &&
             typeof settings.general === "object" &&
             "commissionSettings" in settings.general) {
+            commissionSettings = settings.general.commissionSettings;
+        }
+        if (!commissionSettings || (commissionSettings.defaultRate && commissionSettings.defaultRate <= 10)) {
+            const existingGeneral = settings.general && typeof settings.general === "object"
+                ? settings.general
+                : {};
+            const updatedCommissionSettings = commissionSettings ? {
+                ...commissionSettings,
+                defaultRate: commissionSettings.defaultRate <= 10 ? 15 : commissionSettings.defaultRate,
+            } : {
+                defaultRate: 15,
+                minimumPayout: 50.0,
+                payoutFrequency: "Monthly",
+                approvalPeriod: 30,
+                cookieDuration: 30,
+            };
+            settings = await prisma.systemSettings.update({
+                where: { accountId: ACCOUNT_ID },
+                data: {
+                    general: {
+                        ...existingGeneral,
+                        commissionSettings: updatedCommissionSettings,
+                    },
+                },
+            });
             commissionSettings = settings.general.commissionSettings;
         }
         const affiliateSettings = {
@@ -157,7 +184,7 @@ router.post("/commission/preview", auth_1.authenticateToken, async (req, res) =>
         const currentSettings = await prisma.systemSettings.findUnique({
             where: { accountId: ACCOUNT_ID },
         });
-        let currentDefaultRate = 5;
+        let currentDefaultRate = 15;
         if (currentSettings?.general &&
             typeof currentSettings.general === "object" &&
             "commissionSettings" in currentSettings.general) {
@@ -236,7 +263,7 @@ router.put("/commission", auth_1.authenticateToken, async (req, res) => {
         const currentSettings = await prisma.systemSettings.findUnique({
             where: { accountId: ACCOUNT_ID },
         });
-        let currentDefaultRate = 5;
+        let currentDefaultRate = 15;
         if (currentSettings?.general &&
             typeof currentSettings.general === "object" &&
             "commissionSettings" in currentSettings.general) {
@@ -246,10 +273,6 @@ router.put("/commission", auth_1.authenticateToken, async (req, res) => {
             }
         }
         const affectedAffiliates = await prisma.affiliateProfile.findMany({
-            where: {
-                commissionRate: currentDefaultRate,
-                tier: "BRONZE",
-            },
             select: {
                 id: true,
                 userId: true,
@@ -302,6 +325,7 @@ router.put("/commission", auth_1.authenticateToken, async (req, res) => {
                 compliance: {},
             },
         });
+        SystemSettingsService_1.SystemSettingsService.clearCache();
         let updatedAffiliates = 0;
         if (data.updateAffiliates && affectedAffiliates.length > 0) {
             const updateResult = await prisma.affiliateProfile.updateMany({
@@ -315,6 +339,16 @@ router.put("/commission", auth_1.authenticateToken, async (req, res) => {
                 },
             });
             updatedAffiliates = updateResult.count;
+            await prisma.referralCode.updateMany({
+                where: {
+                    affiliateId: {
+                        in: affectedAffiliates.map((affiliate) => affiliate.id),
+                    },
+                },
+                data: {
+                    commissionRate: data.defaultRate,
+                },
+            });
             for (const affiliate of affectedAffiliates) {
                 await prisma.activity.create({
                     data: {
@@ -327,7 +361,7 @@ router.put("/commission", auth_1.authenticateToken, async (req, res) => {
                             affiliateEmail: affiliate.user.email,
                             oldRate: affiliate.commissionRate,
                             newRate: data.defaultRate,
-                            reason: "Default commission rate change - only affiliates using default rate were updated",
+                            reason: "Default commission rate change - all affiliates updated",
                         },
                     },
                 });

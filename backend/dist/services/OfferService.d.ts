@@ -68,9 +68,10 @@ export declare class OfferService {
         offers: {
             name: string;
             id: string;
-            status: import(".prisma/client").$Enums.OfferStatus;
+            accountId: string;
             createdAt: Date;
             updatedAt: Date;
+            status: import(".prisma/client").$Enums.OfferStatus;
             commissionRate: number;
             totalClicks: number;
             totalConversions: number;
@@ -78,7 +79,6 @@ export declare class OfferService {
             totalCommissions: number;
             startDate: Date;
             endDate: Date | null;
-            accountId: string;
             tags: string[];
             totalRevenue: number;
         }[];
@@ -98,13 +98,14 @@ export declare class OfferService {
                     lastName: string;
                 };
             } & {
+                website: string | null;
+                tier: import(".prisma/client").$Enums.AffiliateTier;
                 id: string;
-                status: string;
-                phone: string | null;
                 createdAt: Date;
                 updatedAt: Date;
+                status: string;
+                phone: string | null;
                 companyName: string | null;
-                website: string | null;
                 socialMedia: import("@prisma/client/runtime/library").JsonValue | null;
                 paymentMethod: import(".prisma/client").$Enums.PaymentMethod;
                 paymentEmail: string | null;
@@ -112,7 +113,6 @@ export declare class OfferService {
                 address: import("@prisma/client/runtime/library").JsonValue | null;
                 bankAccount: string | null;
                 kycVerified: boolean;
-                tier: import(".prisma/client").$Enums.AffiliateTier;
                 commissionRate: number;
                 totalEarnings: number;
                 totalClicks: number;
@@ -123,9 +123,9 @@ export declare class OfferService {
             };
         } & {
             id: string;
-            status: import(".prisma/client").$Enums.ApplicationStatus;
             createdAt: Date;
             updatedAt: Date;
+            status: import(".prisma/client").$Enums.ApplicationStatus;
             message: string | null;
             affiliateId: string;
             offerId: string;
@@ -145,9 +145,10 @@ export declare class OfferService {
     } & {
         name: string;
         id: string;
-        status: import(".prisma/client").$Enums.OfferStatus;
+        accountId: string;
         createdAt: Date;
         updatedAt: Date;
+        status: import(".prisma/client").$Enums.OfferStatus;
         commissionRate: number;
         totalClicks: number;
         totalConversions: number;
@@ -155,16 +156,16 @@ export declare class OfferService {
         totalCommissions: number;
         startDate: Date;
         endDate: Date | null;
-        accountId: string;
         tags: string[];
         totalRevenue: number;
     }>;
     createOffer(data: CreateOfferData, accountId: string): Promise<{
         name: string;
         id: string;
-        status: import(".prisma/client").$Enums.OfferStatus;
+        accountId: string;
         createdAt: Date;
         updatedAt: Date;
+        status: import(".prisma/client").$Enums.OfferStatus;
         commissionRate: number;
         totalClicks: number;
         totalConversions: number;
@@ -172,16 +173,16 @@ export declare class OfferService {
         totalCommissions: number;
         startDate: Date;
         endDate: Date | null;
-        accountId: string;
         tags: string[];
         totalRevenue: number;
     }>;
     updateOffer(id: string, data: UpdateOfferData): Promise<{
         name: string;
         id: string;
-        status: import(".prisma/client").$Enums.OfferStatus;
+        accountId: string;
         createdAt: Date;
         updatedAt: Date;
+        status: import(".prisma/client").$Enums.OfferStatus;
         commissionRate: number;
         totalClicks: number;
         totalConversions: number;
@@ -189,7 +190,6 @@ export declare class OfferService {
         totalCommissions: number;
         startDate: Date;
         endDate: Date | null;
-        accountId: string;
         tags: string[];
         totalRevenue: number;
     }>;
@@ -203,13 +203,14 @@ export declare class OfferService {
                     lastName: string;
                 };
             } & {
+                website: string | null;
+                tier: import(".prisma/client").$Enums.AffiliateTier;
                 id: string;
-                status: string;
-                phone: string | null;
                 createdAt: Date;
                 updatedAt: Date;
+                status: string;
+                phone: string | null;
                 companyName: string | null;
-                website: string | null;
                 socialMedia: import("@prisma/client/runtime/library").JsonValue | null;
                 paymentMethod: import(".prisma/client").$Enums.PaymentMethod;
                 paymentEmail: string | null;
@@ -217,7 +218,6 @@ export declare class OfferService {
                 address: import("@prisma/client/runtime/library").JsonValue | null;
                 bankAccount: string | null;
                 kycVerified: boolean;
-                tier: import(".prisma/client").$Enums.AffiliateTier;
                 commissionRate: number;
                 totalEarnings: number;
                 totalClicks: number;
@@ -228,9 +228,9 @@ export declare class OfferService {
             };
         } & {
             id: string;
-            status: import(".prisma/client").$Enums.ApplicationStatus;
             createdAt: Date;
             updatedAt: Date;
+            status: import(".prisma/client").$Enums.ApplicationStatus;
             message: string | null;
             affiliateId: string;
             offerId: string;
@@ -244,18 +244,18 @@ export declare class OfferService {
     }>;
     applyForOffer(offerId: string, userId: string, data: ApplyForOfferData): Promise<{
         id: string;
-        status: import(".prisma/client").$Enums.ApplicationStatus;
         createdAt: Date;
         updatedAt: Date;
+        status: import(".prisma/client").$Enums.ApplicationStatus;
         message: string | null;
         affiliateId: string;
         offerId: string;
     }>;
     updateApplication(applicationId: string, data: UpdateApplicationData): Promise<{
         id: string;
-        status: import(".prisma/client").$Enums.ApplicationStatus;
         createdAt: Date;
         updatedAt: Date;
+        status: import(".prisma/client").$Enums.ApplicationStatus;
         message: string | null;
         affiliateId: string;
         offerId: string;

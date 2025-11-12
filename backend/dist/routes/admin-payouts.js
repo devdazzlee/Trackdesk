@@ -59,6 +59,7 @@ router.get("/", auth_1.authenticateToken, (0, auth_1.requireRole)(["ADMIN"]), as
                 status: "PAID",
             },
             select: {
+                id: true,
                 affiliateId: true,
                 commissionAmount: true,
                 createdAt: true,
@@ -67,31 +68,9 @@ router.get("/", auth_1.authenticateToken, (0, auth_1.requireRole)(["ADMIN"]), as
                 createdAt: "desc",
             },
         });
-        const paidCommissionsMap = new Map();
-        paidCommissionsData.forEach((pc) => {
-            const existing = paidCommissionsMap.get(pc.affiliateId);
-            if (existing) {
-                existing.totalAmount += pc.commissionAmount;
-                existing.count += 1;
-                if (pc.createdAt > existing.latestDate) {
-                    existing.latestDate = pc.createdAt;
-                }
-            }
-            else {
-                paidCommissionsMap.set(pc.affiliateId, {
-                    totalAmount: pc.commissionAmount,
-                    count: 1,
-                    latestDate: pc.createdAt,
-                });
-            }
-        });
-        const paidCommissions = Array.from(paidCommissionsMap.entries()).map(([affiliateId, data]) => ({
-            affiliateId,
-            _sum: { commissionAmount: data.totalAmount },
-            _count: { id: data.count },
-            latestDate: data.latestDate,
-        }));
-        const affiliateIdsWithPaidCommissions = paidCommissions.map((pc) => pc.affiliateId);
+        const affiliateIdsWithPaidCommissions = [
+            ...new Set(paidCommissionsData.map((pc) => pc.affiliateId)),
+        ];
         const affiliatesWithPaidCommissions = await prisma_1.prisma.affiliateProfile.findMany({
             where: {
                 id: { in: affiliateIdsWithPaidCommissions },
@@ -107,20 +86,21 @@ router.get("/", auth_1.authenticateToken, (0, auth_1.requireRole)(["ADMIN"]), as
                 },
             },
         });
-        const commissionBasedPayouts = paidCommissions.map((pc) => {
+        const commissionBasedPayouts = paidCommissionsData.map((pc) => {
             const affiliate = affiliatesWithPaidCommissions.find((a) => a.id === pc.affiliateId);
+            const paymentMethod = affiliate?.paymentMethod || "PAYPAL";
             return {
-                id: `COMM-${pc.affiliateId}`,
+                id: `COMM-${pc.id}`,
                 affiliateId: pc.affiliateId,
                 affiliateName: affiliate?.user
                     ? `${affiliate.user.firstName} ${affiliate.user.lastName}`
                     : "Unknown Affiliate",
-                amount: pc._sum.commissionAmount || 0,
-                method: affiliate?.paymentMethod || "PAYPAL",
+                amount: pc.commissionAmount,
+                method: formatPaymentMethod(paymentMethod),
                 status: "completed",
-                requestDate: pc.latestDate.toISOString().split("T")[0],
+                requestDate: pc.createdAt.toISOString().split("T")[0],
                 email: affiliate?.user?.email || "",
-                commissionsCount: pc._count.id,
+                commissionsCount: 1,
                 source: "commission",
             };
         });

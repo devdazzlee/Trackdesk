@@ -8,9 +8,9 @@ export declare class PaymentService {
     createPayout(affiliateId: string, amount: number, method: string): Promise<{
         method: import(".prisma/client").$Enums.PaymentMethod;
         id: string;
-        status: import(".prisma/client").$Enums.PayoutStatus;
         createdAt: Date;
         updatedAt: Date;
+        status: import(".prisma/client").$Enums.PayoutStatus;
         affiliateId: string;
         amount: number;
         paymentMethodId: string | null;
@@ -38,9 +38,10 @@ export declare class AnalyticsService {
                     offer: {
                         name: string;
                         id: string;
-                        status: import(".prisma/client").$Enums.OfferStatus;
+                        accountId: string;
                         createdAt: Date;
                         updatedAt: Date;
+                        status: import(".prisma/client").$Enums.OfferStatus;
                         commissionRate: number;
                         totalClicks: number;
                         totalConversions: number;
@@ -48,7 +49,6 @@ export declare class AnalyticsService {
                         totalCommissions: number;
                         startDate: Date;
                         endDate: Date | null;
-                        accountId: string;
                         tags: string[];
                         totalRevenue: number;
                     };
@@ -88,9 +88,9 @@ export declare class AnalyticsService {
             };
         } & {
             id: string;
-            status: import(".prisma/client").$Enums.ConversionStatus;
             createdAt: Date;
             updatedAt: Date;
+            status: import(".prisma/client").$Enums.ConversionStatus;
             userId: string | null;
             affiliateId: string;
             orderValue: number;
@@ -105,9 +105,10 @@ export declare class AnalyticsService {
                 offer: {
                     name: string;
                     id: string;
-                    status: import(".prisma/client").$Enums.OfferStatus;
+                    accountId: string;
                     createdAt: Date;
                     updatedAt: Date;
+                    status: import(".prisma/client").$Enums.OfferStatus;
                     commissionRate: number;
                     totalClicks: number;
                     totalConversions: number;
@@ -115,7 +116,6 @@ export declare class AnalyticsService {
                     totalCommissions: number;
                     startDate: Date;
                     endDate: Date | null;
-                    accountId: string;
                     tags: string[];
                     totalRevenue: number;
                 };
@@ -158,9 +158,10 @@ export declare class AnalyticsService {
                 offer: {
                     name: string;
                     id: string;
-                    status: import(".prisma/client").$Enums.OfferStatus;
+                    accountId: string;
                     createdAt: Date;
                     updatedAt: Date;
+                    status: import(".prisma/client").$Enums.OfferStatus;
                     commissionRate: number;
                     totalClicks: number;
                     totalConversions: number;
@@ -168,7 +169,6 @@ export declare class AnalyticsService {
                     totalCommissions: number;
                     startDate: Date;
                     endDate: Date | null;
-                    accountId: string;
                     tags: string[];
                     totalRevenue: number;
                 };
@@ -211,9 +211,10 @@ export declare class AnalyticsService {
                 offer: {
                     name: string;
                     id: string;
-                    status: import(".prisma/client").$Enums.OfferStatus;
+                    accountId: string;
                     createdAt: Date;
                     updatedAt: Date;
+                    status: import(".prisma/client").$Enums.OfferStatus;
                     commissionRate: number;
                     totalClicks: number;
                     totalConversions: number;
@@ -221,7 +222,6 @@ export declare class AnalyticsService {
                     totalCommissions: number;
                     startDate: Date;
                     endDate: Date | null;
-                    accountId: string;
                     tags: string[];
                     totalRevenue: number;
                 };
@@ -284,9 +284,9 @@ export declare class AutomationService {
     createAutomationRule(ruleData: any): Promise<{
         name: string;
         id: string;
-        status: import(".prisma/client").$Enums.RuleStatus;
         createdAt: Date;
         updatedAt: Date;
+        status: import(".prisma/client").$Enums.RuleStatus;
         action: import(".prisma/client").$Enums.RuleAction;
         type: import(".prisma/client").$Enums.RuleType;
         description: string;
@@ -308,9 +308,9 @@ export declare class IntegrationService {
         name: string;
         url: string;
         id: string;
-        status: import(".prisma/client").$Enums.WebhookStatus;
         createdAt: Date;
         updatedAt: Date;
+        status: import(".prisma/client").$Enums.WebhookStatus;
         lastTriggered: Date | null;
         events: string[];
         secret: string;

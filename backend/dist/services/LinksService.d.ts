@@ -68,12 +68,12 @@ export declare class LinksService {
         };
         clicks: {
             url: string;
+            referralCode: string;
             id: string;
             createdAt: Date;
             ipAddress: string | null;
             userAgent: string | null;
             affiliateId: string;
-            referralCode: string;
             storeId: string;
             utmSource: string | null;
             utmMedium: string | null;
@@ -83,19 +83,39 @@ export declare class LinksService {
         totalClicks: number;
         totalConversions: number;
         totalEarnings: number;
+        totalRevenue: number;
         conversionRate: number;
+    }>;
+    getPublicLink(trackingCode: string): Promise<{
+        id: string;
+        name: string;
+        originalUrl: string;
+        shortUrl: string;
+        trackingCode: string;
+        createdAt: Date;
+        affiliate: {
+            id: string;
+            name: string;
+        };
+        stats: {
+            clicks: number;
+            conversions: number;
+            earnings: number;
+            revenue: number;
+            conversionRate: number;
+        };
     }>;
     trackClick(trackingCode: string, clickData: TrackClickData): Promise<{
         success: boolean;
         redirectUrl: string;
         click: {
             url: string;
+            referralCode: string;
             id: string;
             createdAt: Date;
             ipAddress: string | null;
             userAgent: string | null;
             affiliateId: string;
-            referralCode: string;
             storeId: string;
             utmSource: string | null;
             utmMedium: string | null;
@@ -154,9 +174,9 @@ export declare class LinksService {
     }>;
     deactivateCoupon(userId: string, couponId: string): Promise<{
         id: string;
-        status: import(".prisma/client").$Enums.CouponStatus;
         createdAt: Date;
         updatedAt: Date;
+        status: import(".prisma/client").$Enums.CouponStatus;
         code: string;
         affiliateId: string;
         description: string;

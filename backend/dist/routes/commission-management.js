@@ -9,6 +9,45 @@ const auth_1 = require("../middleware/auth");
 const prisma_1 = require("../lib/prisma");
 const EmailService_1 = __importDefault(require("../services/EmailService"));
 const router = express_1.default.Router();
+function parseBankAccountData(bankAccount) {
+    if (!bankAccount) {
+        return {
+            bankDetails: null,
+            payoutFrequency: null,
+            minimumPayout: null,
+        };
+    }
+    try {
+        const parsed = JSON.parse(bankAccount);
+        if (parsed && typeof parsed === "object") {
+            return {
+                bankDetails: parsed.bankDetails || parsed || null,
+                payoutFrequency: parsed.payoutFrequency || null,
+                minimumPayout: typeof parsed.minimumPayout === "number"
+                    ? parsed.minimumPayout
+                    : null,
+            };
+        }
+    }
+    catch (error) {
+        console.warn("Failed to parse affiliate bank account details", error);
+    }
+    return {
+        bankDetails: null,
+        payoutFrequency: null,
+        minimumPayout: null,
+    };
+}
+function formatPayoutMethod(method) {
+    if (!method) {
+        return "Not Set";
+    }
+    return method
+        .toLowerCase()
+        .split("_")
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ");
+}
 const commissionQuerySchema = zod_1.z.object({
     page: zod_1.z
         .string()
@@ -175,6 +214,18 @@ router.get("/", auth_1.authenticateToken, async (req, res) => {
                     createdAt: true,
                 },
             });
+            const bankData = parseBankAccountData(order.affiliate.bankAccount);
+            const bankDetails = bankData.bankDetails
+                ? {
+                    ...bankData.bankDetails,
+                    payoutMethod: formatPayoutMethod(order.affiliate.paymentMethod),
+                    payoutEmail: order.affiliate.paymentEmail ||
+                        order.affiliate.user?.email ||
+                        "",
+                    payoutFrequency: bankData.payoutFrequency || "Monthly",
+                    minimumPayout: bankData.minimumPayout ?? 50,
+                }
+                : null;
             return {
                 id: order.id,
                 amount: order.commissionAmount,
@@ -198,6 +249,7 @@ router.get("/", auth_1.authenticateToken, async (req, res) => {
                         description: `Order ${order.orderId}`,
                     },
                 },
+                bankDetails,
             };
         }));
         const [totalCommissions, totalAmount, paidCount, paidAmount, pendingCount, pendingAmount, approvedCount, approvedAmount, activeAffiliates,] = statistics;

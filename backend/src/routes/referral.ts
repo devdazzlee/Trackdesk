@@ -531,7 +531,6 @@ router.get("/analytics", authenticateToken, async (req: any, res) => {
         code.id,
         code.code,
         code.code.split("-")[0],
-        code.customSlug,
       ])
       .flat()
       .filter((value): value is string => !!value);
@@ -579,7 +578,6 @@ router.get("/analytics", authenticateToken, async (req: any, res) => {
       .map((code) => {
         const productOrders = orders.filter(
           (order) =>
-            order.productId === code.productId ||
             order.referralCode === code.code ||
             order.referralCode === code.code.split("-")[0]
         );

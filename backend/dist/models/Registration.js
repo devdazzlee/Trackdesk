@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.RegistrationModel = void 0;
 const client_1 = require("@prisma/client");
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
+const SystemSettingsService_1 = require("../services/SystemSettingsService");
 const prisma = new client_1.PrismaClient();
 class RegistrationModel {
     static async createForm(data) {
@@ -170,6 +171,7 @@ class RegistrationModel {
                 status: "ACTIVE",
             },
         });
+        const defaultCommissionRate = await SystemSettingsService_1.SystemSettingsService.getDefaultCommissionRate();
         const affiliate = await prisma.affiliateProfile.create({
             data: {
                 userId: user.id,
@@ -182,6 +184,7 @@ class RegistrationModel {
                 paymentMethod: "BANK_TRANSFER",
                 status: "ACTIVE",
                 tier: form.settings.defaultTierId || "BRONZE",
+                commissionRate: defaultCommissionRate,
             },
         });
         if (form.settings.welcomeEmail) {

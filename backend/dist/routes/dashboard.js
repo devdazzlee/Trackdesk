@@ -123,11 +123,14 @@ router.get("/overview", auth_1.authenticateToken, async (req, res) => {
                 date: startOfDay.toISOString().split("T")[0],
                 clicks: dayClicks,
                 conversions: dayConversions,
+                referrals: dayClicks,
                 commissions: dayCommissions._sum.commissionAmount || 0,
             });
         }
         const overview = {
             totalReferrals: totalClicks,
+            totalClicks,
+            totalConversions,
             totalCommissions: totalCommissions._sum.commissionAmount || 0,
             pendingCommissions: pendingCommissions._sum.commissionAmount || 0,
             conversionRate: Math.round(conversionRate * 10) / 10,

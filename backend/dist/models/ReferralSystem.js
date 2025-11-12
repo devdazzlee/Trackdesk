@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ReferralSystemModel = void 0;
 const prisma_1 = require("../lib/prisma");
+const SystemSettingsService_1 = require("../services/SystemSettingsService");
 class ReferralSystemModel {
     static async generateReferralCode(affiliateId, data) {
         let code;
@@ -23,12 +24,14 @@ class ReferralSystemModel {
         if (attempts >= 10) {
             throw new Error("Unable to generate unique referral code");
         }
+        const commissionRate = data.commissionRate ??
+            (await SystemSettingsService_1.SystemSettingsService.getDefaultCommissionRate());
         const referralCode = await prisma_1.prisma.referralCode.create({
             data: {
                 affiliateId,
                 code,
                 type: data.type,
-                commissionRate: data.commissionRate,
+                commissionRate,
                 productId: data.productId,
                 maxUses: data.maxUses,
                 expiresAt: data.expiresAt,

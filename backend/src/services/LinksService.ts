@@ -289,10 +289,10 @@ export class LinksService {
 
     // Get click details using tracking code
     const identifiers = [
-      link.referralCode,
       link.customSlug,
       link.customSlug?.split("-")[0],
       link.id,
+      link.shortUrl,
     ].filter((value): value is string => !!value);
 
     const clicks = await prisma.affiliateClick.findMany({

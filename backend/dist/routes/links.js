@@ -124,6 +124,26 @@ router.get("/stats/:linkId", auth_1.authenticateToken, async (req, res) => {
         });
     }
 });
+router.get("/public/:trackingCode", async (req, res) => {
+    try {
+        const { trackingCode } = req.params;
+        const link = await LinksService_1.default.getPublicLink(trackingCode);
+        res.json({
+            success: true,
+            link,
+        });
+    }
+    catch (error) {
+        console.error("Error fetching public link:", error);
+        if (error instanceof Error && error.message === "Link not found") {
+            return res.status(404).json({ success: false, error: error.message });
+        }
+        res.status(500).json({
+            success: false,
+            error: "Failed to fetch link details",
+        });
+    }
+});
 router.patch("/:linkId/status", auth_1.authenticateToken, async (req, res) => {
     try {
         const userId = req.user.id;

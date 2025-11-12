@@ -42,6 +42,7 @@ const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const EmailService_1 = __importStar(require("./EmailService"));
 const crypto_1 = __importDefault(require("crypto"));
+const SystemSettingsService_1 = require("./SystemSettingsService");
 const prisma = new client_1.PrismaClient();
 class AuthService {
     async register(data) {
@@ -63,10 +64,12 @@ class AuthService {
             },
         });
         if (data.role === "AFFILIATE" || !data.role) {
+            const defaultCommissionRate = await SystemSettingsService_1.SystemSettingsService.getDefaultCommissionRate();
             await prisma.affiliateProfile.create({
                 data: {
                     userId: user.id,
-                    paymentMethod: "PAYPAL",
+                    paymentMethod: "BANK_TRANSFER",
+                    commissionRate: defaultCommissionRate,
                 },
             });
         }
