@@ -117,9 +117,9 @@ function RegisterForm() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-6">
+      <div className="w-full max-w-md">
         {/* Logo and Back Button */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-6">
           <Link
             href="/"
             className="flex items-center text-slate-600 hover:text-slate-900 transition-colors"
@@ -243,27 +243,6 @@ function RegisterForm() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="website">Website/Social Media URL</Label>
-                <Input
-                  id="website"
-                  type="url"
-                  placeholder="https://yourwebsite.com"
-                  className="h-11"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="paymentEmail">Payment Email (PayPal)</Label>
-                <Input
-                  id="paymentEmail"
-                  type="email"
-                  placeholder="paypal@example.com"
-                  required
-                  className="h-11"
-                />
-              </div>
-
-              <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
                 <div className="relative">
                   <Input
@@ -382,49 +361,6 @@ function RegisterForm() {
           </CardContent>
             </>
           )}
-        </Card>
-
-        {/* Benefits Section */}
-        <Card className="shadow-lg border-0 bg-gradient-to-r from-blue-50 to-teal-50">
-          <CardContent className="p-6">
-            <h3 className="font-semibold text-slate-900 mb-4">
-              Why Join Our Affiliate Program?
-            </h3>
-            <div className="space-y-3">
-              <div className="flex items-center space-x-3">
-                <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
-                  <Check className="h-3 w-3 text-green-600" />
-                </div>
-                <span className="text-sm text-slate-700">
-                  Competitive commission rates up to 30%
-                </span>
-              </div>
-              <div className="flex items-center space-x-3">
-                <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
-                  <Check className="h-3 w-3 text-green-600" />
-                </div>
-                <span className="text-sm text-slate-700">
-                  Real-time tracking and analytics
-                </span>
-              </div>
-              <div className="flex items-center space-x-3">
-                <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
-                  <Check className="h-3 w-3 text-green-600" />
-                </div>
-                <span className="text-sm text-slate-700">
-                  Marketing materials and support
-                </span>
-              </div>
-              <div className="flex items-center space-x-3">
-                <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
-                  <Check className="h-3 w-3 text-green-600" />
-                </div>
-                <span className="text-sm text-slate-700">
-                  Monthly payouts via PayPal
-                </span>
-              </div>
-            </div>
-          </CardContent>
         </Card>
       </div>
     </div>

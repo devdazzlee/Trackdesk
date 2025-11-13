@@ -286,12 +286,34 @@ class AuthService {
         const expiresAt = new Date(Date.now() + 3600000);
         await prisma.user.update({
             where: { id: user.id },
-            data: {},
+            data: {
+                resetToken,
+                resetTokenExpires: expiresAt,
+            },
         });
         await EmailService_1.default.sendPasswordResetEmail(email, user.firstName, resetToken);
     }
     async resetPassword(token, newPassword) {
+        const user = await prisma.user.findFirst({
+            where: {
+                resetToken: token,
+                resetTokenExpires: {
+                    gt: new Date(),
+                },
+            },
+        });
+        if (!user) {
+            throw new Error("Invalid or expired reset token");
+        }
         const hashedPassword = await bcryptjs_1.default.hash(newPassword, parseInt(process.env.BCRYPT_ROUNDS || "12"));
+        await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                password: hashedPassword,
+                resetToken: null,
+                resetTokenExpires: null,
+            },
+        });
     }
     async enable2FA(userId) {
         await prisma.user.update({

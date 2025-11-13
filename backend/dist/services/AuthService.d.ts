@@ -175,6 +175,8 @@ export declare class AuthService {
         language: string;
         twoFactorEnabled: boolean;
         twoFactorSecret: string | null;
+        resetToken: string | null;
+        resetTokenExpires: Date | null;
         lastLoginAt: Date | null;
     }>;
     changePassword(userId: string, currentPassword: string, newPassword: string): Promise<void>;

@@ -28,6 +28,10 @@ model User {
   twoFactorEnabled Boolean @default(false)
   twoFactorSecret  String?
 
+  // Password reset
+  resetToken        String?
+  resetTokenExpires DateTime?
+
   // Timestamps
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt

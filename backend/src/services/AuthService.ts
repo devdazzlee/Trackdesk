@@ -361,12 +361,12 @@ export class AuthService {
     const resetToken = crypto.randomBytes(32).toString("hex");
     const expiresAt = new Date(Date.now() + 3600000); // 1 hour
 
-    // Store reset token (you might want to create a separate table for this)
-    // For now, we'll use a simple approach
+    // Store reset token in database
     await prisma.user.update({
       where: { id: user.id },
       data: {
-        // You might want to add resetToken and resetTokenExpires fields to your schema
+        resetToken,
+        resetTokenExpires: expiresAt,
       },
     });
 
@@ -379,17 +379,35 @@ export class AuthService {
   }
 
   async resetPassword(token: string, newPassword: string) {
-    // Verify token and get user
-    // This is a simplified implementation
-    // In production, you'd want to store reset tokens in a separate table
+    // Find user with matching reset token
+    const user = await prisma.user.findFirst({
+      where: {
+        resetToken: token,
+        resetTokenExpires: {
+          gt: new Date(), // Token must not be expired
+        },
+      },
+    });
 
+    if (!user) {
+      throw new Error("Invalid or expired reset token");
+    }
+
+    // Hash new password
     const hashedPassword = await bcrypt.hash(
       newPassword,
       parseInt(process.env.BCRYPT_ROUNDS || "12")
     );
 
-    // Update password (you'd need to implement proper token verification)
-    // await prisma.user.update({ where: { resetToken: token }, data: { password: hashedPassword } });
+    // Update password and clear reset token
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        resetToken: null,
+        resetTokenExpires: null,
+      },
+    });
   }
 
   async enable2FA(userId: string) {
