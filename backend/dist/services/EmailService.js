@@ -36,7 +36,7 @@ class EmailService {
         }
     }
     async sendVerificationEmail(email, firstName, verificationToken) {
-        const verificationUrl = `${process.env.FRONTEND_URL || "http://localhost:3000"}/auth/verify-email?token=${verificationToken}`;
+        const verificationUrl = `${process.env.FRONTEND_URL}/auth/verify-email?token=${verificationToken}`;
         const html = `
       <!DOCTYPE html>
       <html>

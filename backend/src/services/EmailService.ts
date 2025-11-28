@@ -1,6 +1,5 @@
 import nodemailer from "nodemailer";
 import crypto from "crypto";
-
 interface EmailOptions {
   to: string;
   subject: string;
@@ -48,7 +47,7 @@ class EmailService {
     firstName: string,
     verificationToken: string
   ): Promise<void> {
-    const verificationUrl = `${process.env.FRONTEND_URL || "http://localhost:3000"}/auth/verify-email?token=${verificationToken}`;
+    const verificationUrl = `${process.env.FRONTEND_URL}/auth/verify-email?token=${verificationToken}`;
 
     const html = `
       <!DOCTYPE html>
